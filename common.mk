@@ -1,6 +1,10 @@
 SKIP_SQUASH?=0
 
-build = hack/build.sh
+ifndef common_dir
+    common_dir = common
+endif
+
+build = $(common_dir)/build.sh
 
 ifeq ($(TARGET),rhel7)
 	OS := rhel7
