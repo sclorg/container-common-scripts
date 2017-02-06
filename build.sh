@@ -23,8 +23,6 @@ test -z "$BASE_IMAGE_NAME" && {
   BASE_IMAGE_NAME="${BASE_DIR_NAME#sti-}"
 }
 
-NAMESPACE="openshift/"
-
 # Cleanup the temporary Dockerfile created by docker build with version
 trap "rm -f ${DOCKERFILE_PATH}.version" SIGINT SIGQUIT EXIT
 
@@ -51,7 +49,7 @@ function docker_build_with_version {
 function squash {
   # FIXME: We have to use the exact versions here to avoid Docker client
   #        compatibility issues
-  easy_install -q --user docker_py==1.6.0 docker-squash==1.0.0rc6
+  easy_install -q --user docker_py==1.7.2 docker-squash==1.0.1
   base=$(awk '/^FROM/{print $2}' $1)
   ${HOME}/.local/bin/docker-squash -f $base ${IMAGE_NAME}
 }
@@ -62,7 +60,9 @@ dirs=${VERSION:-$VERSIONS}
 
 for dir in ${dirs}; do
   case " $OPENSHIFT_NAMESPACES " in
-    *\ ${dir}\ *) ;;
+    *\ ${dir}\ *)
+      NAMESPACE="openshift/"
+      ;;
     *)
       if [ "${OS}" == "centos7" ]; then
         NAMESPACE="centos/"
@@ -96,7 +96,7 @@ for dir in ${dirs}; do
 
     if [[ $? -eq 0 ]] && [[ "${TAG_ON_SUCCESS}" == "true" ]]; then
       echo "-> Re-tagging ${IMAGE_NAME} image to ${IMAGE_NAME%"-candidate"}"
-      docker tag -f $IMAGE_NAME ${IMAGE_NAME%"-candidate"}
+      docker tag $IMAGE_NAME ${IMAGE_NAME%"-candidate"}
     fi
   fi
 
