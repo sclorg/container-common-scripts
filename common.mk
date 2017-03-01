@@ -28,3 +28,7 @@ build:
 .PHONY: test
 test:
 	$(script_env) TAG_ON_SUCCESS=$(TAG_ON_SUCCESS) TEST_MODE=true $(build)
+
+.PHONY: test-openshift
+test-openshift:
+	$(script_env) TAG_ON_SUCCESS=$(TAG_ON_SUCCESS) TEST_OPENSHIFT_MODE=true $(build)
