@@ -8,6 +8,8 @@ build = $(common_dir)/build.sh
 
 ifeq ($(TARGET),rhel7)
 	OS := rhel7
+else ifeq ($(TARGET),fedora)
+	OS := fedora
 else
 	OS := centos7
 endif
