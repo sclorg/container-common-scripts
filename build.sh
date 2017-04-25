@@ -66,6 +66,8 @@ for dir in ${dirs}; do
     *)
       if [ "${OS}" == "centos7" ]; then
         NAMESPACE="centos/"
+      elif [ "${OS}" == "fedora" ]; then
+        NAMESPACE="fedora/"
       else
         # we don't test rhel versions of SCL owned images
         if [[ "${SKIP_RHEL_SCL}" == "1" ]]; then
@@ -87,6 +89,8 @@ for dir in ${dirs}; do
   pushd ${dir} > /dev/null
   if [ "$OS" == "rhel7" -o "$OS" == "rhel7-candidate" ]; then
     docker_build_with_version Dockerfile.rhel7
+  elif [ "$OS" == "fedora" -o "$OS" == "fedora-candidate" ]; then
+    docker_build_with_version Dockerfile.fedora
   else
     docker_build_with_version Dockerfile
   fi
