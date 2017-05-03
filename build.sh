@@ -32,6 +32,7 @@ function docker_build_with_version {
   # Use perl here to make this compatible with OSX
   DOCKERFILE_PATH=$(perl -MCwd -e 'print Cwd::abs_path shift' $dockerfile)
   cp ${DOCKERFILE_PATH} "${DOCKERFILE_PATH}.version"
+  echo "COPY help.1 /" >> "${dockerfile}.version"
   git_version=$(git rev-parse --short HEAD)
   echo "LABEL io.openshift.builder-version=\"${git_version}\"" >> "${dockerfile}.version"
   if [[ "${UPDATE_BASE}" == "1" ]]; then

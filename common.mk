@@ -24,13 +24,18 @@ script_env = \
 	OPENSHIFT_NAMESPACES="$(OPENSHIFT_NAMESPACES)"
 
 .PHONY: build
-build:
+build: manpages
 	$(script_env) $(build)
 
 .PHONY: test
-test:
+test: manpages
 	$(script_env) TAG_ON_SUCCESS=$(TAG_ON_SUCCESS) TEST_MODE=true $(build)
 
 .PHONY: test-openshift
-test-openshift:
+test-openshift: manpages
 	$(script_env) TAG_ON_SUCCESS=$(TAG_ON_SUCCESS) TEST_OPENSHIFT_MODE=true $(build)
+
+manpages = $(shell for version in $(VERSIONS); do echo "$$version/help.1"; done)
+manpages: $(manpages)
+$(manpages): %help.1: %README.md
+	go-md2man -in "$^" -out "$@"
