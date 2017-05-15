@@ -35,7 +35,7 @@ test: manpages
 test-openshift: manpages
 	$(script_env) TAG_ON_SUCCESS=$(TAG_ON_SUCCESS) TEST_OPENSHIFT_MODE=true $(build)
 
-manpages = $(shell for version in $(VERSIONS); do echo "$$version/help.1"; done)
+manpages = $(shell for version in $(if $(VERSION), $(VERSION), $(VERSIONS)); do echo "$$version/help.1"; done)
 manpages: $(manpages)
 $(manpages): %help.1: %README.md
 	go-md2man -in "$^" -out "$@"
