@@ -23,25 +23,18 @@ test -z "$BASE_IMAGE_NAME" && {
   BASE_IMAGE_NAME="${BASE_DIR_NAME#s2i-}"
 }
 
-# Cleanup the temporary Dockerfile created by docker build with version
-trap "rm -f ${DOCKERFILE_PATH}.version" SIGINT SIGQUIT EXIT
-
 # Perform docker build but append the LABEL with GIT commit id at the end
 function docker_build_with_version {
   local dockerfile="$1"
-  # Use perl here to make this compatible with OSX
-  DOCKERFILE_PATH=$(perl -MCwd -e 'print Cwd::abs_path shift' $dockerfile)
-  cp ${DOCKERFILE_PATH} "${DOCKERFILE_PATH}.version"
   git_version=$(git rev-parse --short HEAD)
-  echo "LABEL io.openshift.builder-version=\"${git_version}\"" >> "${dockerfile}.version"
+  BUILD_OPTIONS+=" --label io.openshift.builder-version=\"${git_version}\""
   if [[ "${UPDATE_BASE}" == "1" ]]; then
     BUILD_OPTIONS+=" --pull=true"
   fi
-  docker build ${BUILD_OPTIONS} -t ${IMAGE_NAME} -f "${dockerfile}.version" .
+  docker build ${BUILD_OPTIONS} -t ${IMAGE_NAME} -f "${dockerfile}" .
   if [[ "${SKIP_SQUASH}" != "1" ]]; then
-    squash "${dockerfile}.version"
+    squash "${dockerfile}"
   fi
-  rm -f "${DOCKERFILE_PATH}.version"
 }
 
 # Install the docker squashing tool[1] and squash the result image
