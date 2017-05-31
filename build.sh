@@ -1,37 +1,45 @@
 #!/bin/bash -e
 # This script is used to build, test and squash the OpenShift Docker images.
 #
-# Name of resulting image will be: 'NAMESPACE/BASE_IMAGE_NAME-VERSION-OS'.
+# Resulting image will be tagged: 'name:version' and 'name:latest'. Name and version
+#                                  are values of labels from resulted image
 #
-# BASE_IMAGE_NAME - Usually name of the main component within container.
-# OS - Specifies distribution - "rhel7" or "centos7"
+# OS - Specifies distribution - "rhel7", "centos7" or "fedora"
 # VERSION - Specifies the image version - (must match with subdirectory in repo)
 # TEST_MODE - If set, build a candidate image and test it
 # TAG_ON_SUCCESS - If set, tested image will be re-tagged as a non-candidate
 #       image, if the tests pass.
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
-# OPENSHIFT_NAMESPACES - Which of available versions (subdirectories) should be
-#       put into openshift/ namespace.
 
 OS=${1-$OS}
 VERSION=${2-$VERSION}
 
 DOCKERFILE_PATH=""
 
-test -z "$BASE_IMAGE_NAME" && {
-  BASE_DIR_NAME=$(echo $(basename `pwd`) | sed -e 's/-[0-9]*$//g')
-  BASE_IMAGE_NAME="${BASE_DIR_NAME#s2i-}"
-}
-
 # Perform docker build but append the LABEL with GIT commit id at the end
 function docker_build_with_version {
   local dockerfile="$1"
+  echo "-> Version ${dir}: building image from '${dockerfile}' ..."
+
   git_version=$(git rev-parse --short HEAD)
   BUILD_OPTIONS+=" --label io.openshift.builder-version=\"${git_version}\""
   if [[ "${UPDATE_BASE}" == "1" ]]; then
     BUILD_OPTIONS+=" --pull=true"
   fi
-  docker build ${BUILD_OPTIONS} -t ${IMAGE_NAME} -f "${dockerfile}" .
+
+  local docker_cmd=(docker build ${BUILD_OPTIONS} -f "${dockerfile}" .)
+  { IMAGE_ID=$("${docker_cmd[@]}" | tee /dev/fd/$fd | awk '/Successfully built/{print $NF}'); } {fd}>&1
+
+  name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
+  version=$(docker inspect -f "{{.Config.Labels.version}}" $IMAGE_ID)
+
+  IMAGE_NAME=$name
+  if [[ -v TEST_MODE ]]; then
+    IMAGE_NAME+="-candidate"
+  fi
+  echo "-> Image ${IMAGE_ID} tagged as ${IMAGE_NAME}"
+  docker tag $IMAGE_ID $IMAGE_NAME
+
   if [[ "${SKIP_SQUASH}" != "1" ]]; then
     squash "${dockerfile}"
   fi
@@ -52,33 +60,6 @@ function squash {
 dirs=${VERSION:-$VERSIONS}
 
 for dir in ${dirs}; do
-  case " $OPENSHIFT_NAMESPACES " in
-    *\ ${dir}\ *)
-      NAMESPACE="openshift/"
-      ;;
-    *)
-      if [ "${OS}" == "centos7" ]; then
-        NAMESPACE="centos/"
-      elif [ "${OS}" == "fedora" ]; then
-        NAMESPACE="fedora/"
-      else
-        # we don't test rhel versions of SCL owned images
-        if [[ "${SKIP_RHEL_SCL}" == "1" ]]; then
-          echo "Skipping rhel scl image ${BASE_IMAGE_NAME}-${dir//./}-{$OS}"
-          continue
-        fi
-        NAMESPACE="rhscl/"
-      fi
-  esac
-
-  IMAGE_NAME="${NAMESPACE}${BASE_IMAGE_NAME}-${dir//./}-${OS}"
-
-  if [[ -v TEST_MODE ]]; then
-    IMAGE_NAME+="-candidate"
-  fi
-
-  echo "-> Building ${IMAGE_NAME} ..."
-
   pushd ${dir} > /dev/null
   if [ "$OS" == "rhel7" -o "$OS" == "rhel7-candidate" ]; then
     docker_build_with_version Dockerfile.rhel7
@@ -88,12 +69,11 @@ for dir in ${dirs}; do
     docker_build_with_version Dockerfile
   fi
 
+  ok_to_tag=1
   if [[ -v TEST_MODE ]]; then
     VERSION=$dir IMAGE_NAME=${IMAGE_NAME} test/run
-
-    if [[ $? -eq 0 ]] && [[ "${TAG_ON_SUCCESS}" == "true" ]]; then
-      echo "-> Re-tagging ${IMAGE_NAME} image to ${IMAGE_NAME%"-candidate"}"
-      docker tag $IMAGE_NAME ${IMAGE_NAME%"-candidate"}
+    if [[ "${TAG_ON_SUCCESS}" != "true" ]]; then
+      ok_to_tag=0
     fi
   fi
 
@@ -105,6 +85,11 @@ for dir in ${dirs}; do
     fi
   fi
 
+  if [[ $ok_to_tag -eq 1 ]]; then
+    echo "-> Tagging image to '$name:$version' and '$name:latest'"
+    docker tag $IMAGE_NAME "$name:$version"
+    docker tag $IMAGE_NAME "$name:latest"
+  fi
 
   popd > /dev/null
 done
