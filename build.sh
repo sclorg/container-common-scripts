@@ -87,7 +87,7 @@ for dir in ${dirs}; do
     docker tag $IMAGE_NAME "$name:latest"
   fi
 
-  docker rmi $IMAGE_NAME
+  docker rmi --no-prune $IMAGE_NAME
 
   popd > /dev/null
 done
