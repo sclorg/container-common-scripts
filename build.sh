@@ -16,8 +16,6 @@ VERSION=${2-$VERSION}
 
 DOCKERFILE_PATH=""
 
-BASE_DIR_NAME=$(echo $(basename `pwd`) | sed -e 's/-[0-9]*$//g')
-
 # Perform docker build but append the LABEL with GIT commit id at the end
 function docker_build_with_version {
   local dockerfile="$1"
@@ -29,9 +27,18 @@ function docker_build_with_version {
     BUILD_OPTIONS+=" --pull=true"
   fi
 
-  IMAGE_NAME="$BASE_DIR_NAME-$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 4 | head -n 1
-):${git_version}"
-  docker build ${BUILD_OPTIONS} -t ${IMAGE_NAME} -f "${dockerfile}" .
+  docker build ${BUILD_OPTIONS} -f "${dockerfile}" . | tee build.log
+  local IMAGE_ID=$(cat build.log | awk '/Successfully built/{print $NF}')
+  rm build.log
+
+  name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
+  version=$(docker inspect -f "{{.Config.Labels.version}}" $IMAGE_ID)
+
+  IMAGE_NAME=$name
+  if [[ -v TEST_MODE ]]; then
+    IMAGE_NAME+="-candidate"
+  fi
+  docker tag $IMAGE_ID $IMAGE_NAME
 
   if [[ "${SKIP_SQUASH}" != "1" ]]; then
     squash "${dockerfile}"
@@ -79,15 +86,10 @@ for dir in ${dirs}; do
   fi
 
   if [[ $ok_to_tag -eq 1 ]]; then
-    name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_NAME)
-    version=$(docker inspect -f "{{.Config.Labels.version}}" $IMAGE_NAME)
-
     echo "-> Tagging image to '$name:$version' and '$name:latest'"
     docker tag $IMAGE_NAME "$name:$version"
     docker tag $IMAGE_NAME "$name:latest"
   fi
-
-  docker rmi --no-prune $IMAGE_NAME
 
   popd > /dev/null
 done
