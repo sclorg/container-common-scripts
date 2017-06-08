@@ -27,9 +27,8 @@ function docker_build_with_version {
     BUILD_OPTIONS+=" --pull=true"
   fi
 
-  docker build ${BUILD_OPTIONS} -f "${dockerfile}" . | tee build.log
-  local IMAGE_ID=$(cat build.log | awk '/Successfully built/{print $NF}')
-  rm build.log
+  local docker_cmd=(docker build ${BUILD_OPTIONS} -f "${dockerfile}" .)
+  { IMAGE_ID=$("${docker_cmd[@]}" | tee /dev/fd/$fd | awk '/Successfully built/{print $NF}'); } {fd}>&1
 
   name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
   version=$(docker inspect -f "{{.Config.Labels.version}}" $IMAGE_ID)
