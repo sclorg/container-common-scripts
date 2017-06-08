@@ -37,6 +37,7 @@ function docker_build_with_version {
   if [[ -v TEST_MODE ]]; then
     IMAGE_NAME+="-candidate"
   fi
+  echo "-> Image ${IMAGE_ID} tagged as ${IMAGE_NAME}"
   docker tag $IMAGE_ID $IMAGE_NAME
 
   if [[ "${SKIP_SQUASH}" != "1" ]]; then
@@ -71,7 +72,7 @@ for dir in ${dirs}; do
   ok_to_tag=1
   if [[ -v TEST_MODE ]]; then
     VERSION=$dir IMAGE_NAME=${IMAGE_NAME} test/run
-    if [[ $? -ne 0 ]] || [[ "${TAG_ON_SUCCESS}" != "true" ]]; then
+    if [[ "${TAG_ON_SUCCESS}" != "true" ]]; then
       ok_to_tag=0
     fi
   fi
