@@ -5,6 +5,7 @@ ifndef common_dir
 endif
 
 build = $(common_dir)/build.sh
+test = $(common_dir)/test.sh
 
 ifeq ($(TARGET),rhel7)
 	OS := rhel7
@@ -30,10 +31,12 @@ $(VERSIONS): % : %/root/help.1
 .PHONY: test
 test: script_env += TEST_MODE=true
 test: $(VERSIONS)
+	VERSIONS="$(VERSIONS)" $(script_env) $(test)
 
 .PHONY: test-openshift
 test-openshift: script_env += TEST_OPENSHIFT_MODE=true
 test-openshift: $(VERSIONS)
+	VERSIONS="$(VERSIONS)" $(script_env) $(test)
 
 %root/help.1: %README.md
 	mkdir -p $(@D)
