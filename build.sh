@@ -1,8 +1,5 @@
 #!/bin/bash -e
-# This script is used to build, test and squash the OpenShift Docker images.
-#
-# Resulting image will be tagged: 'name:version' and 'name:latest'. Name and version
-#                                  are values of labels from resulted image
+# This script is used to build the OpenShift Docker images.
 #
 # OS - Specifies distribution - "rhel7", "centos7" or "fedora"
 # VERSION - Specifies the image version - (must match with subdirectory in repo)
@@ -30,8 +27,8 @@ function docker_build_with_version {
   local docker_cmd=(docker build ${BUILD_OPTIONS} -f "${dockerfile}" .)
   { IMAGE_ID=$("${docker_cmd[@]}" | tee /dev/fd/$fd | awk '/Successfully built/{print $NF}'); } {fd}>&1
 
+  echo $IMAGE_ID >.image-id
   name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
-  version=$(docker inspect -f "{{.Config.Labels.version}}" $IMAGE_ID)
 
   IMAGE_NAME=$name
   if [[ -v TEST_MODE ]]; then
@@ -70,21 +67,6 @@ for dir in ${dirs}; do
   fi
 
   ok_to_tag=1
-  if [[ -v TEST_MODE ]]; then
-    VERSION=$dir IMAGE_NAME=${IMAGE_NAME} test/run
-    if [[ "${TAG_ON_SUCCESS}" != "true" ]]; then
-      ok_to_tag=0
-    fi
-  fi
-
-  if [[ -v TEST_OPENSHIFT_MODE ]]; then
-    if [[ -x test/run-openshift ]]; then
-      VERSION=$dir IMAGE_NAME=${IMAGE_NAME} test/run-openshift
-    else
-      echo "-> OpenShift tests are not present, skipping"
-    fi
-  fi
-
   if [[ $ok_to_tag -eq 1 ]]; then
     echo "-> Tagging image to '$name:$version' and '$name:latest'"
     docker tag $IMAGE_NAME "$name:$version"
