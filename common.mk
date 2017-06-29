@@ -6,6 +6,7 @@ endif
 
 build = $(common_dir)/build.sh
 test = $(common_dir)/test.sh
+tag = $(common_dir)/tag.sh
 
 ifeq ($(TARGET),rhel7)
 	OS := rhel7
@@ -23,6 +24,7 @@ script_env = \
 
 .PHONY: build
 build: $(VERSIONS)
+	VERSIONS="$(VERSIONS)" $(script_env) $(tag)
 
 .PHONY: $(VERSIONS)
 $(VERSIONS): % : %/root/help.1
@@ -32,11 +34,13 @@ $(VERSIONS): % : %/root/help.1
 test: script_env += TEST_MODE=true
 test: $(VERSIONS)
 	VERSIONS="$(VERSIONS)" $(script_env) $(test)
+	VERSIONS="$(VERSIONS)" $(script_env) $(tag)
 
 .PHONY: test-openshift
 test-openshift: script_env += TEST_OPENSHIFT_MODE=true
 test-openshift: $(VERSIONS)
 	VERSIONS="$(VERSIONS)" $(script_env) $(test)
+	VERSIONS="$(VERSIONS)" $(script_env) $(tag)
 
 %root/help.1: %README.md
 	mkdir -p $(@D)

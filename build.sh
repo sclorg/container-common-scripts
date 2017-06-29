@@ -66,12 +66,5 @@ for dir in ${dirs}; do
     docker_build_with_version Dockerfile
   fi
 
-  ok_to_tag=1
-  if [[ $ok_to_tag -eq 1 ]]; then
-    echo "-> Tagging image to '$name:$version' and '$name:latest'"
-    docker tag $IMAGE_NAME "$name:$version"
-    docker tag $IMAGE_NAME "$name:latest"
-  fi
-
   popd > /dev/null
 done
