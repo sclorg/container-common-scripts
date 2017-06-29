@@ -16,7 +16,7 @@ for dir in ${VERSIONS}; do
   if [[ -v TEST_MODE ]]; then
     IMAGE_NAME+="-candidate"
   fi
-  echo "-> Tagging image to '$name:$version' and '$name:latest'"
+  echo "-> Tagging image '$IMAGE_NAME' as '$name:$version' and '$name:latest'"
   docker tag $IMAGE_NAME "$name:$version"
   docker tag $IMAGE_NAME "$name:latest"
 
