@@ -27,7 +27,6 @@ function docker_build_with_version {
   local docker_cmd=(docker build ${BUILD_OPTIONS} -f "${dockerfile}" .)
   { IMAGE_ID=$("${docker_cmd[@]}" | tee /dev/fd/$fd | awk '/Successfully built/{print $NF}'); } {fd}>&1
 
-  echo $IMAGE_ID >.image-id
   name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
 
   IMAGE_NAME=$name
@@ -40,6 +39,7 @@ function docker_build_with_version {
   if [[ "${SKIP_SQUASH}" != "1" ]]; then
     squash "${dockerfile}"
   fi
+  docker images $IMAGE_NAME -q >.image-id
 }
 
 # Install the docker squashing tool[1] and squash the result image
