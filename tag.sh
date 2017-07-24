@@ -18,7 +18,7 @@ for dir in ${VERSIONS}; do
   name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
   version=$(docker inspect -f "{{.Config.Labels.version}}" $IMAGE_ID)
   IMAGE_NAME=$name
-  if [[ -v TEST_MODE ]]; then
+  if [ -n "${TEST_MODE}" ]; then
     IMAGE_NAME+="-candidate"
   fi
 
