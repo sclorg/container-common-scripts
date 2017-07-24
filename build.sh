@@ -30,7 +30,7 @@ function docker_build_with_version {
   name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
 
   IMAGE_NAME=$name
-  if [[ -v TEST_MODE ]]; then
+  if [ -n "${TEST_MODE}" ]; then
     IMAGE_NAME+="-candidate"
   fi
   echo "-> Image ${IMAGE_ID} tagged as ${IMAGE_NAME}"
