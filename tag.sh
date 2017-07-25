@@ -8,6 +8,7 @@
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
 
 for dir in ${VERSIONS}; do
+  [ ! -e "${dir}/.image-id" ] && echo "-> Image for version $dir not built, skipping tag." && continue
   pushd ${dir} > /dev/null
   IMAGE_ID=$(cat .image-id)
   name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
