@@ -37,6 +37,7 @@ function docker_build_with_version {
   docker tag $IMAGE_ID $IMAGE_NAME
 
   if [[ "${SKIP_SQUASH}" != "1" ]]; then
+    docker tag $IMAGE_ID "${IMAGE_NAME}-unsquashed"
     squash "${dockerfile}"
   fi
   # Narrow by repo:tag first and then grep out the exact match
