@@ -20,6 +20,7 @@ script_env = \
 	SKIP_SQUASH=$(SKIP_SQUASH)                      \
 	UPDATE_BASE=$(UPDATE_BASE)                      \
 	OS=$(OS)                                        \
+	CLEAN_AFTER=$(CLEAN_AFTER)                      \
 	OPENSHIFT_NAMESPACES="$(OPENSHIFT_NAMESPACES)"
 
 .PHONY: build

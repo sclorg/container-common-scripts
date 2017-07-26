@@ -38,9 +38,11 @@ function docker_build_with_version {
   docker tag $IMAGE_ID $IMAGE_NAME
 
   if [[ "${SKIP_SQUASH}" != "1" ]]; then
+    docker tag $IMAGE_ID "${IMAGE_NAME}-unsquashed"
     squash "${dockerfile}"
   fi
-  docker images $IMAGE_NAME -q >.image-id
+  # Narrow by repo:tag first and then grep out the exact match
+  docker images "${IMAGE_NAME}:latest" --format="{{.Repository}} {{.ID}}" | grep "^${IMAGE_NAME}" | awk '{print $2}' >.image-id
 }
 
 # Install the docker squashing tool[1] and squash the result image
