@@ -12,11 +12,11 @@ for dir in ${VERSIONS}; do
   name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
   IMAGE_NAME=$name"-candidate"
 
-  if [[ -v TEST_MODE ]]; then
+  if [ -n "${TEST_MODE}" ]; then
     VERSION=$dir IMAGE_NAME=${IMAGE_NAME} test/run
   fi
 
-  if [[ -v TEST_OPENSHIFT_MODE ]]; then
+  if [ -n "${TEST_OPENSHIFT_MODE}" ]; then
     if [[ -x test/run-openshift ]]; then
       VERSION=$dir IMAGE_NAME=${IMAGE_NAME} test/run-openshift
     else
