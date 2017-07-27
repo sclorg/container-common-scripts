@@ -13,6 +13,7 @@ tag = $(common_dir)/tag.sh
 clean = $(common_dir)/clean.sh
 
 ifeq ($(TARGET),rhel7)
+	SKIP_SQUASH ?= 0
 	OS := rhel7
 	DOCKERFILE ?= Dockerfile.rhel7
 else ifeq ($(TARGET),fedora)
@@ -22,6 +23,8 @@ else
 	OS := centos7
 	DOCKERFILE ?= Dockerfile
 endif
+
+SKIP_SQUASH ?= 1
 
 script_env = \
 	SKIP_SQUASH=$(SKIP_SQUASH)                      \
