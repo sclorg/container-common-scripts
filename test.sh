@@ -8,17 +8,17 @@
 for dir in ${VERSIONS}; do
   [ ! -e "${dir}/.image-id" ] && echo "-> Image for version $dir not built, skipping tests." && continue
   pushd ${dir} > /dev/null
-  IMAGE_ID=$(cat .image-id)
-  name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
-  IMAGE_NAME=$name"-candidate"
+  export IMAGE_ID=$(cat .image-id)
+  # Kept also IMAGE_NAME as some tests might still use that.
+  export IMAGE_NAME=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
 
   if [ -n "${TEST_MODE}" ]; then
-    VERSION=$dir IMAGE_NAME=${IMAGE_NAME} test/run
+    VERSION=$dir test/run
   fi
 
   if [ -n "${TEST_OPENSHIFT_MODE}" ]; then
     if [[ -x test/run-openshift ]]; then
-      VERSION=$dir IMAGE_NAME=${IMAGE_NAME} test/run-openshift
+      VERSION=$dir test/run-openshift
     else
       echo "-> OpenShift tests are not present, skipping"
     fi

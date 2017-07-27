@@ -3,7 +3,6 @@
 #
 # OS - Specifies distribution - "rhel7", "centos7" or "fedora"
 # VERSION - Specifies the image version - (must match with subdirectory in repo)
-# TEST_MODE - If set, build a candidate image and test it
 # TAG_ON_SUCCESS - If set, tested image will be re-tagged as a non-candidate
 #       image, if the tests pass.
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
@@ -68,33 +67,64 @@ function docker_build_with_version {
                "awk '/Successfully built/{print \$NF}'" \
                IMAGE_ID
 
-  name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
 
-  IMAGE_NAME=$name
-  if [ -n "${TEST_MODE}" ]; then
-    IMAGE_NAME+="-candidate"
+  if test -f .image-id.raw; then
+      local previous_id=`cat .image-id.raw`
+      if test "$IMAGE_ID" != "$previous_id"; then
+          # Try to do "best-effort" cleanup the previous one.
+          docker rmi "$previous_id" || :
+      fi
   fi
-  echo "-> Image ${IMAGE_ID} tagged as ${IMAGE_NAME}"
-  docker tag $IMAGE_ID $IMAGE_NAME
+  echo "$IMAGE_ID" > .image-id.raw
 
-  if [[ "${SKIP_SQUASH}" != "1" ]]; then
-    docker tag $IMAGE_ID "${IMAGE_NAME}-unsquashed"
-    squash "${dockerfile}"
-  fi
-  # Narrow by repo:tag first and then grep out the exact match
-  docker images "${IMAGE_NAME}:latest" --format="{{.Repository}} {{.ID}}" | grep "^${IMAGE_NAME}" | awk '{print $2}' >.image-id
+  squash "${dockerfile}" "$IMAGE_ID"
+  echo "$IMAGE_ID" > .image-id
 }
 
+# squash DOCKERFILE
+# -----------------
 # Install the docker squashing tool[1] and squash the result image
+# when necessary.
 # [1] https://github.com/goldmann/docker-squash
-function squash {
+# Reads:
+#   $IMAGE_ID
+# Sets:
+#   $IMAGE_ID
+squash ()
+{
+  local base squashed_from squashed= unsquashed=$IMAGE_ID
+  test "$SKIP_SQUASH" = 1 && return 0
+
   # FIXME: We have to use the exact versions here to avoid Docker client
   #        compatibility issues
   local squash_version=1.0.5
   test "$(docker-squash --version 2>&1)" = "$squash_version" || \
       error "docker-squash $squash_version required"
-  base=$(awk '/^FROM/{print $2}' $1)
-  docker-squash -f $base ${IMAGE_NAME} -t ${IMAGE_NAME}
+
+  if test -f .image-id.squashed; then
+      squashed=$(cat .image-id.squashed)
+      # We (maybe) already have squashed file.
+      if test -f .image-id.squashed_from; then
+          squashed_from=$(cat .image-id.squashed_from)
+          if test "$squashed_from" = "$IMAGE_ID"; then
+              # $squashed is up2date
+              IMAGE_ID=$squashed
+              return 0
+          fi
+      fi
+
+      # We are going to squash now, so if there's existing squashed image, try
+      # to do the best-effort 'rmi' to not waste memory unnecessarily.
+      docker rmi "$squashed" || :
+  fi
+
+  base=$(awk '/^FROM/{print $2}' "$1")
+  parse_output "docker-squash -f '$base' '$unsquashed'" \
+               "awk '/New squashed image ID is/{print \$NF}'" \
+               IMAGE_ID stderr
+
+  echo "$unsquashed" > .image-id.squashed_from
+  echo "$IMAGE_ID" > .image-id.squashed
 }
 
 # Versions are stored in subdirectories. You can specify VERSION variable
