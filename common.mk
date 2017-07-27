@@ -74,3 +74,4 @@ clean:
 %root/help.1: %README.md
 	mkdir -p $(@D)
 	go-md2man -in "$^" -out "$@"
+	chmod a+r "$@"
