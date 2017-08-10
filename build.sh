@@ -16,6 +16,8 @@ DOCKERFILE_PATH=""
 # Perform docker build but append the LABEL with GIT commit id at the end
 function docker_build_with_version {
   local dockerfile="$1"
+  local exclude=.exclude-${OS}
+  [ -e $exclude ] && echo "-> $exclude file exists for version $dir, skipping build." && return
   [ ! -e "$dockerfile" ] && echo "-> $dockerfile for version $dir does not exist, skipping build." && return
   echo "-> Version ${dir}: building image from '${dockerfile}' ..."
 
