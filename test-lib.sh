@@ -10,10 +10,13 @@
 # run_container_creation_tests
 # run_doc_test <words_to_look_for_in_the_doc>"
 
+# Container CI tests
+# abbreviated as "concit"
+
 # may be redefined in the specific container testfile
 EXPECTED_EXIT_CODE=0
 
-function cleanup() {
+function concit_cleanup() {
   for cid_file in $CID_FILE_DIR/* ; do
     CONTAINER=$(cat $cid_file)
 
@@ -30,19 +33,22 @@ function cleanup() {
   rmdir $CID_FILE_DIR
   : "Done."
 }
-trap cleanup EXIT SIGINT
 
-function get_cid() {
+function concit_enable_cleanup() {
+  trap concit_cleanup EXIT SIGINT
+}
+
+function concit_get_cid() {
   local name="$1" ; shift || return 1
   echo $(cat "$CID_FILE_DIR/$name")
 }
 
-function get_container_ip() {
+function concit_get_cip() {
   local id="$1" ; shift
-  docker inspect --format='{{.NetworkSettings.IPAddress}}' $(get_cid "$id")
+  docker inspect --format='{{.NetworkSettings.IPAddress}}' $(concit_get_cid "$id")
 }
 
-function wait_for_cid() {
+function concit_wait_for_cid() {
   local max_attempts=10
   local sleep_time=1
   local attempt=1
@@ -56,7 +62,7 @@ function wait_for_cid() {
 }
 
 # Make sure the invocation of docker run fails.
-function assert_container_creation_fails() {
+function concit_assert_container_creation_fails() {
 
   # Time the docker run command. It should fail. If it doesn't fail,
   # container will keep running so we kill it with SIGKILL to make sure
@@ -67,21 +73,21 @@ function assert_container_creation_fails() {
   set -e
 
   # Timeout will exit with a high number.
-  if [ $ret -gt 128 ]; then
+  if [ $ret -gt 30 ]; then
     return 1
   fi
 }
 
 # to pass some arguments you need to specify CONTAINER_ARGS variable
-function create_container() {
+function concit_create_container() {
   cid_file="$CID_FILE_DIR/$1" ; shift
   # create container with a cidfile in a directory for cleanup
-  docker run ${CONTAINER_ARGS:-} --cidfile="$cid_file" -d $IMAGE_NAME "$@"
+  docker run ${CONTAINER_ARGS:-} --cidfile="$cid_file" -d "$@" $IMAGE_NAME
   : "Created container $(cat $cid_file)"
-  wait_for_cid
+  concit_wait_for_cid
 }
 
-function run_doc_test() {
+function concit_run_doc_test() {
   local tmpdir=$(mktemp -d)
   local f
   : "  Testing documentation in the container image"
@@ -104,7 +110,7 @@ function run_doc_test() {
   : "  Success!"
 }
 
-function run_all_tests() {
+function concit_run_all_tests() {
   for test_case in $TEST_LIST; do
     : "Running test $test_case"
     $test_case
