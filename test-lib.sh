@@ -11,14 +11,21 @@
 # run_doc_test <words_to_look_for_in_the_doc>"
 
 # Container CI tests
-# abbreviated as "concit"
+# abbreviated as "ct"
 
 # may be redefined in the specific container testfile
 EXPECTED_EXIT_CODE=0
 
-function concit_cleanup() {
+# ct_cleanup
+# --------------------
+# Cleans up containers used during tests. Stops and removes all containers
+# referenced by cid_files in CID_FILE_DIR. Dumps logs if a container exited
+# unexpectedly. Removes the cid_files and CID_FILE_DIR as well.
+# Uses: $CID_FILE_DIR - path to directory containing cid_files
+# Uses: $EXPECTED_EXIT_CODE - expected container exit code
+function ct_cleanup() {
   for cid_file in $CID_FILE_DIR/* ; do
-    CONTAINER=$(cat $cid_file)
+    local CONTAINER=$(cat $cid_file)
 
     : "Stopping and removing container $CONTAINER..."
     docker stop $CONTAINER
@@ -34,21 +41,39 @@ function concit_cleanup() {
   : "Done."
 }
 
-function concit_enable_cleanup() {
-  trap concit_cleanup EXIT SIGINT
+# ct_enable_cleanup
+# --------------------
+# Enables automatic container cleanup after tests.
+function ct_enable_cleanup() {
+  trap ct_cleanup EXIT SIGINT
 }
 
-function concit_get_cid() {
+# ct_get_cid [name]
+# --------------------
+# Prints container id from cid_file based on the name of the file.
+# Argument: name - name of cid_file containing the container id
+# Uses: $CID_FILE_DIR - path to directory containing cid_files
+function ct_get_cid() {
   local name="$1" ; shift || return 1
   echo $(cat "$CID_FILE_DIR/$name")
 }
 
-function concit_get_cip() {
+# ct_get_cip [id]
+# --------------------
+# Prints container ip address based on the container id.
+# Argument: id - container id
+function ct_get_cip() {
   local id="$1" ; shift
-  docker inspect --format='{{.NetworkSettings.IPAddress}}' $(concit_get_cid "$id")
+  docker inspect --format='{{.NetworkSettings.IPAddress}}' $(ct_get_cid "$id")
 }
 
-function concit_wait_for_cid() {
+# ct_wait_for_cid [cid_file]
+# --------------------
+# Holds the execution until the cid_file is created. Usually run after container
+# creation.
+# Argument: cid_file - name of the cid_file that should be created
+function ct_wait_for_cid() {
+  local cid_file=$1
   local max_attempts=10
   local sleep_time=1
   local attempt=1
@@ -61,56 +86,84 @@ function concit_wait_for_cid() {
   done
 }
 
-# Make sure the invocation of docker run fails.
-function concit_assert_container_creation_fails() {
+# ct_assert_container_creation_fails [container_args]
+# --------------------
+# The invocation of docker run should fail based on invalid container_args
+# passed to the function. Returns 0 when container fails to start properly.
+# Argument: container_args - all argument are passed directly to dokcer run
+function ct_assert_container_creation_fails() {
 
   # Time the docker run command. It should fail. If it doesn't fail,
-  # container will keep running so we kill it with SIGKILL to make sure
+  # container will keep running so we kill it with SIGTERM to make sure
   # timeout returns a non-zero value.
   set +e
-  timeout -s SIGTERM --preserve-status 10s docker run --rm "$@" $IMAGE_NAME
+  timeout -s SIGTERM --preserve-status 30s docker run --rm "$@" $IMAGE_NAME
   ret=$?
   set -e
 
   # Timeout will exit with a high number.
-  if [ $ret -gt 30 ]; then
+  if [ $ret -gt 128 ]; then
     return 1
   fi
 }
 
-# to pass some arguments you need to specify CONTAINER_ARGS variable
-function concit_create_container() {
-  cid_file="$CID_FILE_DIR/$1" ; shift
+# ct_create_container [name, additional_args]
+# --------------------
+# Creates a container using the IMAGE_NAME and CONTAINER_ARGS variables. Also
+# stores the container id to a cid_file located in the CID_FILE_DIR, and waits
+# for the creation of the file.
+# Argument: name - name of cid_file containing the container id
+# Argument: additional_args - optional arguments passed directly to docker
+# Uses: $CID_FILE_DIR - path to directory containing cid_files
+# Uses: $CONTAINER_ARGS - optional arguments passed directly to docker run
+# Uses: $IMAGE_NAME - name of the image being tested
+function ct_create_container() {
+  local cid_file="$CID_FILE_DIR/$1" ; shift
   # create container with a cidfile in a directory for cleanup
   docker run ${CONTAINER_ARGS:-} --cidfile="$cid_file" -d "$@" $IMAGE_NAME
+  ct_wait_for_cid $cid_file
   : "Created container $(cat $cid_file)"
-  concit_wait_for_cid
 }
 
-function concit_scl_usage() {
+# ctest_scl_usage [name, command, expected]
+# --------------------
+# Tests three ways of running the SCL, by looking for an expected string
+# in the output of the command
+# Argument: name - name of cid_file containing the container id
+# Argument: command - executed inside the container
+# Argument: expected - string that is expected to be in the command output
+# Uses: $CID_FILE_DIR - path to directory containing cid_files
+# Uses: $IMAGE_NAME - name of the image being tested
+function ctest_scl_usage() {
   local name="$1"
   local run_cmd="$2"
   local expected="$3"
-
+  local out=""
   : "  Testing the image SCL enable"
-  out=$(docker run --rm ${IMAGE_NAME} /bin/bash -c "${run_cmd}")
+  out=$(docker run --rm ${IMAGE_NAME} --cidfile="$CID_FILE_DIR/$name" /bin/bash -c "${command}")
   if ! echo "${out}" | grep -q "${expected}"; then
-    echo "ERROR[/bin/bash -c "${run_cmd}"] Expected '${expected}', got '${out}'"
+    echo "ERROR[/bin/bash -c "${command}"] Expected '${expected}', got '${out}'"
     return 1
   fi
-  out=$(docker exec $(get_cid $name) /bin/bash -c "${run_cmd}" 2>&1)
+  out=$(docker exec $(get_cid $name) /bin/bash -c "${command}" 2>&1)
   if ! echo "${out}" | grep -q "${expected}"; then
-    echo "ERROR[exec /bin/bash -c "${run_cmd}"] Expected '${expected}', got '${out}'"
+    echo "ERROR[exec /bin/bash -c "${command}"] Expected '${expected}', got '${out}'"
     return 1
   fi
-  out=$(docker exec $(get_cid $name) /bin/sh -ic "${run_cmd}" 2>&1)
+  out=$(docker exec $(get_cid $name) /bin/sh -ic "${command}" 2>&1)
   if ! echo "${out}" | grep -q "${expected}"; then
-    echo "ERROR[exec /bin/sh -ic "${run_cmd}"] Expected '${expected}', got '${out}'"
+    echo "ERROR[exec /bin/sh -ic "${command}"] Expected '${expected}', got '${out}'"
     return 1
   fi
 }
 
-function concit_run_doc_test() {
+# ctest_doc_content [strings]
+# --------------------
+# Looks for occurence of stirngs in the documentation files and checks
+# the format of the files. Files examined: help.1
+# Argument: strings - strings expected to appear in the documentation
+# Uses: $IMAGE_NAME - name of the image being tested
+function ctest_doc_content() {
   local tmpdir=$(mktemp -d)
   local f
   : "  Testing documentation in the container image"
@@ -133,7 +186,11 @@ function concit_run_doc_test() {
   : "  Success!"
 }
 
-function concit_run_all_tests() {
+# ct_run_test_list
+# --------------------
+# Execute the tests specified by TEST_LIST
+# Uses: $TEST_LIST - list of test names
+function ct_run_test_list() {
   for test_case in $TEST_LIST; do
     : "Running test $test_case"
     $test_case
