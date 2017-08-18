@@ -13,6 +13,41 @@ VERSION=${2-$VERSION}
 
 DOCKERFILE_PATH=""
 
+# parse_output COMMAND FILTER_COMMAND OUTVAR [STREAM={stderr|stdout}]
+# -------------------------------------------------------------------
+# Parse standard (error) output of COMMAND with FILTER_COMMAND and store the
+# output into variable named OUTVAR.  STREAM might be 'stdout' or 'stderr',
+# defaults to 'stdout'.  The filtered output stays (live) printed to terminal.
+# This method doesn't create any explicit temporary files.
+# Defines:
+#   ${$OUTVAR}: Set to FILTER_COMMAND output.
+parse_output ()
+{
+  local command=$1 filter=$2 var=$3 stream=$4
+  local raw_output= rc=0
+  {
+      raw_output=$(
+        set -o pipefail
+        {
+            case $stream in
+            stdout|1|"")
+                eval "$command" | tee >(cat - >&$stdout_fd)
+                 ;;
+            stderr|2)
+                set +x # avoid stderr pollution
+                eval "$command" {free_fd}>&1 1>&$stdout_fd 2>&$free_fd | tee >(cat - >&$stderr_fd)
+                ;;
+            esac
+            # Inherit correct exit status.
+            (exit ${PIPESTATUS[0]})
+        } | eval "$filter"
+      )
+  } {stdout_fd}>&1 {stderr_fd}>&2
+  rc=$?
+  eval "$var=\$raw_output"
+  (exit $rc)
+}
+
 # Perform docker build but append the LABEL with GIT commit id at the end
 function docker_build_with_version {
   local dockerfile="$1"
@@ -27,8 +62,9 @@ function docker_build_with_version {
     BUILD_OPTIONS+=" --pull=true"
   fi
 
-  local docker_cmd=(docker build ${BUILD_OPTIONS} -f "${dockerfile}" .)
-  { IMAGE_ID=$("${docker_cmd[@]}" | tee /dev/fd/$fd | awk '/Successfully built/{print $NF}'); } {fd}>&1
+  parse_output 'docker build $BUILD_OPTIONS -f "$dockerfile" .' \
+               "awk '/Successfully built/{print \$NF}'" \
+               IMAGE_ID
 
   name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
 
