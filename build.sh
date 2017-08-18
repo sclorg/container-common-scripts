@@ -3,8 +3,6 @@
 #
 # OS - Specifies distribution - "rhel7", "centos7" or "fedora"
 # VERSION - Specifies the image version - (must match with subdirectory in repo)
-# TAG_ON_SUCCESS - If set, tested image will be re-tagged as a non-candidate
-#       image, if the tests pass.
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
 
 OS=${1-$OS}
