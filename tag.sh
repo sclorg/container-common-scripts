@@ -4,7 +4,6 @@
 # Resulting image will be tagged: 'name:version' and 'name:latest'. Name and version
 #                                  are values of labels from resulted image
 #
-# TEST_MODE - If set, the script will look for *-candidate images to tag
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
 
 for dir in ${VERSIONS}; do
@@ -13,9 +12,6 @@ for dir in ${VERSIONS}; do
   IMAGE_ID=$(cat .image-id)
   name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
   version=$(docker inspect -f "{{.Config.Labels.version}}" $IMAGE_ID)
-  if [ -n "${TEST_MODE}" ]; then
-    name+="-candidate"
-  fi
 
   echo "-> Tagging image '$IMAGE_ID' as '$name:$version' and '$name:latest'"
   docker tag $IMAGE_ID "$name:$version"
