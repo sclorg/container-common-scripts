@@ -50,7 +50,9 @@ build-all: $(VERSIONS)
 $(VERSIONS): % : %/root/help.1
 	VERSION="$@" $(script_env) $(build)
 
-.PHONY: test
+.PHONY: test check
+check: test
+
 test: script_env += TEST_MODE=true
 
 # The tests should ideally depend on $IMAGE_ID only, but see PR#19 for more info
