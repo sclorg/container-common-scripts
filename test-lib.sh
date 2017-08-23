@@ -25,16 +25,16 @@ EXPECTED_EXIT_CODE=0
 # Uses: $EXPECTED_EXIT_CODE - expected container exit code
 function ct_cleanup() {
   for cid_file in $CID_FILE_DIR/* ; do
-    local CONTAINER=$(cat $cid_file)
+    local container=$(cat $cid_file)
 
-    : "Stopping and removing container $CONTAINER..."
-    docker stop $CONTAINER
-    exit_status=$(docker inspect -f '{{.State.ExitCode}}' $CONTAINER)
+    : "Stopping and removing container $container..."
+    docker stop $container
+    exit_status=$(docker inspect -f '{{.State.ExitCode}}' $container)
     if [ "$exit_status" != "$EXPECTED_EXIT_CODE" ]; then
-      : "Dumping logs for $CONTAINER"
-      docker logs $CONTAINER
+      : "Dumping logs for $container"
+      docker logs $container
     fi
-    docker rm $CONTAINER
+    docker rm $container
     rm $cid_file
   done
   rmdir $CID_FILE_DIR
@@ -141,7 +141,7 @@ function ct_create_container() {
   : "Created container $(cat $cid_file)"
 }
 
-# ctest_scl_usage [name, command, expected]
+# ct_scl_usage_old [name, command, expected]
 # --------------------
 # Tests three ways of running the SCL, by looking for an expected string
 # in the output of the command
@@ -150,7 +150,7 @@ function ct_create_container() {
 # Argument: expected - string that is expected to be in the command output
 # Uses: $CID_FILE_DIR - path to directory containing cid_files
 # Uses: $IMAGE_NAME - name of the image being tested
-function ctest_scl_usage() {
+function ct_scl_usage_old() {
   local name="$1"
   local run_cmd="$2"
   local expected="$3"
@@ -173,13 +173,13 @@ function ctest_scl_usage() {
   fi
 }
 
-# ctest_doc_content [strings]
+# ct_doc_content_old [strings]
 # --------------------
 # Looks for occurence of stirngs in the documentation files and checks
 # the format of the files. Files examined: help.1
 # Argument: strings - strings expected to appear in the documentation
 # Uses: $IMAGE_NAME - name of the image being tested
-function ctest_doc_content() {
+function ct_doc_content_old() {
   local tmpdir=$(mktemp -d)
   local f
   : "  Testing documentation in the container image"
