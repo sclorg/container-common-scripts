@@ -7,8 +7,8 @@
 # CID_FILE_DIR=$(mktemp --suffix=<container>_test_cidfiles -d)
 # reguires definition of TEST_LIST 
 # TEST_LIST="\
-# run_container_creation_tests
-# run_doc_test <words_to_look_for_in_the_doc>"
+# ctest_container_creation
+# ctest_doc_content"
 
 # Container CI tests
 # abbreviated as "ct"
@@ -79,32 +79,48 @@ function ct_wait_for_cid() {
   local attempt=1
   local result=1
   while [ $attempt -le $max_attempts ]; do
-    [ -f $cid_file ] && [ -s $cid_file ] && break
+    [ -f $cid_file ] && [ -s $cid_file ] && return 0
     : "Waiting for container start..."
     attempt=$(( $attempt + 1 ))
     sleep $sleep_time
   done
+  return 1
 }
 
 # ct_assert_container_creation_fails [container_args]
 # --------------------
 # The invocation of docker run should fail based on invalid container_args
 # passed to the function. Returns 0 when container fails to start properly.
-# Argument: container_args - all argument are passed directly to dokcer run
+# Argument: container_args - all arguments are passed directly to dokcer run
+# Uses: $CID_FILE_DIR - path to directory containing cid_files
 function ct_assert_container_creation_fails() {
-
-  # Time the docker run command. It should fail. If it doesn't fail,
-  # container will keep running so we kill it with SIGTERM to make sure
-  # timeout returns a non-zero value.
+  local ret=0
+  local max_attempts=10
+  local attempt=1
+  local cid_file=assert
   set +e
-  timeout -s SIGTERM --preserve-status 30s docker run --rm "$@" $IMAGE_NAME
-  ret=$?
-  set -e
+  ct_create_container $cid_file "$@"
+  if [ $? -eq 0 ]; then
+    local cid=$(ct_get_cid $cid_file)
 
-  # Timeout will exit with a high number.
-  if [ $ret -gt 128 ]; then
-    return 1
+    while [ "$(docker inspect -f '{{.State.Running}}' $cid)" == "true" ] ; do
+      sleep 2
+      attempt=$(( $attempt + 1 ))
+      if [ $attempt -gt $max_attempts ]; then
+        docker stop $cid
+        ret=1
+        break
+      fi
+    done
+    exit_status=$(docker inspect -f '{{.State.ExitCode}}' $cid)
+    if [ "$exit_status" == "0" ]; then
+      ret=1
+    fi
+    docker rm $cid
+    rm $CID_FILE_DIR/$cid_file
   fi
+  set -e
+  return $ret
 }
 
 # ct_create_container [name, additional_args]
@@ -121,7 +137,7 @@ function ct_create_container() {
   local cid_file="$CID_FILE_DIR/$1" ; shift
   # create container with a cidfile in a directory for cleanup
   docker run ${CONTAINER_ARGS:-} --cidfile="$cid_file" -d "$@" $IMAGE_NAME
-  ct_wait_for_cid $cid_file
+  ct_wait_for_cid $cid_file || return 1
   : "Created container $(cat $cid_file)"
 }
 
