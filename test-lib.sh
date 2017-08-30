@@ -34,7 +34,7 @@ function ct_cleanup() {
       : "Dumping logs for $container"
       docker logs $container
     fi
-    docker rm $container
+    docker rm -v $container
     rm $cid_file
   done
   rmdir $CID_FILE_DIR
@@ -51,7 +51,7 @@ function ct_enable_cleanup() {
 # ct_get_cid [name]
 # --------------------
 # Prints container id from cid_file based on the name of the file.
-# Argument: name - name of cid_file containing the container id
+# Argument: name - name of cid_file where the container id will be stored
 # Uses: $CID_FILE_DIR - path to directory containing cid_files
 function ct_get_cid() {
   local name="$1" ; shift || return 1
@@ -99,7 +99,9 @@ function ct_assert_container_creation_fails() {
   local attempt=1
   local cid_file=assert
   set +e
-  ct_create_container $cid_file "$@"
+  local old_container_args="${CONTAINER_ARGS-}"
+  CONTAINER_ARGS="$@"
+  ct_create_container $cid_file
   if [ $? -eq 0 ]; then
     local cid=$(ct_get_cid $cid_file)
 
@@ -116,27 +118,28 @@ function ct_assert_container_creation_fails() {
     if [ "$exit_status" == "0" ]; then
       ret=1
     fi
-    docker rm $cid
+    docker rm -v $cid
     rm $CID_FILE_DIR/$cid_file
   fi
+  [ ! -z $old_container_args ] && CONTAINER_ARGS="$old_container_args"
   set -e
   return $ret
 }
 
-# ct_create_container [name, additional_args]
+# ct_create_container [name, command]
 # --------------------
 # Creates a container using the IMAGE_NAME and CONTAINER_ARGS variables. Also
 # stores the container id to a cid_file located in the CID_FILE_DIR, and waits
 # for the creation of the file.
-# Argument: name - name of cid_file containing the container id
-# Argument: additional_args - optional arguments passed directly to docker
+# Argument: name - name of cid_file where the container id will be stored
+# Argument: command - optional command to be executed in the container
 # Uses: $CID_FILE_DIR - path to directory containing cid_files
 # Uses: $CONTAINER_ARGS - optional arguments passed directly to docker run
 # Uses: $IMAGE_NAME - name of the image being tested
 function ct_create_container() {
   local cid_file="$CID_FILE_DIR/$1" ; shift
   # create container with a cidfile in a directory for cleanup
-  docker run ${CONTAINER_ARGS:-} --cidfile="$cid_file" -d "$@" $IMAGE_NAME
+  docker run --cidfile="$cid_file" -d ${CONTAINER_ARGS:-} $IMAGE_NAME "$@"
   ct_wait_for_cid $cid_file || return 1
   : "Created container $(cat $cid_file)"
 }
@@ -145,28 +148,28 @@ function ct_create_container() {
 # --------------------
 # Tests three ways of running the SCL, by looking for an expected string
 # in the output of the command
-# Argument: name - name of cid_file containing the container id
+# Argument: name - name of cid_file where the container id will be stored
 # Argument: command - executed inside the container
 # Argument: expected - string that is expected to be in the command output
 # Uses: $CID_FILE_DIR - path to directory containing cid_files
 # Uses: $IMAGE_NAME - name of the image being tested
 function ct_scl_usage_old() {
   local name="$1"
-  local run_cmd="$2"
+  local command="$2"
   local expected="$3"
   local out=""
   : "  Testing the image SCL enable"
-  out=$(docker run --rm ${IMAGE_NAME} --cidfile="$CID_FILE_DIR/$name" /bin/bash -c "${command}")
+  out=$(docker run --rm ${IMAGE_NAME} /bin/bash -c "${command}")
   if ! echo "${out}" | grep -q "${expected}"; then
     echo "ERROR[/bin/bash -c "${command}"] Expected '${expected}', got '${out}'"
     return 1
   fi
-  out=$(docker exec $(get_cid $name) /bin/bash -c "${command}" 2>&1)
+  out=$(docker exec $(ct_get_cid $name) /bin/bash -c "${command}" 2>&1)
   if ! echo "${out}" | grep -q "${expected}"; then
     echo "ERROR[exec /bin/bash -c "${command}"] Expected '${expected}', got '${out}'"
     return 1
   fi
-  out=$(docker exec $(get_cid $name) /bin/sh -ic "${command}" 2>&1)
+  out=$(docker exec $(ct_get_cid $name) /bin/sh -ic "${command}" 2>&1)
   if ! echo "${out}" | grep -q "${expected}"; then
     echo "ERROR[exec /bin/sh -ic "${command}"] Expected '${expected}', got '${out}'"
     return 1
@@ -209,6 +212,8 @@ function ct_doc_content_old() {
 function ct_run_test_list() {
   for test_case in $TEST_LIST; do
     : "Running test $test_case"
+    [ -f test/$test_case ] && source test/$test_case
+    [ -f ../test/$test_case ] && source ../test/$test_case
     $test_case
   done;
 }
