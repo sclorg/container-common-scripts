@@ -50,27 +50,38 @@ analyse_commits ()
 analyse_commits
 
 rc=true
-for container in "${!IMAGES[@]}"; do
-    if test -e "$container"; then
+for image in "${!IMAGES[@]}"; do
+    if test -e "$image"; then
         rc=false
-        error "directory '$container' exists"
+        error "directory '$image' exists"
         continue
     fi
 
     (   set -e
-        cleanup () { rm -rf "$container"; }
+        testdir=$PWD
+        cleanup () {
+            set -x
+            # Ensure the cleanup finishes!
+            trap '' INT
+            # Go back, wherever we are.
+            cd "$testdir"
+            # Try to cleanup, if available (and if needed).
+            make clean -C "$image" || :
+            # Drop the image sources.
+            test ! -d "$image" || rm -rf "$image"
+        }
         trap cleanup EXIT
 
-        info "Testing $container container"
+        info "Testing $image image"
         # Use --recursive even if we remove 'common', because there might be
         # other git submodules which need to be tested.
 
-        git clone --recursive -q https://github.com/sclorg/"$container".git
-        cd "$container"
+        git clone --recursive -q https://github.com/sclorg/"$image".git
+        cd "$image"
 
-        revision=${IMAGES[$container]}
+        revision=${IMAGES[$image]}
         if ! test "$revision" = master; then
-            info "Fetching $container PR $revision"
+            info "Fetching $image PR $revision"
             git fetch origin "pull/$revision/head":PR_BRANCH
             git checkout PR_BRANCH --recurse-submodules
         fi
@@ -81,13 +92,16 @@ for container in "${!IMAGES[@]}"; do
         ln -s ../ common
 
         # TODO: Do we have to test everything?
-        PS4="+ [$container] " make TARGET="$OS" test
+        PS4="+ [$image] " make TARGET="$OS" test
+
+        # Cleanup.
+        make clean
     )
 
     # Note that '( set -e ; false ) || blah' doesn't work as one expects.
     if test $? -ne 0; then
         rc=false
-        error "Tests for $container failed"
+        error "Tests for $image failed"
     fi
 done
 
