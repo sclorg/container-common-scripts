@@ -25,12 +25,14 @@ else
 endif
 
 SKIP_SQUASH ?= 1
+DOCKER_BUILD_CONTEXT ?= .
 
 script_env = \
 	SKIP_SQUASH=$(SKIP_SQUASH)                      \
 	UPDATE_BASE=$(UPDATE_BASE)                      \
 	OS=$(OS)                                        \
 	CLEAN_AFTER=$(CLEAN_AFTER)                      \
+	DOCKER_BUILD_CONTEXT=$(DOCKER_BUILD_CONTEXT)    \
 	OPENSHIFT_NAMESPACES="$(OPENSHIFT_NAMESPACES)"
 
 # TODO: switch to 'build: build-all' once parallel builds are relatively safe
