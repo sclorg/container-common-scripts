@@ -37,7 +37,7 @@ analyse_commits ()
                 set -- $2
                 IFS=$old_IFS
                 set -- $1 $2
-                info "Testing $1 from PR $2"
+                info "PR commits ask for testing $1 from PR $2"
                 IMAGES[$1]=$2
                 ;;
         esac
