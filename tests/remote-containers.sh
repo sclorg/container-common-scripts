@@ -28,23 +28,20 @@ analyse_commits ()
     git merge-base --is-ancestor "$MERGE_INTO" HEAD \
         || die "Can not be --ff merged into $MERGE_INTO"
 
-    for commit in `git log --pretty=format:"%H" --reverse "$MERGE_INTO"..HEAD`
-    do
-        while read line; do
-            case $line in
-                Required-by:\ *)
-                    set -- $line
-                    old_IFS=$IFS
-                    IFS=\#
-                    set -- $2
-                    IFS=$old_IFS
-                    set -- $1 $2
-                    info "Commit $commit sets $1 to PR $2"
-                    IMAGES[$1]=$2
-                    ;;
-            esac
-        done < <(git show "$commit" --no-patch --pretty="%B")
-    done
+    while read line; do
+        case $line in
+            Required-by:\ *)
+                set -- $line
+                old_IFS=$IFS
+                IFS=\#
+                set -- $2
+                IFS=$old_IFS
+                set -- $1 $2
+                info "Testing $1 from PR $2"
+                IMAGES[$1]=$2
+                ;;
+        esac
+    done < <(git log --format=%B --reverse "$MERGE_INTO"..HEAD)
 }
 
 analyse_commits
