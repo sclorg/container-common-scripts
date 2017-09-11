@@ -70,9 +70,9 @@ for image in "${!IMAGES[@]}"; do
         trap cleanup EXIT
 
         info "Testing $image image"
+
         # Use --recursive even if we remove 'common', because there might be
         # other git submodules which need to be tested.
-
         git clone --recursive -q https://github.com/sclorg/"$image".git
         cd "$image"
 
@@ -80,7 +80,8 @@ for image in "${!IMAGES[@]}"; do
         if ! test "$revision" = master; then
             info "Fetching $image PR $revision"
             git fetch origin "pull/$revision/head":PR_BRANCH
-            git checkout PR_BRANCH --recurse-submodules
+            git checkout PR_BRANCH
+            git submodule update
         fi
 
         # We fail if the 'common' directory doesn't exist.
