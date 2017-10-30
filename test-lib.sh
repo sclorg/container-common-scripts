@@ -205,6 +205,39 @@ function ct_doc_content_old() {
   : "  Success!"
 }
 
+
+# ct_path_append PATH_VARNAME DIRECTORY
+# -------------------------------------
+# Append DIRECTORY to VARIABLE of name PATH_VARNAME, the VARIABLE must consist
+# of colon-separated list of directories.
+ct_path_append ()
+{
+    if eval "test -n \"\${$1-}\""; then
+        eval "$1=\$2:\$$1"
+    else
+        eval "$1=\$2"
+    fi
+}
+
+
+# ct_path_foreach PATH ACTION [ARGS ...]
+# --------------------------------------
+# For each DIR in PATH execute ACTION (path is colon separated list of
+# directories).  The particular calls to ACTION will look like
+# '$ ACTION directory [ARGS ...]'
+ct_path_foreach ()
+{
+    local dir dirlist action save_IFS
+    save_IFS=$IFS
+    IFS=:
+    dirlist=$1
+    action=$2
+    shift 2
+    for dir in $dirlist; do "$action" "$dir" "$@" ; done
+    IFS=$save_IFS
+}
+
+
 # ct_run_test_list
 # --------------------
 # Execute the tests specified by TEST_LIST
