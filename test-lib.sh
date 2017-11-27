@@ -251,3 +251,19 @@ function ct_run_test_list() {
   done;
 }
 
+# ct_gen_self_signed_cert_pem
+# ---------------------------
+# Generates a self-signed PEM certificate pair into specified directory.
+# Argument: output_dir - output directory path
+# Argument: base_name - base name of the certificate files
+# Resulted files will be those:
+#   <output_dir>/<base_name>-cert-selfsigned.pem -- public PEM cert
+#   <output_dir>/<base_name>-key.pem -- PEM private key
+ct_gen_self_signed_cert_pem() {
+  local output_dir=$1 ; shift
+  local base_name=$1 ; shift
+  mkdir -p ${output_dir}
+  openssl req -newkey rsa:2048 -nodes -keyout ${output_dir}/${base_name}-key.pem -subj '/C=GB/ST=Berkshire/L=Newbury/O=My Server Company' > ${base_name}-req.pem
+  openssl req -new -x509 -nodes -key ${output_dir}/${base_name}-key.pem -batch > ${output_dir}/${base_name}-cert-selfsigned.pem
+}
+
