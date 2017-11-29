@@ -230,12 +230,13 @@ function ct_os_cluster_up() {
   local dir="${1:-$(mktemp -d /var/tmp/openshift/os-data-XXXXXX)}" ; shift || :
   local is_public="${1:-'false'}" ; shift || :
   if ! grep -qe '--insecure-registry.*172\.30\.0\.0' /etc/sysconfig/docker ; then
-    sed -i '/OPTIONS=.*/c\OPTIONS="--selinux-enabled --insecure-registry 172.30.0.0/16"' /etc/sysconfig/docker
+    sed -i "s|OPTIONS='|OPTIONS='--insecure-registry 172.30.0.0/16 |" /etc/sysconfig/docker
   fi
   systemctl restart docker
 
   systemctl stop firewalld
   setenforce 0
+  iptables -F
 
   local cluster_ip="127.0.0.1"
   [ "${is_public}" == "true" ] && cluster_ip=$(ct_get_public_ip)
