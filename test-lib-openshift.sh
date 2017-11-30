@@ -94,6 +94,27 @@ function ct_os_wait_pod_ready() {
   while ! ct_os_check_pod_readiness "${pod_prefix}" "true" ; do
     echo -n "."
     [ ${SECONDS} -gt ${timeout} ] && echo " FAIL" && return 1
+    SECONDS=$((SECONDS+3))
+    sleep 3
+  done
+  echo " DONE"
+}
+
+# ct_os_wait_rc_ready [pod_prefix, timeout]
+# --------------------
+# Wait maximum [timeout] for the rc having desired number of replicas ready.
+# Arguments: pod_prefix - prefix of the replication controller
+# Arguments: timeout - how many seconds to wait seconds
+function ct_os_wait_rc_ready() {
+  local pod_prefix="${1}" ; shift
+  local timeout="${1}" ; shift
+  SECONDS=0
+  echo -n "Waiting for ${pod_prefix} pod becoming ready ..."
+  while ! test "$(oc get rc -o custom-columns=NAME:.metadata.name,DESIRED:status.replicas,READY:status.readyReplicas 2>/dev/null \
+                 | grep "^${pod_prefix}" | awk '$2==$3 {print "ready"}')" == "ready" ; do
+    echo -n "."
+    [ ${SECONDS} -gt ${timeout} ] && echo " FAIL" && return 1
+    SECONDS=$((SECONDS+3))
     sleep 3
   done
   echo " DONE"
@@ -246,6 +267,9 @@ function ct_os_cluster_up() {
                 --use-existing-config --public-hostname=${cluster_ip}
   oc version
   oc login -u system:admin
+  oc project default
+  ct_os_wait_rc_ready docker-registry 180
+  ct_os_wait_rc_ready router 30
   oc login -u developer -p developer
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
