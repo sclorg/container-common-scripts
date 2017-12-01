@@ -33,7 +33,7 @@ function ct_get_public_ip() {
   echo "${public_ip}"
 }
 
-# ct_os_run_in_pod [pod_prefix, cmd]
+# ct_os_run_in_pod POD_PREFIX CMD
 # --------------------
 # Runs [cmd] in the pod specified by prefix [pod_prefix].
 # Arguments: pod_prefix - prefix or whole ID of the pod to run the cmd in
@@ -42,7 +42,7 @@ function ct_os_run_in_pod() {
   : # TODO
 }
 
-# ct_os_get_service_ip [service_name]
+# ct_os_get_service_ip SERVICE_NAME
 # --------------------
 # Returns IP of the service specified by [service_name].
 # Arguments: service_name - name of the service
@@ -60,7 +60,7 @@ function ct_os_get_all_pods_status() {
   oc get pods -o custom-columns=NAME:.metadata.name,Ready:status.containerStatuses[0].ready
 }
 
-# ct_os_get_pod_status [pod_prefix]
+# ct_os_get_pod_status POD_PREFIX
 # --------------------
 # Returns status of the pod specified by prefix [pod_prefix].
 # Arguments: pod_prefix - prefix or whole ID of the pod
@@ -70,7 +70,7 @@ function ct_os_get_pod_status() {
                             | head -n 1
 }
 
-# ct_os_check_pod_readiness [pod_prefix, status]
+# ct_os_check_pod_readiness POD_PREFIX STATUS
 # --------------------
 # Checks whether the pod is ready.
 # Arguments: pod_prefix - prefix or whole ID of the pod
@@ -81,7 +81,7 @@ function ct_os_check_pod_readiness() {
   test "$(ct_os_get_pod_status ${pod_prefix})" == "${status}"
 }
 
-# ct_os_wait_pod_ready [pod_prefix, timeout]
+# ct_os_wait_pod_ready POD_PREFIX TIMEOUT
 # --------------------
 # Wait maximum [timeout] for the pod becomming ready.
 # Arguments: pod_prefix - prefix or whole ID of the pod
@@ -100,7 +100,7 @@ function ct_os_wait_pod_ready() {
   echo " DONE"
 }
 
-# ct_os_wait_rc_ready [pod_prefix, timeout]
+# ct_os_wait_rc_ready POD_PREFIX TIMEOUT
 # --------------------
 # Wait maximum [timeout] for the rc having desired number of replicas ready.
 # Arguments: pod_prefix - prefix of the replication controller
@@ -120,7 +120,7 @@ function ct_os_wait_rc_ready() {
   echo " DONE"
 }
 
-# ct_os_deploy_pure_image [image, env_params, ...]
+# ct_os_deploy_pure_image IMAGE [ENV_PARAMS, ...]
 # --------------------
 # Runs [image] in the openshift and optionally specifies env_params
 # as environment variables to the image.
@@ -134,7 +134,7 @@ function ct_os_deploy_pure_image() {
   sleep 3
 }
 
-# ct_os_deploy_s2i_image [image, app, env_params, ...]
+# ct_os_deploy_s2i_image IMAGE APP [ENV_PARAMS, ... ]
 # --------------------
 # Runs [image] and [app] in the openshift and optionally specifies env_params
 # as environment variables to the image.
@@ -151,7 +151,7 @@ function ct_os_deploy_s2i_image() {
   sleep 3
 }
 
-# ct_os_deploy_template_image [template, env_params]
+# ct_os_deploy_template_image TEMPLATE [ENV_PARAMS, ...]
 # --------------------
 # Runs template in the openshift and optionally gives env_params to use
 # specific values in the template.
@@ -181,7 +181,7 @@ function _ct_os_get_uniq_project_name() {
   done
 }
 
-# ct_os_new_project [project]
+# ct_os_new_project [PROJECT]
 # --------------------
 # Creates a new project in the openshfit using 'os' command.
 # Arguments: project - project name, uses a new random name if omitted
@@ -194,7 +194,7 @@ function ct_os_new_project() {
   sleep 3
 }
 
-# ct_os_delete_project [project]
+# ct_os_delete_project [PROJECT]
 # --------------------
 # Deletes the specified project in the openshfit
 # Arguments: project - project name, uses the current project if omitted
@@ -215,7 +215,7 @@ function ct_os_docker_login() {
   return 1
 }
 
-# ct_os_upload_image [image]
+# ct_os_upload_image IMAGE
 # --------------------
 # Uploads image from local registry to the OpenShift internal registry.
 # Arguments: image - image name to upload
@@ -238,7 +238,7 @@ function ct_os_install_in_centos() {
                  bash-completion origin-clients docker origin-clients
 }
 
-# ct_os_cluster_up [dir, is_public]
+# ct_os_cluster_up [DIR, IS_PUBLIC]
 # --------------------
 # Runs the local OpenShift cluster using 'oc cluster up' and logs in as developer.
 # Arguments: dir - directory to keep configuration data in, random if omitted
