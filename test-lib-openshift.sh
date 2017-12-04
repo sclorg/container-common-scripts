@@ -215,14 +215,17 @@ function ct_os_docker_login() {
   return 1
 }
 
-# ct_os_upload_image IMAGE
+# ct_os_upload_image IMAGE [IMAGESTREAM]
 # --------------------
 # Uploads image from local registry to the OpenShift internal registry.
 # Arguments: image - image name to upload
+# Arguments: imagestream - name and tag to use for the internal registry.
+#                          In the format of name:tag ($image_name:latest by default)
 function ct_os_upload_image() {
   local input_name="${1}" ; shift
   local image_name=${input_name##*/}
-  local output_name="172.30.1.1:5000/$(oc project -q)/${image_name}"
+  local imagestream=${1:-$image_name:latest}
+  local output_name="172.30.1.1:5000/$(oc project -q)/$imagestream"
 
   ct_os_docker_login
   docker tag ${input_name} ${output_name}
