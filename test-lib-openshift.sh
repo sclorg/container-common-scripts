@@ -139,8 +139,7 @@ function ct_os_deploy_pure_image() {
 # Runs [image] and [app] in the openshift and optionally specifies env_params
 # as environment variables to the image.
 # Arguments: image - prefix or whole ID of the pod to run the cmd in
-# Arguments: app - url repo to the application, local files don't work,
-#                  because OpenShift cluster doesn't see the local files
+# Arguments: app - url or local path to git repo with the application sources.
 # Arguments: env_params - environment variables parameters for the images.
 function ct_os_deploy_s2i_image() {
   local image="${1}" ; shift
