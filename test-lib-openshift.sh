@@ -255,12 +255,12 @@ function ct_os_cluster_up() {
   if ! grep -qe '--insecure-registry.*172\.30\.0\.0' /etc/sysconfig/docker ; then
     sed -i "s|OPTIONS='|OPTIONS='--insecure-registry 172.30.0.0/16 |" /etc/sysconfig/docker
   fi
-  systemctl restart docker
 
   systemctl stop firewalld
   setenforce 0
   iptables -F
 
+  systemctl restart docker
   local cluster_ip="127.0.0.1"
   [ "${is_public}" == "true" ] && cluster_ip=$(ct_get_public_ip)
 
