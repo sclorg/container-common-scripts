@@ -13,24 +13,30 @@ build = $(SHELL) $(common_dir)/build.sh
 test =  $(SHELL) $(common_dir)/test.sh
 tag =   $(SHELL) $(common_dir)/tag.sh
 clean = $(SHELL) $(common_dir)/clean.sh
+generator = $(SHELL) $(common_dir)/generate.sh
 
 ifeq ($(TARGET),rhel7)
 	SKIP_SQUASH ?= 0
 	OS := rhel7
 	DOCKERFILE ?= Dockerfile.rhel7
+	DG_CONF := rhel-7-x86_64.yaml
 else ifeq ($(TARGET),fedora)
 	OS := fedora
 	DOCKERFILE ?= Dockerfile.fedora
+	DG_CONF := fedora-27-x86_64.yaml
 else ifeq ($(TARGET),centos6)
 	OS := centos6
 	DOCKERFILE ?= Dockerfile.centos6
 else
 	OS := centos7
 	DOCKERFILE ?= Dockerfile
+	DG_CONF ?= centos-7-x86_64.yaml
 endif
 
 SKIP_SQUASH ?= 1
 DOCKER_BUILD_CONTEXT ?= .
+DISTGEN_BIN ?= /usr/bin/dg
+MANIFEST_FILE ?= manifest.sh
 
 script_env = \
 	SKIP_SQUASH=$(SKIP_SQUASH)                      \
@@ -40,6 +46,11 @@ script_env = \
 	DOCKER_BUILD_CONTEXT=$(DOCKER_BUILD_CONTEXT)    \
 	OPENSHIFT_NAMESPACES="$(OPENSHIFT_NAMESPACES)"  \
 	CUSTOM_REPO="$(CUSTOM_REPO)"
+
+generation_env = \
+	DG_CONF=$(DG_CONF) \
+	DG=$(DISTGEN_BIN) \
+	MANIFEST_FILE=$(MANIFEST_FILE)
 
 # TODO: switch to 'build: build-all' once parallel builds are relatively safe
 .PHONY: build build-serial build-all
@@ -85,3 +96,17 @@ clean:
 	mkdir -p $(@D)
 	go-md2man -in "$^" -out "$@"
 	chmod a+r "$@"
+
+.PHONY: generate
+generate:
+	@$(MAKE) auto_targets.mk
+	@$(MAKE) exec-gen-rules
+	rm auto_targets.mk
+
+auto_targets.mk: $(generator) $(MANIFEST_FILE)
+	VERSIONS="$(VERSIONS)" $(generation_env) $(generator)
+
+include auto_targets.mk
+
+.PHONY: exec-gen-rules
+exec-gen-rules: $(DISTGEN_TARGETS) $(COPY_TARGETS) $(SYMLINK_TARGETS)
