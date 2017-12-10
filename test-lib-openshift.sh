@@ -291,4 +291,36 @@ function ct_os_cluster_running() {
   oc status &>/dev/null
 }
 
+# ct_os_test_s2i_app IMAGE APP CONTEXT_DIR EXPECTED_OUTPUT [ENV_PARAMS, ... ]
+# --------------------
+# Runs [image] and [app] in the openshift and optionally specifies env_params
+# as environment variables to the image. Then check the http response.
+# Arguments: image - prefix or whole ID of the pod to run the cmd in
+# Arguments: app - url or local path to git repo with the application sources.
+# Arguments: context_dir - sub-directory inside the repository with the application sources.
+# Arguments: expected_output - PCRE regular expression that must match the response body.
+# Arguments: env_params - environment variables parameters for the images.
+function ct_os_test_s2i_app() {
+  local image_name=${1}
+  local app=${2}
+  local context_dir=${3}
+  local expected_output=${4}
+  shift 4
+  local image_name_no_namespace=${image_name##*/}
+  local service_name="${image_name_no_namespace}-testing"
+
+  ct_os_new_project
+  # Create a specific imagestream tag for the image so that oc cannot use anything else
+  ct_os_upload_image "${image_name}" "${service_name}"
+
+  ct_os_deploy_s2i_image "${service_name}" "${app}" \
+                          --context-dir="${context_dir}" \
+                          --name "${service_name}" $@
+
+  ct_os_wait_pod_ready "${service_name}" 300
+  local ip=$(ct_os_get_service_ip "${service_name}")
+  ct_test_response "http://${ip}:8080" 200 "${expected_output}"
+
+  ct_os_delete_project
+}
 
