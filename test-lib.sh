@@ -267,3 +267,39 @@ ct_gen_self_signed_cert_pem() {
   openssl req -new -x509 -nodes -key ${output_dir}/${base_name}-key.pem -batch > ${output_dir}/${base_name}-cert-selfsigned.pem
 }
 
+# ct_test_response
+# ----------------
+# Perform GET request to the application container, checks output with
+# a reg-exp and HTTP response code.
+# Argument: url - request URL path
+# Argument: expected_code - expected HTTP response code
+# Argument: body_regexp - PCRE regular expression that must match the response body
+# Argument: max_attempts - Optional number of attempts (default: 20), one second sleep between
+ct_test_response() {
+  local url="$1"
+  local expected_code="$2"
+  local body_regexp="$3"
+  local max_attempts=${4:-20}
+
+  : "  Testing the HTTP(S) response for <${url}>"
+  local sleep_time=3
+  local attempt=1
+  local result=1
+  local status
+  while [ $attempt -le $max_attempts ]; do
+    response=$(curl --connect-timeout 10 -s -w '%{http_code}' "${url}") && status=0 || status=1
+    if [ $status -eq 0 ]; then
+      response_code=$(printf '%s' "$response" | tail -c 3)
+      response_body=$(printf '%s' "$response" | head -c -3)
+      if [ "$response_code" -eq "$expected_code" ]; then
+        result=0
+      fi
+      printf '%s' "$response_body" | grep -qP -e "$body_regexp" || result=1;
+      break
+    fi
+    attempt=$(( $attempt + 1 ))
+    sleep $sleep_time
+  done
+  return $result
+}
+
