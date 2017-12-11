@@ -299,13 +299,22 @@ function ct_os_cluster_running() {
 # Arguments: app - url or local path to git repo with the application sources.
 # Arguments: context_dir - sub-directory inside the repository with the application sources.
 # Arguments: expected_output - PCRE regular expression that must match the response body.
-# Arguments: env_params - environment variables parameters for the images.
+# Arguments: port - which port to use (default: 8080)
+# Arguments: protocol - which protocol to use (default: http)
+# Arguments: response_code - what http response code to expect (default: 200)
+# Arguments: readiness_timeout - how many seconds to wait till the s2i image is deployed (default: 300)
+# Arguments: env_params..* - all other arguments are used as additional parameters for the `oc new-app`
+#            command, typically environment variables
 function ct_os_test_s2i_app() {
   local image_name=${1}
   local app=${2}
   local context_dir=${3}
   local expected_output=${4}
-  shift 4
+  local port=${5:-8080}
+  local protocol=${6:-http}
+  local response_code=${7:-200}
+  local readiness_timeout=${8:-300}
+
   local image_name_no_namespace=${image_name##*/}
   local service_name="${image_name_no_namespace}-testing"
 
@@ -317,9 +326,9 @@ function ct_os_test_s2i_app() {
                           --context-dir="${context_dir}" \
                           --name "${service_name}" $@
 
-  ct_os_wait_pod_ready "${service_name}" 300
+  ct_os_wait_pod_ready "${service_name}" ${readiness_timeout}
   local ip=$(ct_os_get_service_ip "${service_name}")
-  ct_test_response "http://${ip}:8080" 200 "${expected_output}"
+  ct_test_response "${protocol}://${ip}:${port}" ${response_code} "${expected_output}"
 
   ct_os_delete_project
 }
