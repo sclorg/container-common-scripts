@@ -146,6 +146,7 @@ function ct_os_deploy_s2i_image() {
   local app="${1}" ; shift
   # ignore error exit code, because oc new-app returns error when image exists
   oc new-app ${image}~${app} $@ || :
+
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
 }
@@ -291,4 +292,74 @@ function ct_os_cluster_running() {
   oc status &>/dev/null
 }
 
+# ct_os_test_s2i_app_func IMAGE APP CONTEXT_DIR CHECK_CMD [OC_ARGS]
+# --------------------
+# Runs [image] and [app] in the openshift and optionally specifies env_params
+# as environment variables to the image. Then check the container by arbitrary
+# function given as argument (such an argument may include <IP> string,
+# that will be replaced with actual IP).
+# Arguments: image - prefix or whole ID of the pod to run the cmd in  (compulsory)
+# Arguments: app - url or local path to git repo with the application sources  (compulsory)
+# Arguments: context_dir - sub-directory inside the repository with the application sources (compulsory)
+# Arguments: check_command - CMD line that checks whether the container works (compulsory; '<IP>' will be replaced with actual IP)
+# Arguments: oc_args - all other arguments are used as additional parameters for the `oc new-app`
+#            command, typically environment variables (optional)
+function ct_os_test_s2i_app_func() {
+  local image_name=${1}
+  local app=${2}
+  local context_dir=${3}
+  local check_command=${4}
+  local oc_args=${5:-}
+  local image_name_no_namespace=${image_name##*/}
+  local service_name="${image_name_no_namespace}-testing"
+  local image_tagged="${image_name_no_namespace}:testing"
+
+  ct_os_new_project
+  # Create a specific imagestream tag for the image so that oc cannot use anything else
+  ct_os_upload_image "${image_name}" "${image_tagged}"
+
+  ct_os_deploy_s2i_image "${image_tagged}" "${app}" \
+                          --context-dir="${context_dir}" \
+                          --name "${service_name}" \
+                          ${oc_args}
+
+  ct_os_wait_pod_ready "${service_name}" 300
+
+  local ip=$(ct_os_get_service_ip "${service_name}")
+  local check_command_exp=$(echo "$command" | sed -e "s/<IP>/$ip/g")
+
+  eval "$check_command_exp"
+
+  ct_os_delete_project
+}
+
+# ct_os_test_s2i_app IMAGE APP CONTEXT_DIR EXPECTED_OUTPUT [PORT, PROTOCOL, RESPONSE_CODE, OC_ARGS, ... ]
+# --------------------
+# Runs [image] and [app] in the openshift and optionally specifies env_params
+# as environment variables to the image. Then check the http response.
+# Arguments: image - prefix or whole ID of the pod to run the cmd in (compulsory)
+# Arguments: app - url or local path to git repo with the application sources (compulsory)
+# Arguments: context_dir - sub-directory inside the repository with the application sources (compulsory)
+# Arguments: expected_output - PCRE regular expression that must match the response body (compulsory)
+# Arguments: port - which port to use (optional; default: 8080)
+# Arguments: protocol - which protocol to use (optional; default: http)
+# Arguments: response_code - what http response code to expect (optional; default: 200)
+# Arguments: oc_args - all other arguments are used as additional parameters for the `oc new-app`
+#            command, typically environment variables (optional)
+function ct_os_test_s2i_app() {
+  local image_name=${1}
+  local app=${2}
+  local context_dir=${3}
+  local expected_output=${4}
+  local port=${5:-8080}
+  local protocol=${6:-http}
+  local response_code=${7:-200}
+  local oc_args=${8:-}
+
+  ct_os_test_s2i_app_func "${image_name}" \
+                          "${app}" \
+                          "${context_dir}" \
+                          "ct_test_response ${protocol}://<IP>:${port} ${response_code} ${expected_output}" \
+                          "${oc_args}"
+}
 
