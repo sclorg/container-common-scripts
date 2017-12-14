@@ -328,7 +328,7 @@ function ct_os_test_s2i_app_func() {
   local ip=$(ct_os_get_service_ip "${service_name}")
   local check_command_exp=$(echo "$command" | sed -e "s/<IP>/$ip/g")
 
-  ${check_command_exp}
+  eval "$check_command_exp"
 
   ct_os_delete_project
 }
@@ -360,6 +360,6 @@ function ct_os_test_s2i_app() {
                           "${app}" \
                           "${context_dir}" \
                           "ct_test_response ${protocol}://<IP>:${port} ${response_code} ${expected_output}" \
-                          ${oc_args}
+                          "${oc_args}"
 }
 
