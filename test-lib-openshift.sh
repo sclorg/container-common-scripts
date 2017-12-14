@@ -326,7 +326,7 @@ function ct_os_test_s2i_app_func() {
   ct_os_wait_pod_ready "${service_name}" 300
 
   local ip=$(ct_os_get_service_ip "${service_name}")
-  local check_command_exp=$(echo "$command" | sed -e "s/<IP>/$ip/g")
+  local check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
 
   eval "$check_command_exp"
 
@@ -359,7 +359,7 @@ function ct_os_test_s2i_app() {
   ct_os_test_s2i_app_func "${image_name}" \
                           "${app}" \
                           "${context_dir}" \
-                          "ct_test_response ${protocol}://<IP>:${port} ${response_code} ${expected_output}" \
+                          "ct_test_response '${protocol}://<IP>:${port}' '${response_code}' '${expected_output}'" \
                           "${oc_args}"
 }
 
