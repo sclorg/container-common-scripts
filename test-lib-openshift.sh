@@ -57,17 +57,18 @@ function ct_os_get_service_ip() {
 # --------------------
 # Returns status of all pods.
 function ct_os_get_all_pods_status() {
-  oc get pods -o custom-columns=NAME:.metadata.name,Ready:status.containerStatuses[0].ready
+  oc get pods -o custom-columns=Ready:status.containerStatuses[0].ready,NAME:.metadata.name
 }
 
 # ct_os_get_pod_status POD_PREFIX
 # --------------------
 # Returns status of the pod specified by prefix [pod_prefix].
+# Note: Ignores -build and -deploy pods
 # Arguments: pod_prefix - prefix or whole ID of the pod
 function ct_os_get_pod_status() {
   local pod_prefix="${1}" ; shift
-  ct_os_get_all_pods_status | grep -e "^${pod_prefix}" | awk '{print $2}' \
-                            | head -n 1
+  ct_os_get_all_pods_status | grep -e "${pod_prefix}" | grep -Ev "(build|deploy)$" \
+                            | awk '{print $1}' | head -n 1
 }
 
 # ct_os_check_pod_readiness POD_PREFIX STATUS
