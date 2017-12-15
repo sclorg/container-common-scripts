@@ -123,7 +123,6 @@ function ct_os_wait_pod_ready() {
   while ! ct_os_check_pod_readiness "${pod_prefix}" "true" ; do
     echo -n "."
     [ ${SECONDS} -gt ${timeout} ] && echo " FAIL" && return 1
-    SECONDS=$((SECONDS+3))
     sleep 3
   done
   echo " DONE"
@@ -143,7 +142,6 @@ function ct_os_wait_rc_ready() {
                  | grep "^${pod_prefix}" | awk '$2==$3 {print "ready"}')" == "ready" ; do
     echo -n "."
     [ ${SECONDS} -gt ${timeout} ] && echo " FAIL" && return 1
-    SECONDS=$((SECONDS+3))
     sleep 3
   done
   echo " DONE"
