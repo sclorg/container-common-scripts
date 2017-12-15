@@ -33,13 +33,15 @@ function ct_get_public_ip() {
   echo "${public_ip}"
 }
 
-# ct_os_run_in_pod POD_PREFIX CMD
+# ct_os_run_in_pod POD_NAME CMD
 # --------------------
 # Runs [cmd] in the pod specified by prefix [pod_prefix].
-# Arguments: pod_prefix - prefix or whole ID of the pod to run the cmd in
+# Arguments: pod_name - full name of the pod
 # Arguments: cmd - command to be run in the pod
 function ct_os_run_in_pod() {
-  : # TODO
+  local pod_name="$1" ; shift
+
+  oc exec "$pod_name" -- "$@"
 }
 
 # ct_os_get_service_ip SERVICE_NAME
@@ -60,6 +62,13 @@ function ct_os_get_all_pods_status() {
   oc get pods -o custom-columns=Ready:status.containerStatuses[0].ready,NAME:.metadata.name
 }
 
+# ct_os_get_all_pods_name
+# --------------------
+# Returns the full name of all pods.
+function ct_os_get_all_pods_name() {
+  oc get pods --no-headers -o custom-columns=NAME:.metadata.name
+}
+
 # ct_os_get_pod_status POD_PREFIX
 # --------------------
 # Returns status of the pod specified by prefix [pod_prefix].
@@ -69,6 +78,25 @@ function ct_os_get_pod_status() {
   local pod_prefix="${1}" ; shift
   ct_os_get_all_pods_status | grep -e "${pod_prefix}" | grep -Ev "(build|deploy)$" \
                             | awk '{print $1}' | head -n 1
+}
+
+# ct_os_get_pod_name POD_PREFIX
+# --------------------
+# Returns the full name of pods specified by prefix [pod_prefix].
+# Note: Ignores -build and -deploy pods
+# Arguments: pod_prefix - prefix or whole ID of the pod
+function ct_os_get_pod_name() {
+  local pod_prefix="${1}" ; shift
+  ct_os_get_all_pods_name | grep -e "^${pod_prefix}" | grep -Ev "(build|deploy)$"
+}
+
+# ct_os_get_pod_ip POD_NAME
+# --------------------
+# Returns the ip of the pod specified by [pod_name].
+# Arguments: pod_name - full name of the pod
+function ct_os_get_pod_ip() {
+  local pod_name="${1}"
+  oc get pod "$pod_name" --no-headers -o custom-columns=IP:status.podIP
 }
 
 # ct_os_check_pod_readiness POD_PREFIX STATUS
