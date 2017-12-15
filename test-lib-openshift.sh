@@ -39,7 +39,7 @@ function ct_get_public_ip() {
 # Arguments: pod_name - full name of the pod
 # Arguments: cmd - command to be run in the pod
 function ct_os_run_in_pod() {
-  local pod_name="$1"
+  local pod_name="$1" ; shift
 
   oc exec "$pod_name" -- "$@"
 }
