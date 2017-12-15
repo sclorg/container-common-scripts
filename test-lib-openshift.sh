@@ -392,3 +392,77 @@ function ct_os_test_s2i_app() {
                           "${oc_args}"
 }
 
+# ct_os_test_template_app_func IMAGE APP IMAGE_IN_TEMPLATE CHECK_CMD [OC_ARGS]
+# --------------------
+# Runs [image] and [app] in the openshift and optionally specifies env_params
+# as environment variables to the image. Then check the container by arbitrary
+# function given as argument (such an argument may include <IP> string,
+# that will be replaced with actual IP).
+# Arguments: image_name - prefix or whole ID of the pod to run the cmd in  (compulsory)
+# Arguments: template - url or local path to a template to use (compulsory)
+# Arguments: name_in_template - image name used in the template
+# Arguments: check_command - CMD line that checks whether the container works (compulsory; '<IP>' will be replaced with actual IP)
+# Arguments: oc_args - all other arguments are used as additional parameters for the `oc new-app`
+#            command, typically environment variables (optional)
+function ct_os_test_template_app_func() {
+  local image_name=${1}
+  local template=${2}
+  local name_in_template=${3}
+  local check_command=${4}
+  local oc_args=${5:-}
+
+  local service_name="${name_in_template}-testing"
+  local image_tagged="${name_in_template}:${VERSION}"
+
+  ct_os_new_project
+  # Create a specific imagestream tag for the image so that oc cannot use anything else
+  ct_os_upload_image "${image_name}" "${image_tagged}"
+
+  oc new-app ${template} \
+             -p NAME="${service_name}" \
+             -p NAMESPACE="$(oc project -q)" \
+             ${oc_args}
+
+  oc start-build ${service_name}
+
+  ct_os_wait_pod_ready "${service_name}" 300
+
+  local ip=$(ct_os_get_service_ip "${service_name}")
+  local check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
+
+  eval "$check_command_exp"
+
+  ct_os_delete_project
+}
+
+# params:
+# ct_os_test_template_app IMAGE APP IMAGE_IN_TEMPLATE EXPECTED_OUTPUT [PORT, PROTOCOL, RESPONSE_CODE, OC_ARGS, ... ]
+# --------------------
+# Runs [image] and [app] in the openshift and optionally specifies env_params
+# as environment variables to the image. Then check the http response.
+# Arguments: image_name - prefix or whole ID of the pod to run the cmd in (compulsory)
+# Arguments: template - url or local path to a template to use (compulsory)
+# Arguments: name_in_template - image name used in the template
+# Arguments: expected_output - PCRE regular expression that must match the response body (compulsory)
+# Arguments: port - which port to use (optional; default: 8080)
+# Arguments: protocol - which protocol to use (optional; default: http)
+# Arguments: response_code - what http response code to expect (optional; default: 200)
+# Arguments: oc_args - all other arguments are used as additional parameters for the `oc new-app`
+#            command, typically environment variables (optional)
+function ct_os_test_template_app() {
+  local image_name=${1}
+  local template=${2}
+  local name_in_template=${3}
+  local expected_output=${4}
+  local port=${5:-8080}
+  local protocol=${6:-http}
+  local response_code=${7:-200}
+  local oc_args=${8:-}
+
+  ct_os_test_template_app_func "${image_name}" \
+                               "${template}" \
+                               "${name_in_template}" \
+                               "ct_test_response '${protocol}://<IP>:${port}' '${response_code}' '${expected_output}'" \
+                               "${oc_args}"
+}
+
