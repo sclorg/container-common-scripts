@@ -27,7 +27,7 @@ function ct_get_public_ip() {
     fi
   done
   if [ -z "${public_ip}" ] ; then
-    echo "ERROR: public IP could not be guessed."
+    echo "ERROR: public IP could not be guessed." >&2
     return 1
   fi
   echo "${public_ip}"
@@ -158,7 +158,7 @@ function ct_os_wait_rc_ready() {
 function ct_os_deploy_pure_image() {
   local image="${1}" ; shift
   # ignore error exit code, because oc new-app returns error when image exists
-  oc new-app ${image} $@ || :
+  oc new-app ${image} "$@" || :
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
 }
@@ -174,7 +174,7 @@ function ct_os_deploy_s2i_image() {
   local image="${1}" ; shift
   local app="${1}" ; shift
   # ignore error exit code, because oc new-app returns error when image exists
-  oc new-app ${image}~${app} $@ || :
+  oc new-app "${image}~${app}" "$@" || :
 
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
@@ -194,7 +194,7 @@ function ct_os_deploy_s2i_image() {
 #                                            MYSQL_DATABASE=testdb
 function ct_os_deploy_template_image() {
   local template="${1}" ; shift
-  oc process -f "${template}" $@ | oc create -f -
+  oc process -f "${template}" "$@" | oc create -f -
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
 }
@@ -343,14 +343,30 @@ function ct_os_test_s2i_app_func() {
   local service_name="${image_name_no_namespace}-testing"
   local image_tagged="${image_name_no_namespace}:testing"
 
+  if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
+    echo "ERROR: ct_os_test_s2i_app_func() requires at least 4 arguments that cannot be emtpy." >&2
+    return 1
+  fi
+
   ct_os_new_project
   # Create a specific imagestream tag for the image so that oc cannot use anything else
   ct_os_upload_image "${image_name}" "${image_tagged}"
 
-  ct_os_deploy_s2i_image "${image_tagged}" "${app}" \
+  local app_param="${app}"
+  if [ -d "${app}" ] ; then
+    # for local directory, we need to copy the content, otherwise too smart os command
+    # pulls the git remote repository instead
+    app_param=$(ct_obtain_input "${app}")
+  fi
+
+  ct_os_deploy_s2i_image "${image_tagged}" "${app_param}" \
                           --context-dir="${context_dir}" \
                           --name "${service_name}" \
                           ${oc_args}
+
+  if [ -d "${app}" ] ; then
+    oc start-build "${service_name}" --from-dir="${app_param}"
+  fi
 
   ct_os_wait_pod_ready "${service_name}" 300
 
@@ -385,6 +401,11 @@ function ct_os_test_s2i_app() {
   local response_code=${7:-200}
   local oc_args=${8:-}
 
+  if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
+    echo "ERROR: ct_os_test_s2i_app() requires at least 4 arguments that cannot be emtpy." >&2
+    return 1
+  fi
+
   ct_os_test_s2i_app_func "${image_name}" \
                           "${app}" \
                           "${context_dir}" \
@@ -411,6 +432,11 @@ function ct_os_test_template_app_func() {
   local check_command=${4}
   local oc_args=${5:-}
 
+  if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
+    echo "ERROR: ct_os_test_template_app_func() requires at least 4 arguments that cannot be emtpy." >&2
+    return 1
+  fi
+
   local service_name="${name_in_template}-testing"
   local image_tagged="${name_in_template}:${VERSION}"
 
@@ -418,12 +444,13 @@ function ct_os_test_template_app_func() {
   # Create a specific imagestream tag for the image so that oc cannot use anything else
   ct_os_upload_image "${image_name}" "${image_tagged}"
 
-  oc new-app ${template} \
+  local local_template=$(ct_obtain_input "${template}")
+  oc new-app ${local_template} \
              -p NAME="${service_name}" \
              -p NAMESPACE="$(oc project -q)" \
              ${oc_args}
 
-  oc start-build ${service_name}
+  oc start-build "${service_name}"
 
   ct_os_wait_pod_ready "${service_name}" 300
 
@@ -458,6 +485,11 @@ function ct_os_test_template_app() {
   local protocol=${6:-http}
   local response_code=${7:-200}
   local oc_args=${8:-}
+
+  if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
+    echo "ERROR: ct_os_test_template_app() requires at least 4 arguments that cannot be emtpy." >&2
+    return 1
+  fi
 
   ct_os_test_template_app_func "${image_name}" \
                                "${template}" \

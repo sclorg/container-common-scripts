@@ -161,17 +161,17 @@ function ct_scl_usage_old() {
   : "  Testing the image SCL enable"
   out=$(docker run --rm ${IMAGE_NAME} /bin/bash -c "${command}")
   if ! echo "${out}" | grep -q "${expected}"; then
-    echo "ERROR[/bin/bash -c "${command}"] Expected '${expected}', got '${out}'"
+    echo "ERROR[/bin/bash -c "${command}"] Expected '${expected}', got '${out}'" >&2
     return 1
   fi
   out=$(docker exec $(ct_get_cid $name) /bin/bash -c "${command}" 2>&1)
   if ! echo "${out}" | grep -q "${expected}"; then
-    echo "ERROR[exec /bin/bash -c "${command}"] Expected '${expected}', got '${out}'"
+    echo "ERROR[exec /bin/bash -c "${command}"] Expected '${expected}', got '${out}'" >&2
     return 1
   fi
   out=$(docker exec $(ct_get_cid $name) /bin/sh -ic "${command}" 2>&1)
   if ! echo "${out}" | grep -q "${expected}"; then
-    echo "ERROR[exec /bin/sh -ic "${command}"] Expected '${expected}', got '${out}'"
+    echo "ERROR[exec /bin/sh -ic "${command}"] Expected '${expected}', got '${out}'" >&2
     return 1
   fi
 }
@@ -192,14 +192,14 @@ function ct_doc_content_old() {
     # Check whether the files contain some important information
     for term in $@ ; do
       if ! cat ${tmpdir}/$(basename ${f}) | grep -F -q -e "${term}" ; then
-        echo "ERROR: File /${f} does not include '${term}'."
+        echo "ERROR: File /${f} does not include '${term}'." >&2
         return 1
       fi
     done
   done
   # Check whether the files use the correct format
   if ! file ${tmpdir}/help.1 | grep -q roff ; then
-    echo "ERROR: /help.1 is not in troff or groff format"
+    echo "ERROR: /help.1 is not in troff or groff format" >&2
     return 1
   fi
   : "  Success!"
@@ -265,6 +265,34 @@ ct_gen_self_signed_cert_pem() {
   mkdir -p ${output_dir}
   openssl req -newkey rsa:2048 -nodes -keyout ${output_dir}/${base_name}-key.pem -subj '/C=GB/ST=Berkshire/L=Newbury/O=My Server Company' > ${base_name}-req.pem
   openssl req -new -x509 -nodes -key ${output_dir}/${base_name}-key.pem -batch > ${output_dir}/${base_name}-cert-selfsigned.pem
+}
+
+# ct_obtain_input FILE|DIR|URL
+# --------------------
+# Either copies a file or a directory to a tmp location for local copies, or
+# downloads the file from remote location.
+# Resulted file path is printed, so it can be later used by calling function.
+# Arguments: input - local file, directory or remote URL
+function ct_obtain_input() {
+  local input=$1
+  local extension="${input##*.}"
+
+  # Try to use same extension for the temporary file if possible
+  [[ "${extension}" =~ ^[a-z0-9]*$ ]] && extension=".${extension}" || extension=""
+
+  local output=$(mktemp "/var/tmp/test-input-XXXXXX$extension")
+  if [ -f "${input}" ] ; then
+    cp "${input}" "${output}"
+  elif [ -d "${input}" ] ; then
+    rm -f "${output}"
+    cp -r -LH "${input}" "${output}"
+  elif echo "${input}" | grep -qe '^http\(s\)\?://' ; then
+    curl "${input}" > "${output}"
+  else
+    echo "ERROR: file type not known: ${input}" >&2
+    return 1
+  fi
+  echo "${output}"
 }
 
 # ct_test_response
