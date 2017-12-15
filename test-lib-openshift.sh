@@ -27,7 +27,7 @@ function ct_get_public_ip() {
     fi
   done
   if [ -z "${public_ip}" ] ; then
-    echo "ERROR: public IP could not be guessed."
+    echo "ERROR: public IP could not be guessed." >&2
     return 1
   fi
   echo "${public_ip}"
@@ -158,7 +158,7 @@ function ct_os_wait_rc_ready() {
 function ct_os_deploy_pure_image() {
   local image="${1}" ; shift
   # ignore error exit code, because oc new-app returns error when image exists
-  oc new-app ${image} $@ || :
+  oc new-app ${image} "$@" || :
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
 }
@@ -174,7 +174,7 @@ function ct_os_deploy_s2i_image() {
   local image="${1}" ; shift
   local app="${1}" ; shift
   # ignore error exit code, because oc new-app returns error when image exists
-  oc new-app ${image}~${app} $@ || :
+  oc new-app "${image}~${app}" "$@" || :
 
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
@@ -194,7 +194,7 @@ function ct_os_deploy_s2i_image() {
 #                                            MYSQL_DATABASE=testdb
 function ct_os_deploy_template_image() {
   local template="${1}" ; shift
-  oc process -f "${template}" $@ | oc create -f -
+  oc process -f "${template}" "$@" | oc create -f -
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
 }
@@ -343,14 +343,30 @@ function ct_os_test_s2i_app_func() {
   local service_name="${image_name_no_namespace}-testing"
   local image_tagged="${image_name_no_namespace}:testing"
 
+  if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
+    echo "ERROR: ct_os_test_s2i_app_func() requires at least 4 arguments that cannot be emtpy." >&2
+    return 1
+  fi
+
   ct_os_new_project
   # Create a specific imagestream tag for the image so that oc cannot use anything else
   ct_os_upload_image "${image_name}" "${image_tagged}"
 
-  ct_os_deploy_s2i_image "${image_tagged}" "${app}" \
+  local app_param="${app}"
+  if [ -d "${app}" ] ; then
+    # for local directory, we need to copy the content, otherwise too smart os command
+    # pulls the git remote repository instead
+    app_param=$(ct_obtain_input "${app}")
+  fi
+
+  ct_os_deploy_s2i_image "${image_tagged}" "${app_param}" \
                           --context-dir="${context_dir}" \
                           --name "${service_name}" \
                           ${oc_args}
+
+  if [ -d "${app}" ] ; then
+    oc start-build "${service_name}" --from-dir="${app_param}"
+  fi
 
   ct_os_wait_pod_ready "${service_name}" 300
 
@@ -385,10 +401,100 @@ function ct_os_test_s2i_app() {
   local response_code=${7:-200}
   local oc_args=${8:-}
 
+  if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
+    echo "ERROR: ct_os_test_s2i_app() requires at least 4 arguments that cannot be emtpy." >&2
+    return 1
+  fi
+
   ct_os_test_s2i_app_func "${image_name}" \
                           "${app}" \
                           "${context_dir}" \
                           "ct_test_response '${protocol}://<IP>:${port}' '${response_code}' '${expected_output}'" \
                           "${oc_args}"
+}
+
+# ct_os_test_template_app_func IMAGE APP IMAGE_IN_TEMPLATE CHECK_CMD [OC_ARGS]
+# --------------------
+# Runs [image] and [app] in the openshift and optionally specifies env_params
+# as environment variables to the image. Then check the container by arbitrary
+# function given as argument (such an argument may include <IP> string,
+# that will be replaced with actual IP).
+# Arguments: image_name - prefix or whole ID of the pod to run the cmd in  (compulsory)
+# Arguments: template - url or local path to a template to use (compulsory)
+# Arguments: name_in_template - image name used in the template
+# Arguments: check_command - CMD line that checks whether the container works (compulsory; '<IP>' will be replaced with actual IP)
+# Arguments: oc_args - all other arguments are used as additional parameters for the `oc new-app`
+#            command, typically environment variables (optional)
+function ct_os_test_template_app_func() {
+  local image_name=${1}
+  local template=${2}
+  local name_in_template=${3}
+  local check_command=${4}
+  local oc_args=${5:-}
+
+  if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
+    echo "ERROR: ct_os_test_template_app_func() requires at least 4 arguments that cannot be emtpy." >&2
+    return 1
+  fi
+
+  local service_name="${name_in_template}-testing"
+  local image_tagged="${name_in_template}:${VERSION}"
+
+  ct_os_new_project
+  # Create a specific imagestream tag for the image so that oc cannot use anything else
+  ct_os_upload_image "${image_name}" "${image_tagged}"
+
+  local local_template=$(ct_obtain_input "${template}")
+  oc new-app ${local_template} \
+             -p NAME="${service_name}" \
+             -p NAMESPACE="$(oc project -q)" \
+             ${oc_args}
+
+  oc start-build "${service_name}"
+
+  ct_os_wait_pod_ready "${service_name}" 300
+
+  local ip=$(ct_os_get_service_ip "${service_name}")
+  local check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
+
+  eval "$check_command_exp"
+
+  ct_os_delete_project
+}
+
+# params:
+# ct_os_test_template_app IMAGE APP IMAGE_IN_TEMPLATE EXPECTED_OUTPUT [PORT, PROTOCOL, RESPONSE_CODE, OC_ARGS, ... ]
+# --------------------
+# Runs [image] and [app] in the openshift and optionally specifies env_params
+# as environment variables to the image. Then check the http response.
+# Arguments: image_name - prefix or whole ID of the pod to run the cmd in (compulsory)
+# Arguments: template - url or local path to a template to use (compulsory)
+# Arguments: name_in_template - image name used in the template
+# Arguments: expected_output - PCRE regular expression that must match the response body (compulsory)
+# Arguments: port - which port to use (optional; default: 8080)
+# Arguments: protocol - which protocol to use (optional; default: http)
+# Arguments: response_code - what http response code to expect (optional; default: 200)
+# Arguments: oc_args - all other arguments are used as additional parameters for the `oc new-app`
+#            command, typically environment variables (optional)
+function ct_os_test_template_app() {
+  local image_name=${1}
+  local template=${2}
+  local name_in_template=${3}
+  local expected_output=${4}
+  local port=${5:-8080}
+  local protocol=${6:-http}
+  local response_code=${7:-200}
+  local oc_args=${8:-}
+
+  if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
+    echo "ERROR: ct_os_test_template_app() requires at least 4 arguments that cannot be emtpy." >&2
+    return 1
+  fi
+
+  ct_os_test_template_app_func "${image_name}" \
+                               "${template}" \
+                               "${name_in_template}" \
+                               "ct_test_response '${protocol}://<IP>:${port}' '${response_code}' '${expected_output}'" \
+                               "${oc_args}"
 }
 
