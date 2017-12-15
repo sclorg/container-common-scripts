@@ -371,9 +371,18 @@ function ct_os_test_s2i_app_func() {
   local ip=$(ct_os_get_service_ip "${service_name}")
   local check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
 
-  eval "$check_command_exp"
+  echo "  Checking APP using $check_command_exp ..."
+  local result=0
+  eval "$check_command_exp" || result=1
+
+  if [ $result -eq 0 ] ; then
+    echo "  Check passed."
+  else
+    echo "  Check failed."
+  fi
 
   ct_os_delete_project
+  return $result
 }
 
 # ct_os_test_s2i_app IMAGE APP CONTEXT_DIR EXPECTED_OUTPUT [PORT, PROTOCOL, RESPONSE_CODE, OC_ARGS, ... ]
@@ -455,9 +464,18 @@ function ct_os_test_template_app_func() {
   local ip=$(ct_os_get_service_ip "${service_name}")
   local check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
 
-  eval "$check_command_exp"
+  echo "  Checking APP using $check_command_exp ..."
+  local result=0
+  eval "$check_command_exp" || result=1
+
+  if [ $result -eq 0 ] ; then
+    echo "  Check passed."
+  else
+    echo "  Check failed."
+  fi
 
   ct_os_delete_project
+  return $result
 }
 
 # params:
