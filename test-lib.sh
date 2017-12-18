@@ -314,20 +314,22 @@ ct_test_response() {
   local attempt=1
   local result=1
   local status
-  while [ $attempt -le $max_attempts ]; do
-    response=$(curl --connect-timeout 10 -s -w '%{http_code}' "${url}") && status=0 || status=1
-    if [ $status -eq 0 ]; then
-      response_code=$(printf '%s' "$response" | tail -c 3)
-      response_body=$(printf '%s' "$response" | head -c -3)
-      if [ "$response_code" -eq "$expected_code" ]; then
+  local response_code
+  local response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
+  while [ ${attempt} -le ${max_attempts} ]; do
+    curl --connect-timeout 10 -s -w '%{http_code}' "${url}" >${response_file} && status=0 || status=1
+    if [ ${status} -eq 0 ]; then
+      response_code=$(cat ${response_file} | tail -c 3)
+      if [ "${response_code}" -eq "${expected_code}" ]; then
         result=0
       fi
-      printf '%s' "$response_body" | grep -qP -e "$body_regexp" || result=1;
+      cat ${response_file} | grep -qP -e "${body_regexp}" || result=1;
       break
     fi
-    attempt=$(( $attempt + 1 ))
-    sleep $sleep_time
+    attempt=$(( ${attempt} + 1 ))
+    sleep ${sleep_time}
   done
-  return $result
+  rm -f ${response_file}
+  return ${result}
 }
 
