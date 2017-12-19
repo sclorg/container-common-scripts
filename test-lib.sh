@@ -302,12 +302,14 @@ function ct_obtain_input() {
 # Argument: url - request URL path
 # Argument: expected_code - expected HTTP response code
 # Argument: body_regexp - PCRE regular expression that must match the response body
-# Argument: max_attempts - Optional number of attempts (default: 20), one second sleep between
+# Argument: max_attempts - Optional number of attempts (default: 20), three seconds sleep between
+# Argument: ignore_error_attempts - Optional number of attempts when we ignore error output (default: 10)
 ct_test_response() {
   local url="$1"
   local expected_code="$2"
   local body_regexp="$3"
   local max_attempts=${4:-20}
+  local ignore_error_attempts=${5:-10}
 
   : "  Testing the HTTP(S) response for <${url}>"
   local sleep_time=3
@@ -324,7 +326,12 @@ ct_test_response() {
         result=0
       fi
       cat ${response_file} | grep -qP -e "${body_regexp}" || result=1;
-      break
+      # Some services return 40x code until they are ready, so let's give them
+      # some chance and not end with failure right away
+      # Do not wait if we already have expected outcome though
+      if [ ${result} -eq 0 -o ${attempt} -gt ${ignore_error_attempts} -o ${attempt} -eq ${max_attempts} ] ; then
+        break
+      fi
     fi
     attempt=$(( ${attempt} + 1 ))
     sleep ${sleep_time}
