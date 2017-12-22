@@ -432,12 +432,17 @@ function ct_os_test_s2i_app() {
 # Arguments: check_command - CMD line that checks whether the container works (compulsory; '<IP>' will be replaced with actual IP)
 # Arguments: oc_args - all other arguments are used as additional parameters for the `oc new-app`
 #            command, typically environment variables (optional)
+# Arguments: other_images - some templates need other image to be pushed into the OpenShift registry,
+#            specify them in this parameter as "<image>|<tag>", where "<image>" is a full image name
+#            (including registry if needed) and "<tag>" is a tag under which the image should be available
+#            in the OpenShift registry.
 function ct_os_test_template_app_func() {
   local image_name=${1}
   local template=${2}
   local name_in_template=${3}
   local check_command=${4}
   local oc_args=${5:-}
+  local other_images=${6:-}
 
   if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
     echo "ERROR: ct_os_test_template_app_func() requires at least 4 arguments that cannot be emtpy." >&2
@@ -450,6 +455,16 @@ function ct_os_test_template_app_func() {
   ct_os_new_project
   # Create a specific imagestream tag for the image so that oc cannot use anything else
   ct_os_upload_image "${image_name}" "${image_tagged}"
+
+  # upload also other images, that template might need (list of pairs in the format <image>|<tag>
+  local images_tags_a
+  local i_t
+  for i_t in ${other_images} ; do
+    echo "${i_t}"
+    IFS='|' read -ra image_tag_a <<< "${i_t}"
+    docker pull "${image_tag_a[0]}"
+    ct_os_upload_image "${image_tag_a[0]}" "${image_tag_a[1]}"
+  done
 
   local local_template=$(ct_obtain_input "${template}")
   oc new-app ${local_template} \
@@ -492,6 +507,10 @@ function ct_os_test_template_app_func() {
 # Arguments: response_code - what http response code to expect (optional; default: 200)
 # Arguments: oc_args - all other arguments are used as additional parameters for the `oc new-app`
 #            command, typically environment variables (optional)
+# Arguments: other_images - some templates need other image to be pushed into the OpenShift registry,
+#            specify them in this parameter as "<image>|<tag>", where "<image>" is a full image name
+#            (including registry if needed) and "<tag>" is a tag under which the image should be available
+#            in the OpenShift registry.
 function ct_os_test_template_app() {
   local image_name=${1}
   local template=${2}
@@ -501,6 +520,7 @@ function ct_os_test_template_app() {
   local protocol=${6:-http}
   local response_code=${7:-200}
   local oc_args=${8:-}
+  local other_images=${9:-}
 
   if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
     echo "ERROR: ct_os_test_template_app() requires at least 4 arguments that cannot be emtpy." >&2
@@ -511,6 +531,7 @@ function ct_os_test_template_app() {
                                "${template}" \
                                "${name_in_template}" \
                                "ct_test_response '${protocol}://<IP>:${port}' '${response_code}' '${expected_output}'" \
-                               "${oc_args}"
+                               "${oc_args}" \
+                               "${other_images}"
 }
 
