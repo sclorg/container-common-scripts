@@ -8,6 +8,25 @@ function ct_os_get_status() {
   oc status
 }
 
+# ct_os_print_logs
+# --------------------
+# Returns status of all objects and logs from all pods.
+function ct_os_print_logs() {
+  ct_os_get_status
+  while read pod_name; do
+    echo "INFO: printing logs for pod ${pod_name}"
+    oc logs ${pod_name}
+  done < <(oc get pods --no-headers=true -o custom-columns=NAME:.metadata.name)
+}
+
+# ct_os_enable_print_logs
+# --------------------
+# Enables automatic printing of pod logs on ERR.
+function ct_os_enable_print_logs() {
+  set -E
+  trap ct_os_print_logs ERR
+}
+
 # ct_get_public_ip
 # --------------------
 # Returns best guess for the IP that the node is accessible from other computers.
@@ -138,7 +157,7 @@ function ct_os_wait_rc_ready() {
   local timeout="${1}" ; shift
   SECONDS=0
   echo -n "Waiting for ${pod_prefix} pod becoming ready ..."
-  while ! test "$(oc get rc -o custom-columns=NAME:.metadata.name,DESIRED:status.replicas,READY:status.readyReplicas 2>/dev/null \
+  while ! test "$((oc get --no-headers statefulsets; oc get --no-headers rc) 2>/dev/null \
                  | grep "^${pod_prefix}" | awk '$2==$3 {print "ready"}')" == "ready" ; do
     echo -n "."
     [ ${SECONDS} -gt ${timeout} ] && echo " FAIL" && return 1
