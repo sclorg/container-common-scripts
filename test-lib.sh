@@ -340,3 +340,47 @@ ct_test_response() {
   return ${result}
 }
 
+# ct_registry_from_os OS
+# ----------------
+# Transform operating system string [os] into registry url
+# Argument: OS - string containing the os version
+ct_registry_from_os() {
+  local registry=""
+  case $1 in
+    rhel7)
+        registry=registry.access.redhat.com
+        ;;
+    *)
+        registry=docker.io
+        ;;
+    esac
+  echo "$registry"
+}
+
+# ct_assert_cmd_success CMD
+# ----------------
+# Evaluates [cmd] and fails if it does not succeed.
+# Argument: CMD - Command to be run
+function ct_assert_cmd_success() {
+  echo "Checking '$*' for success ..."
+  if ! eval "$@" &>/dev/null; then
+    echo " FAIL"
+    return 1
+  fi
+  echo " PASS"
+  return 0
+}
+
+# ct_assert_cmd_failure CMD
+# ----------------
+# Evaluates [cmd] and fails if it succeeds.
+# Argument: CMD - Command to be run
+function ct_assert_cmd_failure() {
+  echo "Checking '$*' for failure ..."
+  if eval "$@" &>/dev/null; then
+    echo " FAIL"
+    return 1
+  fi
+  echo " PASS"
+  return 0
+}

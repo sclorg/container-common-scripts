@@ -554,3 +554,47 @@ function ct_os_test_template_app() {
                                "${other_images}"
 }
 
+# ct_os_test_image_update IMAGE IS CHECK_CMD OC_ARGS
+# --------------------
+# Runs an image update test with [image] uploaded to [is] imagestream
+# and checks the services using an arbitrary function provided in [check_cmd].
+# Arguments: image - prefix or whole ID of the pod to run the cmd in (compulsory)
+# Arguments: is - imagestream to upload the images into (compulsory)
+# Arguments: check_cmd - command to be run to check functionality of created services (compulsory)
+# Arguments: oc_args - arguments to use during oc new-app (compulsory)
+ct_os_test_image_update() {
+  local image_name=$1; shift
+  local istag=$1; shift
+  local check_function=$1; shift
+  local service_name=${image_name##*/}
+  local old_image="" ip="" check_command_exp="" registry=""
+  registry=$(ct_registry_from_os "$OS")
+  old_image="$registry/$image_name"
+
+  echo "Running image update test for: $image_name"
+  ct_os_new_project
+
+  # Get current image from repository and create an imagestream
+  docker pull "$old_image" 2>/dev/null
+  ct_os_upload_image "$old_image" "$istag"
+
+  # Setup example application with curent image
+  oc new-app "$@" --name "$service_name"
+  ct_os_wait_pod_ready "$service_name" 60
+
+  # Check application output
+  ip=$(ct_os_get_service_ip "$service_name")
+  check_command_exp=${check_function//<IP>/$ip}
+  ct_assert_cmd_success "$check_command_exp"
+
+  # Tag built image into the imagestream and wait for rebuild
+  ct_os_upload_image "$image_name" "$istag"
+  ct_os_wait_pod_ready "${service_name}-2" 60
+
+  # Check application output
+  ip=$(ct_os_get_service_ip "$service_name")
+  check_command_exp=${check_function//<IP>/$ip}
+  ct_assert_cmd_success "$check_command_exp"
+
+  ct_os_delete_project
+}
