@@ -311,9 +311,9 @@ function ct_os_cluster_up() {
   local cluster_ip="127.0.0.1"
   [ "${is_public}" == "true" ] && cluster_ip=$(ct_get_public_ip)
 
-  mkdir -p ${dir}/{config,data}
+  mkdir -p ${dir}/{config,data,pv}
   oc cluster up --host-data-dir=${dir}/data --host-config-dir=${dir}/config \
-                --use-existing-config --public-hostname=${cluster_ip}
+                --host-pv-dir=${dir}/pv --use-existing-config --public-hostname=${cluster_ip}
   oc version
   oc login -u system:admin
   oc project default
