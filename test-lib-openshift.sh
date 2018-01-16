@@ -335,7 +335,7 @@ function ct_os_cluster_down() {
 # --------------------
 # Returns 0 if oc cluster is running
 function ct_os_cluster_running() {
-  oc status &>/dev/null
+  oc cluster status &>/dev/null
 }
 
 # ct_os_test_s2i_app_func IMAGE APP CONTEXT_DIR CHECK_CMD [OC_ARGS]
