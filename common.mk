@@ -3,14 +3,16 @@
 # If set to '0', images are automatically squashed.  '1' disables
 # squashing.  By default only RHEL containers are squashed.
 
+SHELL := /bin/env bash
+
 ifndef common_dir
     common_dir = common
 endif
 
-build = $(common_dir)/build.sh
-test = $(common_dir)/test.sh
-tag = $(common_dir)/tag.sh
-clean = $(common_dir)/clean.sh
+build = $(SHELL) $(common_dir)/build.sh
+test =  $(SHELL) $(common_dir)/test.sh
+tag =   $(SHELL) $(common_dir)/tag.sh
+clean = $(SHELL) $(common_dir)/clean.sh
 
 ifeq ($(TARGET),rhel7)
 	SKIP_SQUASH ?= 0
