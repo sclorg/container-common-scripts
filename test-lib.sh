@@ -196,12 +196,14 @@ function ct_doc_content_old() {
         return 1
       fi
     done
+    # Check whether the files use the correct format
+    for term in TH PP SH ; do
+      if ! grep -q "^\.${term}" ${tmpdir}/help.1 ; then
+        echo "ERROR: /help.1 is probably not in troff or groff format, since '${term}' is missing." >&2
+        return 1
+      fi
+    done
   done
-  # Check whether the files use the correct format
-  if ! file ${tmpdir}/help.1 | grep -q roff ; then
-    echo "ERROR: /help.1 is not in troff or groff format" >&2
-    return 1
-  fi
   : "  Success!"
 }
 
