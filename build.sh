@@ -71,6 +71,15 @@ function docker_build_with_version {
   if [[ "${UPDATE_BASE}" == "1" ]]; then
     BUILD_OPTIONS+=" --pull=true"
   fi
+  if [ ! -z "$CUSTOM_REPO" ]; then
+    if [ -f "$CUSTOM_REPO" ]; then
+      BUILD_OPTIONS+=" -v $CUSTOM_REPO:/etc/yum.repos.d/sclorg_custom.repo:Z"
+    elif [ -d "$CUSTOM_REPO" ]; then
+      BUILD_OPTIONS+=" -v $CUSTOM_REPO:/etc/yum.repos.d/:Z"
+    else
+      echo "ERROR: file type not known: $CUSTOM_REPO" >&2
+    fi
+  fi
 
   parse_output 'docker build $BUILD_OPTIONS -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}"' \
                "awk '/Successfully built/{print \$NF}'" \
