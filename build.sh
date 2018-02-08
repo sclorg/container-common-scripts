@@ -155,6 +155,8 @@ for dir in ${dirs}; do
     docker_build_with_version Dockerfile.rhel7
   elif [ "$OS" == "fedora" -o "$OS" == "fedora-candidate" ]; then
     docker_build_with_version Dockerfile.fedora
+  elif [ "$OS" == "centos6" -o "$OS" == "centos6-candidate" ]; then
+    docker_build_with_version Dockerfile.centos6
   else
     docker_build_with_version Dockerfile
   fi
