@@ -3,7 +3,7 @@
 # If set to '0', images are automatically squashed.  '1' disables
 # squashing.  By default only RHEL containers are squashed.
 
-SHELL := /bin/env bash
+SHELL := /usr/bin/env bash
 
 ifndef common_dir
     common_dir = common
