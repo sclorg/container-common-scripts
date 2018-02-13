@@ -1,10 +1,13 @@
-#!/bin/bash -e
+#!/bin/bash
+
 # This script is used to tag the OpenShift Docker images.
 #
 # Resulting image will be tagged: 'name:version' and 'name:latest'. Name and version
 #                                  are values of labels from resulted image
 #
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
+
+set -e
 
 for dir in ${VERSIONS}; do
   [ ! -e "${dir}/.image-id" ] && echo "-> Image for version $dir not built, skipping tag." && continue

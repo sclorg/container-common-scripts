@@ -1,9 +1,12 @@
-#!/bin/bash -e
+#!/bin/bash
+
 # This script is used to test the OpenShift Docker images.
 #
 # TEST_MODE - If set, run regular test suite
 # TEST_OPENSHIFT_MODE - If set, run OpenShift tests (if present)
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
+
+set -e
 
 for dir in ${VERSIONS}; do
   [ ! -e "${dir}/.image-id" ] && echo "-> Image for version $dir not built, skipping tests." && continue
