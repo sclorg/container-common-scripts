@@ -254,7 +254,7 @@ function ct_os_delete_project() {
 # Logs in into docker daemon
 function ct_os_docker_login() {
   # docker login fails with "404 page not found" error sometimes, just try it more times
-  for i in `seq 6` ; do
+  for i in `seq 12` ; do
     docker login -u developer -p $(oc whoami -t) 172.30.1.1:5000 && return 0 || :
     sleep 5
   done
