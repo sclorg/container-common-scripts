@@ -382,6 +382,9 @@ function ct_os_test_s2i_app_func() {
                           ${oc_args}
 
   if [ -d "${app}" ] ; then
+    # in order to avoid weird race seen sometimes, let's wait shortly
+    # before starting the build explicitly
+    sleep 5
     oc start-build "${service_name}" --from-dir="${app_param}"
   fi
 
