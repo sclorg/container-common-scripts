@@ -1,6 +1,8 @@
 #! /bin/sh
 
 set -e
+test -f auto_targets.mk && rm auto_targets.mk
+
 for version
 do
     remove_images=
