@@ -87,6 +87,11 @@ test: script_env += TEST_MODE=true
 test: tag
 	VERSIONS="$(VERSIONS)" $(script_env) $(test)
 
+.PHONY: test-with-conu
+test-with-conu: script_env += TEST_CONU_MODE=true
+test-with-conu: tag
+	VERSIONS="$(VERSIONS)" $(script_env) $(test)
+
 .PHONY: test-openshift
 test-openshift: script_env += TEST_OPENSHIFT_MODE=true
 test-openshift: tag

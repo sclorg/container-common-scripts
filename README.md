@@ -38,6 +38,15 @@ Depends on `tag` as some tests might need to have the images tagged (s2i).
 Similar to `make test` but runs testsuite for Openshift, expected to be found at
 `$gitroot/$version/test/run-openshift`
 
+`make test-with-conu`  
+The rule is similar to `make test`. It runs a test suite written using [conu
+library](https://github.com/user-cont/conu). The path to the test script is
+meant to be at `$gitroot/$version/test/run-conu`. By default the test suite is
+being run in the current environment. You can also run the tests in a container
+by defining variable `CONU_IMAGE`. Container images with conu are available in
+[this docker hub repository](docker.io/usercont/conu:0.6.2), a good value for
+the variable is `docker.io/usercont/conu:0.6.2`.
+
 `make clean`  
 Runs scripts that clean-up the working dir. Depends on the `clean-images` rule by default
 and additional clean rules can be provided through the `clean-hook` variable.
