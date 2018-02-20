@@ -19,6 +19,31 @@ for dir in ${VERSIONS}; do
     VERSION=$dir test/run
   fi
 
+  if [ -n "${TEST_CONU_MODE}" ]; then
+    if [[ -x test/run-conu ]]; then
+      if [ -n "${CONU_IMAGE}" ]; then
+        echo "-> Running conu tests in a container"
+        docker run \
+          --net=host \
+          -e VERSION="${dir}" \
+          -e IMAGE_NAME \
+          --rm \
+          --security-opt label=disable \
+          -ti \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -v ${PWD}/../:/src \
+          -w "/src/${dir}/" \
+          -ti \
+          "${CONU_IMAGE}" \
+          ./test/run-conu
+      else
+        VERSION="${dir}" ./test/run-conu
+      fi
+    else
+      echo "-> conu tests are not present, skipping"
+    fi
+  fi
+
   if [ -n "${TEST_OPENSHIFT_MODE}" ]; then
     if [[ -x test/run-openshift ]]; then
       VERSION=$dir test/run-openshift
