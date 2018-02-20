@@ -47,7 +47,31 @@ parse_rules() {
             distgen)
                 [[ -z "$src" ]] && echo "src has to be specified in distgen rule" && exit 1
                 [[ -z "$dest" ]] && echo "dest has to be specified in distgen rule" && exit 1
-                core_subst=$core
+
+                if [[ "$dest" == "Dockerfile"* ]]; then
+                    if [[ "$dest" == "Dockerfile.rhel7" ]]; then
+                        if [[ "$DG_CONF" == *"rhel-7-x86_64.yaml"* ]]; then
+                            conf=rhel-7-x86_64.yaml
+                        else
+                            continue
+                        fi
+                    elif [[ "$dest" == *"Dockerfile.fedora" ]]; then
+                        if [[ "$DG_CONF" == *"fedora-27-x86_64.yaml"* ]]; then
+                            conf=fedora-27-x86_64.yaml
+                        else
+                            continue
+                        fi
+                    elif [[ "$dest" == *"Dockerfile" ]]; then
+                        if [[ "$DG_CONF" == *"centos-7-x86_64.yaml"* ]]; then
+                            conf=centos-7-x86_64.yaml
+                        else
+                            continue
+                        fi
+                    fi
+                else
+                    conf=centos-7-x86_64.yaml
+                fi
+                core_subst=$(echo $core | sed -e "s~__conf__~"${conf}"~g")
                 ;;
             link)
                 [[ -z "$link_name" ]] && echo "link_name has to be specified in link rule" && exit 1
@@ -85,7 +109,7 @@ for version in ${VERSIONS}; do
     # distgen targets
     rules="$DISTGEN_RULES"
     core="${DG} --multispec specs/multispec.yml \\
-	--template \"\$<\" --distro \"$DG_CONF\" \\
+	--template \"\$<\" --distro \"__conf__\" \\
 	--multispec-selector version=\"$version\" --output \"\$@\" ; \\"
     message="Generating \"\$@\" using distgen"
     creator="distgen"

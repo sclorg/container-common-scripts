@@ -13,7 +13,6 @@ build = $(SHELL) $(common_dir)/build.sh
 test =  $(SHELL) $(common_dir)/test.sh
 tag =   $(SHELL) $(common_dir)/tag.sh
 clean = $(SHELL) $(common_dir)/clean.sh
-generator = $(SHELL) $(common_dir)/generate.sh
 
 ifeq ($(TARGET),rhel7)
 	SKIP_SQUASH ?= 0
@@ -30,13 +29,11 @@ else ifeq ($(TARGET),centos6)
 else
 	OS := centos7
 	DOCKERFILE ?= Dockerfile
-	DG_CONF ?= centos-7-x86_64.yaml
+	DG_CONF := centos-7-x86_64.yaml
 endif
 
 SKIP_SQUASH ?= 1
 DOCKER_BUILD_CONTEXT ?= .
-DISTGEN_BIN ?= /usr/bin/dg
-MANIFEST_FILE ?= manifest.sh
 
 script_env = \
 	SKIP_SQUASH=$(SKIP_SQUASH)                      \
@@ -46,11 +43,6 @@ script_env = \
 	DOCKER_BUILD_CONTEXT=$(DOCKER_BUILD_CONTEXT)    \
 	OPENSHIFT_NAMESPACES="$(OPENSHIFT_NAMESPACES)"  \
 	CUSTOM_REPO="$(CUSTOM_REPO)"
-
-generation_env = \
-	DG_CONF=$(DG_CONF) \
-	DG=$(DISTGEN_BIN) \
-	MANIFEST_FILE=$(MANIFEST_FILE)
 
 # TODO: switch to 'build: build-all' once parallel builds are relatively safe
 .PHONY: build build-serial build-all
@@ -99,14 +91,7 @@ clean:
 
 .PHONY: generate
 generate:
-	@$(MAKE) auto_targets.mk
-	@$(MAKE) exec-gen-rules
-	rm auto_targets.mk
+	$(MAKE) VERSIONS="$(VERSIONS)" DG_CONF=$(DG_CONF) -f $(common_dir)/gen.mk gen
 
-auto_targets.mk: $(generator) $(MANIFEST_FILE)
-	VERSIONS="$(VERSIONS)" $(generation_env) $(generator)
-
-include auto_targets.mk
-
-.PHONY: exec-gen-rules
-exec-gen-rules: $(DISTGEN_TARGETS) $(COPY_TARGETS) $(SYMLINK_TARGETS)
+generate-all:
+	$(MAKE) VERSIONS="$(VERSIONS)" DG_CONF="rhel-7-x86_64.yaml fedora-27-x86_64.yaml centos-7-x86_64.yaml" -f $(common_dir)/gen.mk gen
