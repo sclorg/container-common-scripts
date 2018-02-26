@@ -139,7 +139,7 @@ function ct_assert_container_creation_fails() {
 function ct_create_container() {
   local cid_file="$CID_FILE_DIR/$1" ; shift
   # create container with a cidfile in a directory for cleanup
-  docker run --cidfile="$cid_file" -d ${CONTAINER_ARGS:-} $IMAGE_NAME "$@"
+  docker run --cidfile="$cid_file" -d "${CONTAINER_ARGS:-}" $IMAGE_NAME "$@"
   ct_wait_for_cid $cid_file || return 1
   : "Created container $(cat $cid_file)"
 }
