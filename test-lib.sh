@@ -240,6 +240,14 @@ ct_path_foreach ()
 }
 
 
+# ct_generate_random_str
+# ---------------------
+# Generate random string
+ct_generate_random_str() {
+  return $(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 10 | head -n 1)
+}
+
+
 # ct_run_test_list
 # --------------------
 # Execute the tests specified by TEST_LIST
