@@ -386,3 +386,17 @@ function ct_assert_cmd_failure() {
   echo " PASS"
   return 0
 }
+
+
+# ct_random_string [LENGTH=10]
+# ----------------------------
+# Generate pseudorandom alphanumeric string of LENGTH bytes, the
+# default length is 10.  The string is printed on stdout.
+ct_random_string()
+(
+   export LC_ALL=C
+   dd if=/dev/urandom count=1 bs=10k 2>/dev/null \
+       | tr -dc 'a-z0-9' \
+       | fold -w "${1-10}" \
+       | head -n 1
+)
