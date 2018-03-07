@@ -1,0 +1,24 @@
+#! /bin/bash
+
+set -e
+
+. test-lib.sh
+
+path='a b c:d x:y'
+exp_output="==a b c==
+==.==
+==d x==
+==.==
+==y==
+==.=="
+
+wrap() { for arg; do echo "==$arg=="; done; }
+
+test "$(ct_path_foreach "$path" wrap .)" == "$exp_output"
+
+ct_path_append path '/a'
+exp_output="==/a==
+==.==
+$exp_output"
+
+test "$(ct_path_foreach "$path" wrap .)" == "$exp_output"
