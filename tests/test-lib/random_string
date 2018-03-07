@@ -1,0 +1,17 @@
+#! /bin/bash
+
+set -e
+. test-lib.sh
+
+x=$(ct_random_string)
+test ${#x} -eq 10
+
+for i in 5 9 11 13; do
+    x=$(ct_random_string $i)
+    test ${#x} -eq $i
+done
+
+# Even with ignored sigpipe we have to succeed promptly (#70).
+trap '' SIGPIPE
+x=$(ct_random_string 20)
+test ${#x} -eq 20
