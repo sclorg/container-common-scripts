@@ -578,7 +578,7 @@ ct_os_test_image_update() {
   ct_os_new_project
 
   # Get current image from repository and create an imagestream
-  docker pull "$old_image" 2>/dev/null
+  docker pull "$old_image:latest" 2>/dev/null
   ct_os_upload_image "$old_image" "$istag"
 
   # Setup example application with curent image
