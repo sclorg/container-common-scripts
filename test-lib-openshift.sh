@@ -287,18 +287,23 @@ function ct_os_install_in_centos() {
                  bash-completion origin-clients docker origin-clients
 }
 
-# ct_os_cluster_up [DIR, IS_PUBLIC]
+# ct_os_cluster_up [DIR, IS_PUBLIC, CLUSTER_VERSION]
 # --------------------
 # Runs the local OpenShift cluster using 'oc cluster up' and logs in as developer.
 # Arguments: dir - directory to keep configuration data in, random if omitted
 # Arguments: is_public - sets either private or public hostname for web-UI,
 #                        use "true" for allow remote access to the web-UI,
 #                        "false" is default
+# Arguments: cluster_version - version of the OpenShift cluster to use, empty
+#                              means default version of `oc`; example value: v3.7.0;
+#                              also can be specified outside by OC_CLUSTER_VERSION
 function ct_os_cluster_up() {
   ct_os_cluster_running && echo "Cluster already running. Nothing is done." && return 0
   mkdir -p /var/tmp/openshift
   local dir="${1:-$(mktemp -d /var/tmp/openshift/os-data-XXXXXX)}" ; shift || :
   local is_public="${1:-'false'}" ; shift || :
+  local default_cluster_version=${OC_CLUSTER_VERSION:-}
+  local cluster_version=${1:-${default_cluster_version}} ; shift || :
   if ! grep -qe '--insecure-registry.*172\.30\.0\.0' /etc/sysconfig/docker ; then
     sed -i "s|OPTIONS='|OPTIONS='--insecure-registry 172.30.0.0/16 |" /etc/sysconfig/docker
   fi
@@ -313,7 +318,8 @@ function ct_os_cluster_up() {
 
   mkdir -p ${dir}/{config,data,pv}
   oc cluster up --host-data-dir=${dir}/data --host-config-dir=${dir}/config \
-                --host-pv-dir=${dir}/pv --use-existing-config --public-hostname=${cluster_ip}
+                --host-pv-dir=${dir}/pv --use-existing-config --public-hostname=${cluster_ip} \
+                ${cluster_version:+--version=$cluster_version }
   oc version
   oc login -u system:admin
   oc project default
