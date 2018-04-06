@@ -19,6 +19,8 @@ test -f auto_targets.mk && rm auto_targets.mk
 
 DESTDIR="${DESTDIR:-$PWD}"
 
+DISTGEN_COMBINATIONS=$(${DG} --multispec specs/multispec.yml --multispec-combinations)
+
 clean_rule_variables(){
     src=""
     dest=""
@@ -47,32 +49,27 @@ parse_rules() {
             distgen)
                 [[ -z "$src" ]] && echo "src has to be specified in distgen rule" && exit 1
                 [[ -z "$dest" ]] && echo "dest has to be specified in distgen rule" && exit 1
-
-                if [[ "$dest" == "Dockerfile"* ]]; then
-                    if [[ "$dest" == "Dockerfile.rhel7" ]]; then
-                        if [[ "$DG_CONF" == *"rhel-7-x86_64.yaml"* ]]; then
-                            conf=rhel-7-x86_64.yaml
-                        else
-                            continue
-                        fi
-                    elif [[ "$dest" == *"Dockerfile.fedora" ]]; then
-                        if [[ "$DG_CONF" == *"fedora-27-x86_64.yaml"* ]]; then
-                            conf=fedora-27-x86_64.yaml
-                        else
-                            continue
-                        fi
-                    elif [[ "$dest" == *"Dockerfile" ]]; then
-                        if [[ "$DG_CONF" == *"centos-7-x86_64.yaml"* ]]; then
-                            conf=centos-7-x86_64.yaml
-                        else
-                            continue
-                        fi
-                    fi
-                else
-                    conf=centos-7-x86_64.yaml
-                fi
-                core_subst=$(echo $core | sed -e "s~__conf__~"${conf}"~g")
+                core_subst=$core
                 ;;
+            distgen_multi)
+                [[ -z "$src" ]] && echo "src has to be specified in distgen rule" && exit 1
+                [[ -z "$dest" ]] && echo "dest has to be specified in distgen rule" && exit 1
+
+                if [[ "$dest" == "Dockerfile.rhel7" ]]; then
+                    if ! [[ "$DG_CONF" =~ rhel-[0-9]{,2}-x86_64.yaml ]]; then
+                        continue
+                    fi
+                elif [[ "$dest" == *"Dockerfile.fedora" ]]; then
+                    if ! [[ "$DG_CONF" =~ fedora-[0-9]{,2}-x86_64.yaml ]]; then
+                        continue
+                    fi
+                elif [[ "$dest" == *"Dockerfile" ]]; then
+                    if ! [[ "$DG_CONF" =~ centos-[0-9]{,2}-x86_64.yaml ]]; then
+                        continue
+                    fi
+                fi
+                core_subst=$core
+               ;;
             link)
                 [[ -z "$link_name" ]] && echo "link_name has to be specified in link rule" && exit 1
                 [[ -z "$link_target" ]] && echo "link_target has to be specified in link rule" && exit 1
@@ -109,7 +106,7 @@ for version in ${VERSIONS}; do
     # distgen targets
     rules="$DISTGEN_RULES"
     core="${DG} --multispec specs/multispec.yml \\
-	--template \"\$<\" --distro \"__conf__\" \\
+	--template \"\$<\" --distro centos-7-x86_64.yaml \\
 	--multispec-selector version=\"$version\" --output \"\$@\" ; \\"
     message="Generating \"\$@\" using distgen"
     creator="distgen"
@@ -125,6 +122,21 @@ for version in ${VERSIONS}; do
     SYMLINK_TARGETS+="$targets"
 done
 
+while read -r combination; do
+    version=${combination##*=}
+    DG_CONF=$(echo $combination | cut -d' ' -f2)
+    # distgen multi targets
+    rules="$DISTGEN_MULTI_RULES"
+    core="${DG} --multispec specs/multispec.yml \\
+                --template \"\$<\" \\
+                --output \"\$@\" \\
+                $combination ; \\"
+    message="Generating \"\$@\" using distgen"
+    creator="distgen_multi"
+    parse_rules
+    DISTGEN_MULTI_TARGETS+="$targets"
+done <<< ${DISTGEN_COMBINATIONS}
+
     # adding COPY_TARGETS variable at the bottom of auto_targets.mk file
     cat -v >> auto_targets.mk << EOF
 COPY_TARGETS = \\
@@ -135,6 +147,12 @@ EOF
     cat -v >> auto_targets.mk << EOF
 DISTGEN_TARGETS = \\
 $DISTGEN_TARGETS
+EOF
+
+    # adding DISTGEN_MULTI_TARGETS variable at the bottom of auto_targets.mk file
+    cat -v >> auto_targets.mk << EOF
+DISTGEN_MULTI_TARGETS = \\
+$DISTGEN_MULTI_TARGETS
 EOF
 
     cat -v >> auto_targets.mk << EOF
