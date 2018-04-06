@@ -24,4 +24,4 @@ auto_targets.mk: $(generator) $(MANIFEST_FILE)
 include auto_targets.mk
 
 .PHONY: exec-gen-rules
-exec-gen-rules: $(DISTGEN_TARGETS) $(COPY_TARGETS) $(SYMLINK_TARGETS)
+exec-gen-rules: $(DISTGEN_TARGETS) $(DISTGEN_MULTI_TARGETS) $(COPY_TARGETS) $(SYMLINK_TARGETS)
