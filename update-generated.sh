@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -ex
+shopt -s extglob
 
 SOURCE_BRANCH=${1:-master}
 GENERATED_BRANCH=${2:-generated}
@@ -16,17 +17,7 @@ rsync -a ./* source
 VERSIONS=$(sed -n 's/^VERSIONS[[:space:]]*=//p' source/Makefile)
 
 git checkout "$GENERATED_BRANCH" && git submodule update
-for i in *; do
-    case "$i" in
-    # Do not remove the update script or common submodule
-    update|common|source)
-        continue
-        ;;
-    *)
-        rm -rf "$i"
-        ;;
-    esac
-done
+rm -rf !(common|source|update)
 
 # Generate the sources inside source/ and copy them to root
 (
