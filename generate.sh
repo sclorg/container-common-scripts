@@ -15,6 +15,8 @@
 
 source manifest.sh
 
+die () { echo "FATAL: $*" ; exit 1 ; }
+
 test -f auto_targets.mk && rm auto_targets.mk
 
 DESTDIR="${DESTDIR:-$PWD}"
@@ -124,8 +126,16 @@ for version in ${VERSIONS}; do
 done
 
 while read -r combination; do
-    version=${combination##*=}
-    DG_CONF=$(echo $combination | cut -d' ' -f2)
+    # line looks like: --distro rhel-7-x86_64.yaml --multispec-selector version=9.4
+    eval 'set -- $combination'
+    case $4 in
+        version=*) version=${4##*=} ;;
+        *) die "version not found"
+    esac
+    case $2 in
+        *x86_64*) DG_CONF=$2 ;;
+        *) die "invalid --distro option"
+    esac
     # distgen multi targets
     rules="$DISTGEN_MULTI_RULES"
     core="\$(DG) --multispec specs/multispec.yml \\
@@ -136,7 +146,7 @@ while read -r combination; do
     creator="distgen_multi"
     parse_rules
     DISTGEN_MULTI_TARGETS+="$targets"
-done <<< ${DISTGEN_COMBINATIONS}
+done <<< "$DISTGEN_COMBINATIONS"
 
     # adding COPY_TARGETS variable at the bottom of auto_targets.mk file
     cat -v >> auto_targets.mk << EOF
