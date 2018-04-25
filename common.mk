@@ -14,22 +14,23 @@ test =  $(SHELL) $(common_dir)/test.sh
 tag =   $(SHELL) $(common_dir)/tag.sh
 clean = $(SHELL) $(common_dir)/clean.sh
 
+DG ?= /bin/dg
+
+generator = DG="$(DG)" $(SHELL) $(common_dir)/generate.sh
+
 ifeq ($(TARGET),rhel7)
 	SKIP_SQUASH ?= 0
 	OS := rhel7
 	DOCKERFILE ?= Dockerfile.rhel7
-	DG_CONF := rhel-7-x86_64.yaml
 else ifeq ($(TARGET),fedora)
 	OS := fedora
 	DOCKERFILE ?= Dockerfile.fedora
-	DG_CONF := fedora-27-x86_64.yaml
 else ifeq ($(TARGET),centos6)
 	OS := centos6
 	DOCKERFILE ?= Dockerfile.centos6
 else
 	OS := centos7
 	DOCKERFILE ?= Dockerfile
-	DG_CONF := centos-7-x86_64.yaml
 endif
 
 SKIP_SQUASH ?= 1
@@ -90,8 +91,18 @@ clean:
 	chmod a+r "$@"
 
 .PHONY: generate
-generate:
-	$(MAKE) VERSIONS="$(VERSIONS)" DG_CONF=$(DG_CONF) -f $(common_dir)/gen.mk gen
+generate: exec-gen-rules
+generate-all: generate
 
-generate-all:
-	$(MAKE) VERSIONS="$(VERSIONS)" DG_CONF="rhel-7-x86_64.yaml fedora-27-x86_64.yaml centos-7-x86_64.yaml" -f $(common_dir)/gen.mk gen
+MANIFEST_FILE ?= manifest.sh
+
+auto_targets.mk: $(MANIFEST_FILE)
+	MANIFEST_FILE="$(MANIFEST_FILE)" \
+	VERSIONS="$(VERSIONS)" \
+	$(generator)
+
+# triggers build of auto_targets.mk automatically
+-include auto_targets.mk
+
+.PHONY: exec-gen-rules
+exec-gen-rules: $(DISTGEN_TARGETS) $(DISTGEN_MULTI_TARGETS) $(COPY_TARGETS) $(SYMLINK_TARGETS)

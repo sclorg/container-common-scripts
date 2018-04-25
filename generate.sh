@@ -19,7 +19,7 @@ test -f auto_targets.mk && rm auto_targets.mk
 
 DESTDIR="${DESTDIR:-$PWD}"
 
-DISTGEN_COMBINATIONS=$(${DG} --multispec specs/multispec.yml --multispec-combinations)
+DISTGEN_COMBINATIONS=$(${DG-/bin/dg} --multispec specs/multispec.yml --multispec-combinations)
 
 clean_rule_variables(){
     src=""
@@ -105,7 +105,8 @@ for version in ${VERSIONS}; do
 
     # distgen targets
     rules="$DISTGEN_RULES"
-    core="${DG} --multispec specs/multispec.yml \\
+    # TODO: Drop terrible hack that we use fixed --distro here!
+    core="\$(DG) --multispec specs/multispec.yml \\
 	--template \"\$<\" --distro centos-7-x86_64.yaml \\
 	--multispec-selector version=\"$version\" --output \"\$@\" ; \\"
     message="Generating \"\$@\" using distgen"
@@ -127,7 +128,7 @@ while read -r combination; do
     DG_CONF=$(echo $combination | cut -d' ' -f2)
     # distgen multi targets
     rules="$DISTGEN_MULTI_RULES"
-    core="${DG} --multispec specs/multispec.yml \\
+    core="\$(DG) --multispec specs/multispec.yml \\
                 --template \"\$<\" \\
                 --output \"\$@\" \\
                 $combination ; \\"
