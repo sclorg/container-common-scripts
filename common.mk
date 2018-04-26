@@ -18,6 +18,18 @@ DG ?= /bin/dg
 
 generator = DG="$(DG)" $(SHELL) $(common_dir)/generate.sh
 
+
+# pretty printers
+# ---------------
+__PROLOG = $(if $(VERBOSE),,@echo "  $(1)   " $@;)
+V_LN  = $(call __PROLOG,LN )
+V_DG  = $(call __PROLOG,DG )
+V_DGM = $(call __PROLOG,DGM)
+V_CP  = $(call __PROLOG,CP )
+
+CDIR  = mkdir -p "$$(dirname "$@")" || exit 1 ;
+
+
 ifeq ($(TARGET),rhel7)
 	SKIP_SQUASH ?= 0
 	OS := rhel7
@@ -90,8 +102,6 @@ clean:
 	go-md2man -in "$^" -out "$@"
 	chmod a+r "$@"
 
-.PHONY: generate
-generate: exec-gen-rules
 generate-all: generate
 
 MANIFEST_FILE ?= manifest.sh
@@ -104,5 +114,8 @@ auto_targets.mk: $(MANIFEST_FILE)
 # triggers build of auto_targets.mk automatically
 -include auto_targets.mk
 
-.PHONY: exec-gen-rules
-exec-gen-rules: $(DISTGEN_TARGETS) $(DISTGEN_MULTI_TARGETS) $(COPY_TARGETS) $(SYMLINK_TARGETS)
+# We have to remove auto_targets.mk here, otherwise subsequent make calls
+# with different VERSIONS=* option keeps the auto_targets.mk unchanged.
+.PHONY: generate
+generate: $(DISTGEN_TARGETS) $(DISTGEN_MULTI_TARGETS) $(COPY_TARGETS) $(SYMLINK_TARGETS)
+	rm auto_targets.mk
