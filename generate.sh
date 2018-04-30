@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # This script is used to create image directories using distgen, cp or ln
-# It requires manifest.sh file to be present in image repository
+# It requires "$MANIFEST_FILE" (defaults to manifest.sh) file to be present in
+# image repository.
 # The manifest file should contain set of rules in form:
 # <rules_type>="
 # src=<path to source>
@@ -13,7 +14,7 @@
 # Supported type rules are now COPY_RULES, DISTGEN_RULES and SYMLINKS_RULES
 # for real example see https://github.com/sclorg/postgresql-container/blob/master/manifest.sh
 
-source manifest.sh
+source "$MANIFEST_FILE"
 
 die () { echo "FATAL: $*" ; exit 1 ; }
 
@@ -94,7 +95,7 @@ parse_rules() {
         targets+="\\$nl	$target"
 
         cat >> auto_targets.mk << EOF
-$nl$target: $src manifest.sh
+$nl$target: $src \$(MANIFEST_FILE)
 	$prolog \\
 	$core_subst${mode:+"; \\
 	chmod $mode '\$@'"}
