@@ -61,12 +61,33 @@ parse_output ()
   (exit $rc)
 }
 
+# "best-effort" cleanup of previous image
+function clean_image {
+  if test -f .image-id.raw; then
+      local previous_id
+      previous_id=$(cat .image-id.raw)
+      if test "$IMAGE_ID" != "$previous_id"; then
+          # Also remove squashed image since it will change anyway
+          docker rmi "$previous_id" "$(cat .image-id)" || :
+          rm -f ".image-id.raw" ".image-id" || :
+      fi
+  fi
+}
+
 # Perform docker build but append the LABEL with GIT commit id at the end
 function docker_build_with_version {
   local dockerfile="$1"
   local exclude=.exclude-${OS}
-  [ -e $exclude ] && echo "-> $exclude file exists for version $dir, skipping build." && return
-  [ ! -e "$dockerfile" ] && echo "-> $dockerfile for version $dir does not exist, skipping build." && return
+  if [ -e "$exclude" ]; then
+    echo "-> $exclude file exists for version $dir, skipping build."
+    clean_image
+    return
+  fi
+  if [ ! -e "$dockerfile" ]; then
+    echo "-> $dockerfile for version $dir does not exist, skipping build."
+    clean_image
+    return
+  fi
   echo "-> Version ${dir}: building image from '${dockerfile}' ..."
 
   git_version=$(git rev-parse --short HEAD)
@@ -88,14 +109,7 @@ function docker_build_with_version {
                "awk '/Successfully built/{print \$NF}'" \
                IMAGE_ID
 
-
-  if test -f .image-id.raw; then
-      local previous_id=`cat .image-id.raw`
-      if test "$IMAGE_ID" != "$previous_id"; then
-          # Try to do "best-effort" cleanup the previous one.
-          docker rmi "$previous_id" || :
-      fi
-  fi
+  clean_image
   echo "$IMAGE_ID" > .image-id.raw
 
   squash "${dockerfile}" "$IMAGE_ID"
