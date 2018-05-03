@@ -94,8 +94,15 @@ tag: build
 	VERSIONS="$(VERSIONS)" $(script_env) $(tag)
 
 .PHONY: clean
-clean:
+clean: clean-images $(clean-hook)
+
+.PHONY: clean-images
+clean-images:
 	$(clean) $(VERSIONS)
+
+.PHONY: clean-versions
+clean-versions:
+	rm -rf $(VERSIONS)
 
 %root/help.1: %README.md
 	mkdir -p $(@D)
