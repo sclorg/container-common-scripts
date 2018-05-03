@@ -87,6 +87,7 @@ for image in "${!IMAGES[@]}"; do
         # We fail if the 'common' directory doesn't exist.
         test -d common
         rm -rf common
+        info "Replacing common with PR's version"
         ln -s ../ common
 
         # TODO: Do we have to test everything?
