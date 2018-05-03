@@ -93,14 +93,13 @@ test-openshift: tag
 tag: build
 	VERSIONS="$(VERSIONS)" $(script_env) $(tag)
 
-.PHONY: clean
-clean: clean-images $(clean-hook)
+.PHONY: clean clean-hook clean-images clean-versions
+clean: clean-images
+	@$(MAKE) --no-print-directory clean-hook
 
-.PHONY: clean-images
 clean-images:
 	$(clean) $(VERSIONS)
 
-.PHONY: clean-versions
 clean-versions:
 	rm -rf $(VERSIONS)
 
