@@ -39,6 +39,10 @@ Similar to `make test` but runs testsuite for Openshift, expected to be found at
 `$gitroot/$version/test/run-openshift`
 
 `make clean`  
+Runs scripts that clean-up the working dir. Depends on the `clean-images` rule by default
+and additional clean rules can be provided through the `clean-hook` variable.
+
+`make clean-images`  
 Best-effort to remove the last set of images that have been built using the scripts.
 
 **There are additional variables that you can use that the default rules are prepared to
@@ -67,6 +71,10 @@ Set to 1 if you want the build script to always pull the base image when availab
 `DOCKER_BUILD_CONTEXT`  
 Use this variable in case you want to have a different context for your builds. By default
 the context of the build is the versioned directory the Dockerfiles are contained in.
+
+`clean-hook`  
+Append Makefile rules to this variable to make sure additional cleaning actions are run
+when `make clean` is called.
 
 Regression tests
 ----------------
