@@ -316,7 +316,10 @@ function ct_os_cluster_up() {
   local cluster_ip="127.0.0.1"
   [ "${is_public}" == "true" ] && cluster_ip=$(ct_get_public_ip)
 
-  ct_os_set_path_oc "${cluster_version}"
+  if [ -n "${cluster_version}" ] ; then
+    # if $cluster_version is not set, we simply use oc that is available
+    ct_os_set_path_oc "${cluster_version}"
+  fi
 
   mkdir -p ${dir}/{config,data,pv}
   oc cluster up --host-data-dir=${dir}/data --host-config-dir=${dir}/config \
@@ -395,7 +398,7 @@ function ct_os_set_path_oc() {
 function ct_os_get_latest_ver(){
   local vxy="v$1"
   for vz in {3..0} ; do
-    curl -si "https://github.com/openshift/origin/releases/tag/${vxy}.${vz}" | grep -q 'HTTP/1.1 200 OK' && echo "${vxy}.${vz}" && return 0
+    curl -sif "https://github.com/openshift/origin/releases/tag/${vxy}.${vz}" >/dev/null && echo "${vxy}.${vz}" && return 0
   done
   echo "ERROR: version ${vxy} not found in https://github.com/openshift/origin/tags" >&2
   return 1
