@@ -356,37 +356,37 @@ function ct_os_cluster_running() {
 # it first takes a look into /usr/local/oc-<ver>/bin directory,
 # and if not found there it downloads the community release from github.
 # In the end the PATH variable is changed, so the other tests can still use just 'oc'.
-# Arguments: oc_ver - X.Y part of the version of OSE (e.g. 3.9)
+# Arguments: oc_version - X.Y part of the version of OSE (e.g. 3.9)
 function ct_os_set_path_oc() {
-  local oc_ver=$(ct_os_get_latest_ver $1)
+  local oc_version=$(ct_os_get_latest_ver $1)
   local oc_path
 
-  if oc version | grep -q "oc ${oc_ver%.*}." ; then
-    echo "Binary oc found already available in version ${oc_ver}: `which oc` Doing noting."
+  if oc version | grep -q "oc ${oc_version%.*}." ; then
+    echo "Binary oc found already available in version ${oc_version}: `which oc` Doing noting."
     return 0
   fi
 
   # first check whether we already have oc available in /usr/local
-  local installed_oc_path="/usr/local/oc-${oc_ver%.*}/bin"
+  local installed_oc_path="/usr/local/oc-${oc_version%.*}/bin"
 
   if [ -x "${installed_oc_path}/oc" ] ; then
     oc_path="${installed_oc_path}"
     echo "Binary oc found in ${installed_oc_path}" >&2
   else
     # oc not available in /usr/local, try to download it from github (community release)
-    oc_path="/tmp/oc-${oc_ver}-bin"
-    ct_os_download_upstream_oc "${oc_ver}" "${oc_path}"
+    oc_path="/tmp/oc-${oc_version}-bin"
+    ct_os_download_upstream_oc "${oc_version}" "${oc_path}"
   fi
   if [ -z "${oc_path}/oc" ] ; then
     echo "ERROR: oc not found installed, nor downloaded" >&1
     return 1
   fi
   export PATH="${oc_path}:${PATH}"
-  if ! oc version | grep -q "oc ${oc_ver%.*}." ; then
-    echo "ERROR: something went wrong, oc located at ${oc_path}, but oc of version ${oc_ver} not found in PATH ($PATH)" >&1
+  if ! oc version | grep -q "oc ${oc_version%.*}." ; then
+    echo "ERROR: something went wrong, oc located at ${oc_path}, but oc of version ${oc_version} not found in PATH ($PATH)" >&1
     return 1
   else
-    echo "PATH set correctly, binary oc found in version ${oc_ver}: `which oc`"
+    echo "PATH set correctly, binary oc found in version ${oc_version}: `which oc`"
   fi
 }
 
@@ -408,26 +408,26 @@ function ct_os_get_latest_ver(){
 # --------------------
 # Downloads a particular version of openshift-origin-client-tools from
 # github into specified output directory
-# Arguments: oc_ver - version of OSE (e.g. v3.7.2)
+# Arguments: oc_version - version of OSE (e.g. v3.7.2)
 # Arguments: output_dir - output directory
 function ct_os_download_upstream_oc() {
-  local oc_ver=$1
+  local oc_version=$1
   local output_dir=$2
 
   # check whether we already have the binary in place
   [ -x "${output_dir}/oc" ] && return 0
 
   mkdir -p "${output_dir}"
-  # using html output instead of https://api.github.com/repos/openshift/origin/releases/tags/${oc_ver},
+  # using html output instead of https://api.github.com/repos/openshift/origin/releases/tags/${oc_version},
   # because API is limited for number of queries if not authenticated
-  tarball=$(curl -si "https://github.com/openshift/origin/releases/tag/${oc_ver}" | grep -o -e "openshift-origin-client-tools-${oc_ver}-[a-f0-9]*-linux-64bit.tar.gz" | head -n 1)
+  tarball=$(curl -si "https://github.com/openshift/origin/releases/tag/${oc_version}" | grep -o -e "openshift-origin-client-tools-${oc_version}-[a-f0-9]*-linux-64bit.tar.gz" | head -n 1)
 
   # download, unpack the binaries and then put them into output directory
-  echo "Downloading https://github.com/openshift/origin/releases/download/${oc_ver}/${tarball} into ${output_dir}/" >&2
-  curl -sL https://github.com/openshift/origin/releases/download/${oc_ver}/${tarball} | tar -C "${output_dir}" -xz
-  mv -f "${output_dir}/${tarball%.tar.gz}"/* ${output_dir}/
+  echo "Downloading https://github.com/openshift/origin/releases/download/${oc_version}/${tarball} into ${output_dir}/" >&2
+  curl -sL https://github.com/openshift/origin/releases/download/${oc_version}/"${tarball}" | tar -C "${output_dir}" -xz
+  mv -f "${output_dir}"/"${tarball%.tar.gz}"/* "${output_dir}/"
 
-  rmdir "${output_dir}/${tarball%.tar.gz}"
+  rmdir "${output_dir}"/"${tarball%.tar.gz}"
 }
 
 
