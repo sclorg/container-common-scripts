@@ -3,33 +3,58 @@
 set -ex
 shopt -s extglob
 
-SOURCE_BRANCH=${1:-master}
+COMMIT=$(git rev-parse HEAD)
+
+# import generated content from this git reference ..
+SOURCE_BRANCH=${1:-$COMMIT}
+
+# into this git branch
 GENERATED_BRANCH=${2:-generated}
 
 git clean -f -d
 
-# checkout source branch
-git checkout "$SOURCE_BRANCH" && git submodule update
-tag=$(git rev-parse HEAD)
+# switch to generated branch for working env; and switch back later
+git checkout "$GENERATED_BRANCH"
+git submodule update
 
-# copy the branch content into source/
-rsync -a ./* source
-VERSIONS=$(sed -n 's/^VERSIONS[[:space:]]*=//p' source/Makefile)
+# Clean everything in generated branch.
+rm -rf -- *
 
-git checkout "$GENERATED_BRANCH" && git submodule update
-rm -rf !(common|source|update)
+srcdir=srcdir
 
-# Generate the sources inside source/ and copy them to root
+cleanup ()
+{
+    exit_status=$?
+    rm -rf "$srcdir"
+
+    # switch back to initial ranch
+    git checkout "$SOURCE_BRANCH"
+    git submodule update
+
+    return $exit_status
+}
+trap cleanup EXIT
+
 (
-    cd source
+    # Copy the actual repo into $srcdir, and generate there
+    mkdir "$srcdir"
+    cd "$srcdir"
+    git clone .. .
+    git checkout "$SOURCE_BRANCH"
+    git submodule update --init
     make generate-all
-    for i in $VERSIONS; do
-        cp -r "$i" ../
-    done
 )
-rm -rf source
 
-git add $VERSIONS
+# copy the relevant (generated) content from $srcdir
+versions=$(sed -n 's/^VERSIONS[[:space:]]*=//p' "$srcdir"/Makefile)
+for i in $versions; do
+    cp -r "$srcdir/$i" .
+done
+
+# source directory is not needed anymore
+rm -rf "$srcdir"
+
+git add $versions
 
 # Add deleted files to the index as well
 (
@@ -40,7 +65,7 @@ git add $VERSIONS
 )
 
 if ! git diff --cached --exit-code --quiet ; then
-    git commit -m "auto-sync: master commit $tag"
+    git commit -m "auto-sync: master commit $COMMIT"
 else
     echo "Nothing changed"
 fi
