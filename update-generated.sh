@@ -35,7 +35,7 @@ git add $VERSIONS
 (
     IFS=$'\n'
     for i in $(git ls-files --deleted) ;do
-        git add "$i"
+        git add --all "$i"
     done
 )
 
