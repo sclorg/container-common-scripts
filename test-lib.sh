@@ -208,6 +208,29 @@ function ct_doc_content_old() {
 }
 
 
+# ct_npm_works
+# --------------------
+# Checks existance of the npm tool and runs it.
+function ct_npm_works() {
+  local tmpdir=$(mktemp -d)
+  : "  Testing npm in the container image"
+  docker run --rm ${IMAGE_NAME} /bin/bash -c "npm --version" >${tmpdir}/version
+
+  if [ $? -ne 0 ] ; then
+    echo "ERROR: 'npm --version' does not work inside the image ${IMAGE_NAME}." >&2
+    return 1
+  fi
+
+  docker run --rm ${IMAGE_NAME} /bin/bash -c "npm install jquery && test -f node_modules/jquery/src/jquery.js"
+  if [ $? -ne 0 ] ; then
+    echo "ERROR: npm could not install jquery inside the image ${IMAGE_NAME}." >&2
+    return 1
+  fi
+
+  : "  Success!"
+}
+
+
 # ct_path_append PATH_VARNAME DIRECTORY
 # -------------------------------------
 # Append DIRECTORY to VARIABLE of name PATH_VARNAME, the VARIABLE must consist
