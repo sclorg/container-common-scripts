@@ -22,8 +22,12 @@ nl='
 '
 
 test -f auto_targets.mk && rm auto_targets.mk
+DG="${DG-/bin/dg}"
+[ ! -x "$DG" ] && echo "  Error: distgen binary not found or not executable in $DG" && \
+echo "    Make sure distgen is properly installed on your host in $DG, or provide a path to your distgen binary via \$DG" && exit 1
 
-DISTGEN_COMBINATIONS=$(${DG-/bin/dg} --multispec specs/multispec.yml --multispec-combinations)
+DISTGEN_COMBINATIONS=$("$DG" --multispec specs/multispec.yml --multispec-combinations)
+
 
 clean_rule_variables(){
     src=""
