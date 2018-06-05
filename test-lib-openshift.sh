@@ -223,7 +223,7 @@ function _ct_os_get_uniq_project_name() {
   local r
   while true ; do
     r=${RANDOM}
-    mkdir /var/tmp/os-test-${r} &>/dev/null && echo test-${r} && break
+    mkdir /var/tmp/sclorg-test-${r} &>/dev/null && echo sclorg-test-${r} && break
   done
 }
 
@@ -234,6 +234,10 @@ function _ct_os_get_uniq_project_name() {
 # Expects 'os' command that is properly logged in to the OpenShift cluster.
 # Not using mktemp, because we cannot use uppercase characters.
 function ct_os_new_project() {
+  if [ "${CT_SKIP_NEW_PROJECT:-false}" == 'true' ] ; then
+    echo "Creating project skipped."
+    return
+  fi
   local project_name="${1:-$(_ct_os_get_uniq_project_name)}" ; shift || :
   oc new-project ${project_name}
   # let openshift cluster to sync to avoid some race condition errors
@@ -245,17 +249,36 @@ function ct_os_new_project() {
 # Deletes the specified project in the openshfit
 # Arguments: project - project name, uses the current project if omitted
 function ct_os_delete_project() {
+  if [ "${CT_SKIP_NEW_PROJECT:-false}" == 'true' ] ; then
+    echo "Deleting project skipped, cleaning objects only."
+    ct_delete_all_objects
+    return
+  fi
   local project_name="${1:-$(oc project -q)}" ; shift || :
   oc delete project "${project_name}"
+}
+
+# ct_delete_all_objects
+# -----------------
+# Deletes all objects within the project.
+# Handy when we have one project and want to run more tests.
+function ct_delete_all_objects() {
+  for x in bc builds is dc svc po routes secrets ; do
+    oc delete $x --all
+  done
+  sleep 10
 }
 
 # ct_os_docker_login
 # --------------------
 # Logs in into docker daemon
+# Uses global REGISRTY_ADDRESS environment variable for arbitrary registry address.
+# Does not do anything if REGISTRY_ADDRESS is set.
 function ct_os_docker_login() {
+  [ -n "${REGISTRY_ADDRESS:-}" ] && "REGISTRY_ADDRESS set, not trying to docker login." && return 0
   # docker login fails with "404 page not found" error sometimes, just try it more times
   for i in `seq 12` ; do
-    docker login -u developer -p $(oc whoami -t) 172.30.1.1:5000 && return 0 || :
+    docker login -u developer -p $(oc whoami -t) ${REGISRTY_ADDRESS:-172.30.1.1:5000} && return 0 || :
     sleep 5
   done
   return 1
@@ -267,11 +290,12 @@ function ct_os_docker_login() {
 # Arguments: image - image name to upload
 # Arguments: imagestream - name and tag to use for the internal registry.
 #                          In the format of name:tag ($image_name:latest by default)
+# Uses global REGISRTY_ADDRESS environment variable for arbitrary registry address.
 function ct_os_upload_image() {
   local input_name="${1}" ; shift
   local image_name=${input_name##*/}
   local imagestream=${1:-$image_name:latest}
-  local output_name="172.30.1.1:5000/$(oc project -q)/$imagestream"
+  local output_name="${REGISRTY_ADDRESS:-172.30.1.1:5000}/$(oc project -q)/$imagestream"
 
   ct_os_docker_login
   docker tag ${input_name} ${output_name}
@@ -299,6 +323,8 @@ function ct_os_install_in_centos() {
 #                              also can be specified outside by OC_CLUSTER_VERSION
 function ct_os_cluster_up() {
   ct_os_cluster_running && echo "Cluster already running. Nothing is done." && return 0
+  ct_os_logged_in && echo "Already logged in to a cluster. Nothing is done." && return 0
+
   mkdir -p /var/tmp/openshift
   local dir="${1:-$(mktemp -d /var/tmp/openshift/os-data-XXXXXX)}" ; shift || :
   local is_public="${1:-'false'}" ; shift || :
@@ -357,6 +383,13 @@ function ct_os_cluster_down() {
 # Returns 0 if oc cluster is running
 function ct_os_cluster_running() {
   oc cluster status &>/dev/null
+}
+
+# ct_os_logged_in
+# ---------------
+# Returns 0 if logged in to a cluster (remote or local)
+function ct_os_logged_in() {
+  oc whoami >/dev/null
 }
 
 # ct_os_set_path_oc OC_VERSION
@@ -460,9 +493,10 @@ function ct_os_test_s2i_app_func() {
   local context_dir=${3}
   local check_command=${4}
   local oc_args=${5:-}
+  local import_image=${6:-}
   local image_name_no_namespace=${image_name##*/}
   local service_name="${image_name_no_namespace}-testing"
-  local image_tagged="${image_name_no_namespace}:testing"
+  local image_tagged="${image_name_no_namespace}:${VERSION}"
 
   if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
     echo "ERROR: ct_os_test_s2i_app_func() requires at least 4 arguments that cannot be emtpy." >&2
@@ -471,7 +505,19 @@ function ct_os_test_s2i_app_func() {
 
   ct_os_new_project
   # Create a specific imagestream tag for the image so that oc cannot use anything else
-  ct_os_upload_image "${image_name}" "${image_tagged}"
+  if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
+    if [ -n "${import_image}" ] ; then
+      echo "Importing image ${import_image} as ${image_name}:${VERSION}"
+      oc import-image ${image_name}:${VERSION} --from ${import_image} --confirm
+    else
+      echo "Uploading and importing image skipped."
+    fi
+  else
+    if [ -n "${import_image}" ] ; then
+      echo "Warning: Import image ${import_image} requested, but uploading image ${image_name} instead."
+    fi
+    ct_os_upload_image "${image_name}" "${image_tagged}"
+  fi
 
   local app_param="${app}"
   if [ -d "${app}" ] ; then
@@ -533,6 +579,7 @@ function ct_os_test_s2i_app() {
   local protocol=${6:-http}
   local response_code=${7:-200}
   local oc_args=${8:-}
+  local import_image=${9:-}
 
   if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
     echo "ERROR: ct_os_test_s2i_app() requires at least 4 arguments that cannot be emtpy." >&2
@@ -542,8 +589,8 @@ function ct_os_test_s2i_app() {
   ct_os_test_s2i_app_func "${image_name}" \
                           "${app}" \
                           "${context_dir}" \
-                          "ct_test_response '${protocol}://<IP>:${port}' '${response_code}' '${expected_output}'" \
-                          "${oc_args}"
+                          "ct_os_test_response_internal '${protocol}://<IP>:${port}' '${response_code}' '${expected_output}'" \
+                          "${oc_args}" "${import_image}"
 }
 
 # ct_os_test_template_app_func IMAGE APP IMAGE_IN_TEMPLATE CHECK_CMD [OC_ARGS]
@@ -569,6 +616,7 @@ function ct_os_test_template_app_func() {
   local check_command=${4}
   local oc_args=${5:-}
   local other_images=${6:-}
+  local import_image=${7:-}
 
   if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
     echo "ERROR: ct_os_test_template_app_func() requires at least 4 arguments that cannot be emtpy." >&2
@@ -579,26 +627,38 @@ function ct_os_test_template_app_func() {
   local image_tagged="${name_in_template}:${VERSION}"
 
   ct_os_new_project
-  # Create a specific imagestream tag for the image so that oc cannot use anything else
-  ct_os_upload_image "${image_name}" "${image_tagged}"
 
-  # upload also other images, that template might need (list of pairs in the format <image>|<tag>
-  local images_tags_a
-  local i_t
-  for i_t in ${other_images} ; do
-    echo "${i_t}"
-    IFS='|' read -ra image_tag_a <<< "${i_t}"
-    docker pull "${image_tag_a[0]}"
-    ct_os_upload_image "${image_tag_a[0]}" "${image_tag_a[1]}"
-  done
+  # Create a specific imagestream tag for the image so that oc cannot use anything else
+  if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
+    if [ -n "${import_image}" ] ; then
+      echo "Importing image ${import_image} as ${image_name}:${VERSION}"
+      oc import-image ${image_name}:${VERSION} --from ${import_image} --confirm
+    else
+      echo "Uploading and importing image skipped."
+    fi
+  else
+    if [ -n "${import_image}" ] ; then
+      echo "Warning: Import image ${import_image} requested, but uploading image ${image_name} instead."
+    fi
+    ct_os_upload_image "${image_name}" "${image_tagged}"
+
+    # upload also other images, that template might need (list of pairs in the format <image>|<tag>
+    local images_tags_a
+    local i_t
+    for i_t in ${other_images} ; do
+      echo "${i_t}"
+      IFS='|' read -ra image_tag_a <<< "${i_t}"
+      docker pull "${image_tag_a[0]}"
+      ct_os_upload_image "${image_tag_a[0]}" "${image_tag_a[1]}"
+    done
+  fi
 
   local local_template=$(ct_obtain_input "${template}")
+  local namespace=${CT_NAMESPACE:-$(oc project -q)}
   oc new-app ${local_template} \
-             -p NAME="${service_name}" \
-             -p NAMESPACE="$(oc project -q)" \
+             --name "${name_in_template}" \
+             -p NAMESPACE="${namespace}" \
              ${oc_args}
-
-  oc start-build "${service_name}"
 
   ct_os_wait_pod_ready "${service_name}" 300
 
@@ -647,6 +707,7 @@ function ct_os_test_template_app() {
   local response_code=${7:-200}
   local oc_args=${8:-}
   local other_images=${9:-}
+  local import_image=${10:-}
 
   if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
     echo "ERROR: ct_os_test_template_app() requires at least 4 arguments that cannot be emtpy." >&2
@@ -656,9 +717,10 @@ function ct_os_test_template_app() {
   ct_os_test_template_app_func "${image_name}" \
                                "${template}" \
                                "${name_in_template}" \
-                               "ct_test_response '${protocol}://<IP>:${port}' '${response_code}' '${expected_output}'" \
+                               "ct_os_test_response_internal '${protocol}://<IP>:${port}' '${response_code}' '${expected_output}'" \
                                "${oc_args}" \
-                               "${other_images}"
+                               "${other_images}" \
+                               "${import_image}"
 }
 
 # ct_os_test_image_update IMAGE IS CHECK_CMD OC_ARGS
@@ -705,3 +767,156 @@ ct_os_test_image_update() {
 
   ct_os_delete_project
 }
+
+# ct_os_deploy_cmd_image IMAGE_NAME
+# --------------------
+# Runs a special command pod, a pod that does nothing, but includes utilities for testing.
+# A typical usage is a mysql pod that includes mysql commandline, that we need for testing.
+# Running commands inside this command pod is done via ct_os_cmd_image_run function.
+# The pod is not run again if already running.
+# Arguments: image_name - image to be used as a command pod
+function ct_os_deploy_cmd_image() {
+  local image_name=${1}
+  oc get pod command-app &>/dev/null && echo "command POD already running" && return 0
+  echo "command POD not running yet, will start one called command-app"
+  oc create -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: command-app
+spec:
+  containers:
+  - name: command-container
+    image: ${image_name}
+    command: ["sleep"]
+    args: ["3h"]
+  restartPolicy: OnFailure
+EOF
+
+  SECONDS=0
+  echo -n "Waiting for command POD ."
+  while [ $SECONDS -lt 60 ] ; do
+    ct_os_cmd_image_run "echo 24" &>/dev/null && echo "DONE" && return 0
+    sleep 3
+    echo -n "."
+  done
+  echo "FAIL"
+  return 1
+}
+
+# ct_os_cmd_image_run CMD [ ARG ... ]
+# --------------------
+# Runs a command CMD inside a special command pod
+# Arguments: cmd - shell command with args to run in a pod
+function ct_os_cmd_image_run() {
+  oc exec command-app -- bash -c "$@"
+}
+
+# ct_os_test_response_internal
+# ----------------
+# Perform GET request to the application container, checks output with
+# a reg-exp and HTTP response code.
+# That all is done inside an image in the cluster, so the function is used
+# typically in clusters that are not accessible outside.
+# The interanal image is a python image that should include the most of the useful commands.
+# The check is repeated until timeout.
+# Argument: url - request URL path
+# Argument: expected_code - expected HTTP response code
+# Argument: body_regexp - PCRE regular expression that must match the response body
+# Argument: max_attempts - Optional number of attempts (default: 20), three seconds sleep between
+# Argument: ignore_error_attempts - Optional number of attempts when we ignore error output (default: 10)
+ct_os_test_response_internal() {
+  local url="$1"
+  local expected_code="$2"
+  local body_regexp="$3"
+  local max_attempts=${4:-20}
+  local ignore_error_attempts=${5:-10}
+
+  : "  Testing the HTTP(S) response for <${url}>"
+  local sleep_time=3
+  local attempt=1
+  local result=1
+  local status
+  local response_code
+  local response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
+  local util_image_name='registry.access.redhat.com/rhscl/python-36-rhel7'
+
+  ct_os_deploy_cmd_image "${util_image_name}"
+
+  while [ ${attempt} -le ${max_attempts} ]; do
+    ct_os_cmd_image_run "curl --connect-timeout 10 -s -w '%{http_code}' '${url}'" >${response_file} && status=0 || status=1
+    if [ ${status} -eq 0 ]; then
+      response_code=$(cat ${response_file} | tail -c 3)
+      if [ "${response_code}" -eq "${expected_code}" ]; then
+        result=0
+      fi
+      cat ${response_file} | grep -qP -e "${body_regexp}" || result=1;
+      # Some services return 40x code until they are ready, so let's give them
+      # some chance and not end with failure right away
+      # Do not wait if we already have expected outcome though
+      if [ ${result} -eq 0 -o ${attempt} -gt ${ignore_error_attempts} -o ${attempt} -eq ${max_attempts} ] ; then
+        break
+      fi
+    fi
+    attempt=$(( ${attempt} + 1 ))
+    sleep ${sleep_time}
+  done
+  rm -f ${response_file}
+  return ${result}
+}
+
+# ct_os_get_image_from_pod
+# ------------------------
+# Print image identifier from an existing pod to stdout
+# Argument: pod_prefix - prefix or full name of the pod to get image from
+ct_os_get_image_from_pod() {
+  local pod_prefix=$1 ; shift
+  local pod_name=$(ct_os_get_pod_name $pod_prefix)
+  oc get "po/${pod_name}" -o yaml | grep '^    image: ' | head -n 1 | sed -e 's|^    image: ||'
+}
+
+# ct_os_check_cmd_internal
+# ----------------
+# Runs a specified command, checks exit code and compares the output with expected regexp.
+# That all is done inside an image in the cluster, so the function is used
+# typically in clusters that are not accessible outside.
+# The check is repeated until timeout.
+# Argument: util_image_name - name of the image in the cluster that is used for running the cmd
+# Argument: service_name - kubernetes' service name to work with (IP address is taken from this one)
+# Argument: check_command - command that is run within the util_image_name container
+# Argument: expected_content_match - regexp that must be in the output (use .* to ignore check)
+# Argument: timeout - number of seconds to wait till the check succeeds
+function ct_os_check_cmd_internal() {
+  local util_image_name=$1 ; shift
+  local service_name=$1 ; shift
+  local check_command=$1 ; shift
+  local expected_content_match=${1:-.*} ; shift
+  local timeout=${1:-60} ; shift || :
+
+  : "  Service ${service_name} check ..."
+
+  local output
+  local ret
+  local ip=$(ct_os_get_service_ip "${service_name}")
+  local check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
+
+  ct_os_deploy_cmd_image $(ct_os_get_image_from_pod "${util_image_name}" | head -n 1)
+  SECONDS=0
+
+  echo -n "Waiting for ${service_name} service becoming ready ..."
+  while true ; do
+    output=$(ct_os_cmd_image_run "$check_command_exp")
+    ret=$?
+    echo "${output}" | grep -qe "${expected_content_match}" || ret=1
+    if [ ${ret} -eq 0 ] ; then
+      echo " PASS"
+      return 0
+    fi
+    echo -n "."
+    [ ${SECONDS} -gt ${timeout} ] && break
+    sleep 3
+  done
+  echo " FAIL"
+  return 1
+}
+

@@ -307,7 +307,7 @@ function ct_obtain_input() {
 
   local output=$(mktemp "/var/tmp/test-input-XXXXXX$extension")
   if [ -f "${input}" ] ; then
-    cp "${input}" "${output}"
+    cp -f "${input}" "${output}"
   elif [ -d "${input}" ] ; then
     rm -f "${output}"
     cp -r -LH "${input}" "${output}"
