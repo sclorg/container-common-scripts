@@ -263,9 +263,11 @@ function ct_os_delete_project() {
 # Deletes all objects within the project.
 # Handy when we have one project and want to run more tests.
 function ct_delete_all_objects() {
-  for x in bc builds is dc svc po routes secrets ; do
+  for x in bc builds dc is isimage istag po pv pvc rc routes secrets svc ; do
     oc delete $x --all
   done
+  # for some objects it takes longer to be really deleted, so a dummy sleep
+  # to avoid some races when other test can see not-yet-deleted objects and can fail
   sleep 10
 }
 
