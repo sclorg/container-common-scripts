@@ -323,12 +323,12 @@ function ct_os_cluster_up() {
 
   mkdir -p ${dir}/{config,data,pv}
   case $(oc version| head -n 1) in
-    "oc v3.1"*)
-      oc cluster up --base-dir=${dir}/data --public-hostname=${cluster_ip}
+    "oc 3.1"?.*)
+      oc cluster up --base-dir="${dir}/data" --public-hostname="${cluster_ip}"
       ;;
     "oc v3."*)
-      oc cluster up --host-data-dir=${dir}/data --host-config-dir=${dir}/config \
-                    --host-pv-dir=${dir}/pv --use-existing-config --public-hostname=${cluster_ip}
+      oc cluster up --host-data-dir="${dir}/data" --host-config-dir="${dir}/config" \
+                    --host-pv-dir="${dir}/pv" --use-existing-config --public-hostname="${cluster_ip}"
       ;;
     *)
       echo "ERROR: Unexpected oc version." >&2
