@@ -323,7 +323,7 @@ function ct_os_cluster_up() {
 
   mkdir -p ${dir}/{config,data,pv}
   case $(oc version| head -n 1) in
-    "oc 3.1"?.*)
+    "oc v3.1"?.*)
       oc cluster up --base-dir="${dir}/data" --public-hostname="${cluster_ip}"
       ;;
     "oc v3."*)
