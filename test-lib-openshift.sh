@@ -789,7 +789,7 @@ metadata:
 spec:
   containers:
   - name: command-container
-    image: ${image_name}
+    image: "${image_name}"
     command: ["sleep"]
     args: ["3h"]
   restartPolicy: OnFailure
@@ -798,7 +798,8 @@ EOF
   SECONDS=0
   echo -n "Waiting for command POD ."
   while [ $SECONDS -lt 60 ] ; do
-    ct_os_cmd_image_run "echo 24" &>/dev/null && echo "DONE" && return 0
+    sout="$(ct_os_cmd_image_run 'echo $((11*11))')"
+    grep -q '^121$' <<< "$sout" && echo "DONE" && return 0 || :
     sleep 3
     echo -n "."
   done
@@ -874,7 +875,7 @@ ct_os_test_response_internal() {
 ct_os_get_image_from_pod() {
   local pod_prefix=$1 ; shift
   local pod_name=$(ct_os_get_pod_name $pod_prefix)
-  oc get "po/${pod_name}" -o yaml | grep '^    image: ' | head -n 1 | sed -e 's|^    image: ||'
+  oc get "po/${pod_name}" -o yaml | sed -ne 's/^\s*image:\s*\(.*\)\s*$/\1/ p' | head -1
 }
 
 # ct_os_check_cmd_internal
