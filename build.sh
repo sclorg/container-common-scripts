@@ -106,9 +106,8 @@ function docker_build_with_version {
   fi
 
   parse_output 'docker build $BUILD_OPTIONS -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}"' \
-               "awk '/Successfully built/{print \$NF}'" \
+               "tail -n 1 | awk '/Successfully built|^--> (Using cache )?[a-fA-F0-9]+$/{print \$NF}'" \
                IMAGE_ID
-
   clean_image
   echo "$IMAGE_ID" > .image-id.raw
 
