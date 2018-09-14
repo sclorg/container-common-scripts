@@ -423,3 +423,75 @@ ct_random_string()
        | fold -w "${1-10}" \
        | head -n 1
 )
+
+# ct_s2i_usage IMG_NAME [S2I_ARGS]
+# ----------------------------
+# Create a container and run the usage script inside
+# Argument: IMG_NAME - name of the image to be used for the container run
+# Argument: S2I_ARGS - Additional list of source-to-image arguments, currently unused.
+ct_s2i_usage()
+{
+    local img_name=$1; shift
+    local s2i_args="$*";
+    local usage_command="/usr/libexec/s2i/usage"
+    docker run --rm "$img_name" bash -c "$usage_command"
+}
+
+# ct_s2i_build_as_df APP_PATH SRC_IMAGE DST_IMAGE [S2I_ARGS]
+# ----------------------------
+# Create a new s2i app image from local sources in a similar way as source-to-image would have used.
+# Argument: APP_PATH - local path to the app sources to be used in the test
+# Argument: SRC_IMAGE - image to be used as a base for the s2i build
+# Argument: DST_IMAGE - image name to be used during the tagging of the s2i build result
+# Argument: S2I_ARGS - Additional list of source-to-image arguments, currently unused.
+ct_s2i_build_as_df()
+{
+    local app_path=$1; shift
+    local src_image=$1; shift
+    local dst_image=$1; shift
+    local s2i_args="$*";
+    local local_app=upload/src/
+    local local_scripts=upload/scripts/
+    local user_id=
+    local df_name=
+    local tmpdir=
+    # Use /tmp to not pollute cwd
+    tmpdir=$(mktemp -d)
+    df_name=$(mktemp -p "$tmpdir" Dockerfile.XXXX)
+    pushd "$tmpdir"
+    # Check if the image is available locally and try to pull it if it is not
+    docker images "$src_image" &>/dev/null || docker pull "$src_image"
+    user_id=$(docker inspect -f "{{.ContainerConfig.User}}" "$src_image")
+    # Strip file:// from APP_PATH and copy its contents into current context
+    rm -rf upload
+    mkdir -p "$local_app"
+    cp -r "${app_path/file:\/\//}/." "$local_app"
+    [ -d "$local_app/.s2i/bin/" ] && mv "$local_app/.s2i/bin" "$local_scripts"
+    # Create a Dockerfile named df_name and fill it with proper content
+    cat <<EOF >"$df_name"
+FROM $src_image
+LABEL "io.openshift.s2i.build.image"="$src_image" \\
+      "io.openshift.s2i.build.source-location"="$app_path"
+USER root
+COPY $local_app /tmp/src
+EOF
+    [ -d "$local_scripts" ] && echo "COPY $local_scripts /tmp/scripts" >> "$df_name" &&
+    echo "RUN chown -R $user_id:0 /tmp/scripts" >>"$df_name"
+    echo "RUN chown -R $user_id:0 /tmp/src" >>"$df_name"
+    echo "USER $user_id" >>"$df_name"
+    # If exists, run the custom assemble script, else default to /usr/libexec/s2i/assemble
+    if [ -x "$local_scripts/assemble" ]; then
+        echo "RUN /tmp/scripts/assemble" >>"$df_name"
+    else
+        echo "RUN /usr/libexec/s2i/assemble" >>"$df_name"
+    fi
+    # If exists, set the custom run script as CMD, else default to /usr/libexec/s2i/run
+    if [ -x "$local_scripts/run" ]; then
+        echo "CMD /tmp/scripts/run" >>"$df_name"
+    else
+        echo "CMD /usr/libexec/s2i/run" >>"$df_name"
+    fi
+    # Run the build and tag the result
+    docker build -f "$df_name" -t "$dst_image" .
+    popd
+}
