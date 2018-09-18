@@ -725,22 +725,22 @@ function ct_os_test_template_app() {
                                "${import_image}"
 }
 
-# ct_os_test_image_update IMAGE IS CHECK_CMD OC_ARGS
+# ct_os_test_image_update IMAGE_NAME OLD_IMAGE ISTAG CHECK_FUNCTION OC_ARGS
 # --------------------
 # Runs an image update test with [image] uploaded to [is] imagestream
-# and checks the services using an arbitrary function provided in [check_cmd].
-# Arguments: image - prefix or whole ID of the pod to run the cmd in (compulsory)
-# Arguments: is - imagestream to upload the images into (compulsory)
-# Arguments: check_cmd - command to be run to check functionality of created services (compulsory)
+# and checks the services using an arbitrary function provided in [check_function].
+# Arguments: image_name - prefix or whole ID of the pod to run the cmd in (compulsory)
+# Arguments: old_image - valid name of the image from the registry
+# Arguments: istag - imagestream to upload the images into (compulsory)
+# Arguments: check_function - command to be run to check functionality of created services (compulsory)
 # Arguments: oc_args - arguments to use during oc new-app (compulsory)
 ct_os_test_image_update() {
   local image_name=$1; shift
+  local old_image=$1; shift
   local istag=$1; shift
   local check_function=$1; shift
   local service_name=${image_name##*/}
-  local old_image="" ip="" check_command_exp="" registry=""
-  registry=$(ct_registry_from_os "$OS")
-  old_image="$registry/$image_name"
+  local ip="" check_command_exp=""
 
   echo "Running image update test for: $image_name"
   ct_os_new_project
