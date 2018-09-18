@@ -797,7 +797,7 @@ EOF
 
   SECONDS=0
   echo -n "Waiting for command POD ."
-  while [ $SECONDS -lt 60 ] ; do
+  while [ $SECONDS -lt 180 ] ; do
     sout="$(ct_os_cmd_image_run 'echo $((11*11))')"
     grep -q '^121$' <<< "$sout" && echo "DONE" && return 0 || :
     sleep 3
