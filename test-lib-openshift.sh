@@ -842,7 +842,7 @@ ct_os_test_response_internal() {
   local status
   local response_code
   local response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
-  local util_image_name='registry.access.redhat.com/rhscl/python-36-rhel7'
+  local util_image_name='python:3.6'
 
   ct_os_deploy_cmd_image "${util_image_name}"
 
