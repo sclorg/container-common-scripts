@@ -443,7 +443,7 @@ ct_s2i_usage()
 # Argument: APP_PATH - local path to the app sources to be used in the test
 # Argument: SRC_IMAGE - image to be used as a base for the s2i build
 # Argument: DST_IMAGE - image name to be used during the tagging of the s2i build result
-# Argument: S2I_ARGS - Additional list of source-to-image arguments, currently unused.
+# Argument: S2I_ARGS - Additional list of source-to-image arguments, currently only used to check for pull-policy=never.
 ct_s2i_build_as_df()
 {
     local app_path=$1; shift
@@ -460,7 +460,7 @@ ct_s2i_build_as_df()
     df_name=$(mktemp -p "$tmpdir" Dockerfile.XXXX)
     pushd "$tmpdir"
     # Check if the image is available locally and try to pull it if it is not
-    docker images "$src_image" &>/dev/null || docker pull "$src_image"
+    docker images "$src_image" &>/dev/null || echo "$s2i_args" | grep -q "pull-policy=never" || docker pull "$src_image"
     user_id=$(docker inspect -f "{{.ContainerConfig.User}}" "$src_image")
     # Strip file:// from APP_PATH and copy its contents into current context
     mkdir -p "$local_app"
