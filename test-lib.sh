@@ -463,7 +463,6 @@ ct_s2i_build_as_df()
     docker images "$src_image" &>/dev/null || docker pull "$src_image"
     user_id=$(docker inspect -f "{{.ContainerConfig.User}}" "$src_image")
     # Strip file:// from APP_PATH and copy its contents into current context
-    rm -rf upload
     mkdir -p "$local_app"
     cp -r "${app_path/file:\/\//}/." "$local_app"
     [ -d "$local_app/.s2i/bin/" ] && mv "$local_app/.s2i/bin" "$local_scripts"
@@ -478,6 +477,13 @@ EOF
     [ -d "$local_scripts" ] && echo "COPY $local_scripts /tmp/scripts" >> "$df_name" &&
     echo "RUN chown -R $user_id:0 /tmp/scripts" >>"$df_name"
     echo "RUN chown -R $user_id:0 /tmp/src" >>"$df_name"
+    # Check for custom environment variables
+    if [ -e "$local_app/.s2i/environment" ]; then
+        # Remove any comments and add the contents as ENV commands to the Dockerfile
+        sed '/^\s*#.*$/d' "$local_app/.s2i/environment" | while read -r line; do
+            echo "ENV $line" >>"$df_name"
+        done
+    fi
     echo "USER $user_id" >>"$df_name"
     # If exists, run the custom assemble script, else default to /usr/libexec/s2i/assemble
     if [ -x "$local_scripts/assemble" ]; then
