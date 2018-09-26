@@ -443,7 +443,8 @@ ct_s2i_usage()
 # Argument: APP_PATH - local path to the app sources to be used in the test
 # Argument: SRC_IMAGE - image to be used as a base for the s2i build
 # Argument: DST_IMAGE - image name to be used during the tagging of the s2i build result
-# Argument: S2I_ARGS - Additional list of source-to-image arguments, currently only used to check for pull-policy=never.
+# Argument: S2I_ARGS - Additional list of source-to-image arguments.
+#                      Only used to check for pull-policy=never and environment variable definitions.
 ct_s2i_build_as_df()
 {
     local app_path=$1; shift
@@ -467,6 +468,7 @@ ct_s2i_build_as_df()
     cp -r "${app_path/file:\/\//}/." "$local_app"
     [ -d "$local_app/.s2i/bin/" ] && mv "$local_app/.s2i/bin" "$local_scripts"
     # Create a Dockerfile named df_name and fill it with proper content
+    #FIXME: Some commands could be combined into a single layer but not sure if worth the trouble for testing purposes
     cat <<EOF >"$df_name"
 FROM $src_image
 LABEL "io.openshift.s2i.build.image"="$src_image" \\
@@ -477,13 +479,15 @@ EOF
     [ -d "$local_scripts" ] && echo "COPY $local_scripts /tmp/scripts" >> "$df_name" &&
     echo "RUN chown -R $user_id:0 /tmp/scripts" >>"$df_name"
     echo "RUN chown -R $user_id:0 /tmp/src" >>"$df_name"
-    # Check for custom environment variables
+    # Check for custom environment variables inside .s2i/ folder
     if [ -e "$local_app/.s2i/environment" ]; then
         # Remove any comments and add the contents as ENV commands to the Dockerfile
         sed '/^\s*#.*$/d' "$local_app/.s2i/environment" | while read -r line; do
             echo "ENV $line" >>"$df_name"
         done
     fi
+    # Filter out env var definitions from $s2i_args and create Dockerfile ENV commands out of them
+    echo "$s2i_args" | grep -o -e '\(-e\|--env\)[[:space:]=]\S*=\S*' | sed -e 's/-e /ENV /' -e 's/--env[ =]/ENV /' >>"$df_name"
     echo "USER $user_id" >>"$df_name"
     # If exists, run the custom assemble script, else default to /usr/libexec/s2i/assemble
     if [ -x "$local_scripts/assemble" ]; then
