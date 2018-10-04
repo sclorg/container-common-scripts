@@ -336,7 +336,7 @@ function ct_os_cluster_up() {
     sed -i "s|OPTIONS='|OPTIONS='--insecure-registry 172.30.0.0/16 |" /etc/sysconfig/docker
   fi
 
-  systemctl stop firewalld
+  systemctl stop firewalld || :
   setenforce 0
   iptables -F
 
