@@ -129,7 +129,7 @@ for version in ${VERSIONS}; do
 
 
     rules=$SYMLINK_RULES
-    core="ln -fs __link_target__ \$@"
+    core="ln -nfs __link_target__ \$@"
     creator="link"
     parse_rules
     SYMLINK_TARGETS+="$targets"
