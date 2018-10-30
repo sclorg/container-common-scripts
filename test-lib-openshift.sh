@@ -1,3 +1,6 @@
+# some functions are used from test-lib.sh, that is usually in the same dir
+source $(dirname ${BASH_SOURCE[0]})/test-lib.sh
+
 # Set of functions for testing docker images in OpenShift using 'oc' command
 
 # ct_os_get_status
