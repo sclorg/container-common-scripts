@@ -3,6 +3,33 @@ source $(dirname ${BASH_SOURCE[0]})/test-lib.sh
 
 # Set of functions for testing docker images in OpenShift using 'oc' command
 
+# A variable containing the overall test result; must be changed to 0 in the end
+# of the testing script:
+#   OS_TESTSUITE_RESULT=0
+# And the following trap must be set, in the beginning of the test script:
+#   trap ct_os_cleanup EXIT SIGINT
+OS_TESTSUITE_RESULT=1
+
+function ct_os_cleanup() {
+  if [ $OS_TESTSUITE_RESULT -eq 0 ] ; then
+    echo "OpenShift tests for ${IMAGE_NAME} succeeded."
+  else
+    echo "OpenShift tests for ${IMAGE_NAME} failed."
+  fi
+}
+
+# ct_os_check_compulsory_vars
+# ---------------------------
+# Check the compulsory variables:
+# * IMAGE_NAME specifies a name of the candidate image used for testing.
+# * VERSION specifies the major version of the MariaDB in format of X.Y
+# * OS specifies RHEL version (e.g. OS=rhel7)
+function ct_os_check_compulsory_vars() {
+  test -n "${IMAGE_NAME-}" || ( echo 'make sure $IMAGE_NAME is defined' >&2 ; exit 1)
+  test -n "${VERSION-}" || ( echo 'make sure $VERSION is defined' >&2 ; exit 1)
+  test -n "${OS-}" || ( echo 'make sure $OS is defined' >&2 ; exit 1)
+}
+
 # ct_os_get_status
 # --------------------
 # Returns status of all objects to make debugging easier.
