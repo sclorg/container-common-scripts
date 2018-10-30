@@ -658,7 +658,10 @@ function ct_os_test_template_app_func() {
     done
   fi
 
-  local local_template=$(ct_obtain_input "${template}")
+  # get the template file from remote or local location; if not found, it is
+  # considered an internal template name, like 'mysql', so use the name
+  # explicitly
+  local local_template=$(ct_obtain_input "${template}" || echo "${template}")
   local namespace=${CT_NAMESPACE:-$(oc project -q)}
   oc new-app ${local_template} \
              --name "${name_in_template}" \
