@@ -281,7 +281,9 @@ function ct_os_new_project() {
 function ct_os_delete_project() {
   if [ "${CT_SKIP_NEW_PROJECT:-false}" == 'true' ] ; then
     echo "Deleting project skipped, cleaning objects only."
-    ct_delete_all_objects
+    # when not having enough privileges (remote cluster), it might fail and
+    # it is not a big problem, so ignore failure in this case
+    ct_delete_all_objects || :
     return
   fi
   local project_name="${1:-$(oc project -q)}" ; shift || :
