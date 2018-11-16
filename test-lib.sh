@@ -372,7 +372,7 @@ ct_test_response() {
 ct_registry_from_os() {
   local registry=""
   case $1 in
-    rhel7)
+    rhel*)
         registry=registry.access.redhat.com
         ;;
     *)
