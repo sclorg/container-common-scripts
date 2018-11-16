@@ -29,8 +29,11 @@ V_CP  = $(call __PROLOG,CP )
 
 CDIR  = mkdir -p "$$(dirname "$@")" || exit 1 ;
 
-
-ifeq ($(TARGET),rhel7)
+ifeq ($(TARGET),rhel8)
+	SKIP_SQUASH ?= 1
+	OS := rhel8
+	DOCKERFILE ?= Dockerfile.rhel8
+else ifeq ($(TARGET),rhel7)
 	SKIP_SQUASH ?= 0
 	OS := rhel7
 	DOCKERFILE ?= Dockerfile.rhel7

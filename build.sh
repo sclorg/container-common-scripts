@@ -167,7 +167,9 @@ dirs=${VERSION:-$VERSIONS}
 
 for dir in ${dirs}; do
   pushd ${dir} > /dev/null
-  if [ "$OS" == "rhel7" -o "$OS" == "rhel7-candidate" ]; then
+  if [ "$OS" == "rhel8" -o "$OS" == "rhel8-candidate" ]; then
+    docker_build_with_version Dockerfile.rhel8
+  elif [ "$OS" == "rhel7" -o "$OS" == "rhel7-candidate" ]; then
     docker_build_with_version Dockerfile.rhel7
   elif [ "$OS" == "fedora" -o "$OS" == "fedora-candidate" ]; then
     docker_build_with_version Dockerfile.fedora
