@@ -93,7 +93,7 @@ Just run `make check`
 Dependencies for testsuite:
 
 - docker
-- docker-squash (version 1.0.5)
+- docker-squash
 - git
 - go-md2man
 - make
