@@ -129,11 +129,7 @@ squash ()
   local base squashed_from squashed= unsquashed=$IMAGE_ID
   test "$SKIP_SQUASH" = 1 && return 0
 
-  # FIXME: We have to use the exact versions here to avoid Docker client
-  #        compatibility issues
-  local squash_version=1.0.5
-  test "$(docker-squash --version 2>&1)" = "$squash_version" || \
-      error "docker-squash $squash_version required"
+  docker-squash --help &>/dev/null || error "docker-squash is required"
 
   if test -f .image-id.squashed; then
       squashed=$(cat .image-id.squashed)
