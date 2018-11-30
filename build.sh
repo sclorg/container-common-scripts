@@ -8,6 +8,9 @@
 
 set -e
 
+script_name=$(readlink -f "$0")
+script_dir=$(dirname "$script_name")
+
 OS=${1-$OS}
 VERSION=${2-$VERSION}
 
@@ -111,13 +114,13 @@ function docker_build_with_version {
   clean_image
   echo "$IMAGE_ID" > .image-id.raw
 
-  squash "${dockerfile}" "$IMAGE_ID"
+  squash "${dockerfile}"
   echo "$IMAGE_ID" > .image-id
 }
 
 # squash DOCKERFILE
 # -----------------
-# Install the docker squashing tool[1] and squash the result image
+# Use python library docker_squash[1] and squash the result image
 # when necessary.
 # [1] https://github.com/goldmann/docker-squash
 # Reads:
@@ -129,8 +132,6 @@ squash ()
   local base squashed_from squashed= unsquashed=$IMAGE_ID
   test "$SKIP_SQUASH" = 1 && return 0
 
-  docker-squash --help &>/dev/null || error "docker-squash is required"
-
   if test -f .image-id.squashed; then
       squashed=$(cat .image-id.squashed)
       # We (maybe) already have squashed file.
@@ -139,6 +140,7 @@ squash ()
           if test "$squashed_from" = "$IMAGE_ID"; then
               # $squashed is up2date
               IMAGE_ID=$squashed
+              echo "Image '$unsquashed' already squashed as '$squashed'"
               return 0
           fi
       fi
@@ -149,9 +151,9 @@ squash ()
   fi
 
   base=$(awk '/^FROM/{print $2}' "$1")
-  parse_output "docker-squash -f '$base' '$unsquashed'" \
-               "awk '/New squashed image ID is/{print \$NF}'" \
-               IMAGE_ID stderr
+
+  echo "Squashing the image '$unsquashed' from '$base' layer"
+  IMAGE_ID=$("${PYTHON-python3}" "$script_dir"/squash.py "$unsquashed" "$base")
 
   echo "$unsquashed" > .image-id.squashed_from
   echo "$IMAGE_ID" > .image-id.squashed

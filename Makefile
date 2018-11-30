@@ -27,6 +27,10 @@ test: check
 
 check-failures: check-test-lib
 	cd tests/failures/check && make tag && ! make check && make clean
+	cd tests/failures/check && make tag SKIP_SQUASH=0
 
-check: check-failures
+check-squash:
+	./tests/squash/squash.sh
+
+check: check-failures check-squash
 	TESTED_IMAGES="$(TESTED_IMAGES)" tests/remote-containers.sh
