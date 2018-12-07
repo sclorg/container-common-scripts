@@ -67,7 +67,11 @@ parse_rules() {
                 [[ -z "$dest" ]] && echo "dest has to be specified in distgen rule" && exit 1
 
                 if [[ "$dest" == "Dockerfile.rhel7" ]]; then
-                    if ! [[ "$DG_CONF" =~ rhel-[0-9]{,2}-x86_64.yaml ]]; then
+                    if ! [[ "$DG_CONF" =~ rhel-7-x86_64.yaml ]]; then
+                        continue
+                    fi
+                elif [[ "$dest" == "Dockerfile.rhel8" ]]; then
+                    if ! [[ "$DG_CONF" =~ rhel-8-x86_64.yaml ]]; then
                         continue
                     fi
                 elif [[ "$dest" == *"Dockerfile.fedora" ]]; then
