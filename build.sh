@@ -152,8 +152,10 @@ squash ()
 
   base=$(awk '/^FROM/{print $2}' "$1")
 
-  echo "Squashing the image '$unsquashed' from '$base' layer"
+  echo "Squashing the image '$unsquashed' from '$base' layer."
   IMAGE_ID=$("${PYTHON-python3}" "$script_dir"/squash.py "$unsquashed" "$base")
+
+  echo "Squashed as '$IMAGE_ID'."
 
   echo "$unsquashed" > .image-id.squashed_from
   echo "$IMAGE_ID" > .image-id.squashed
