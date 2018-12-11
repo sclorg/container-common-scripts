@@ -113,6 +113,13 @@ EOF
 }
 
 for version in ${VERSIONS}; do
+    # Get a working combination of distgen options for this version
+    while read -r combination; do
+        # line looks like: --distro rhel-7-x86_64.yaml --multispec-selector version=9.4
+        echo "$combination" | grep "version=$version" &>/dev/null && break
+    done <<< "$DISTGEN_COMBINATIONS"
+    [ -z "$combination" ] && die "Could not find a working distgen options combination for version $version"
+
     # copy targets
     rules="$COPY_RULES"
     core="cp \$< \$@"
@@ -123,10 +130,8 @@ for version in ${VERSIONS}; do
 
     # distgen targets
     rules="$DISTGEN_RULES"
-    # TODO: Drop terrible hack that we use fixed --distro here!
     core="\$(DG) --multispec specs/multispec.yml \\
-	--template \"\$<\" --distro centos-7-x86_64.yaml \\
-	--multispec-selector version=\"$version\" --output \"\$@\""
+	--template \"\$<\" $combination --output \"\$@\""
     creator="distgen"
     parse_rules
     DISTGEN_TARGETS+="$targets"
