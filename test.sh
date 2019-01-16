@@ -13,7 +13,7 @@ for dir in ${VERSIONS}; do
   pushd ${dir} > /dev/null
   export IMAGE_ID=$(cat .image-id)
   # Kept also IMAGE_NAME as some tests might still use that.
-  export IMAGE_NAME=localhost/$(docker inspect -f "{{.ContainerConfig.Labels.name}}" $IMAGE_ID)
+  export IMAGE_NAME=$(docker inspect -f "{{.ContainerConfig.Labels.name}}" $IMAGE_ID)
 
   if [ -n "${TEST_MODE}" ]; then
     VERSION=$dir test/run
