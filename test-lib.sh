@@ -462,7 +462,7 @@ ct_s2i_build_as_df()
     pushd "$tmpdir"
     # Check if the image is available locally and try to pull it if it is not
     docker images "$src_image" &>/dev/null || echo "$s2i_args" | grep -q "pull-policy=never" || docker pull "$src_image"
-    user_id=$(docker inspect -f "{{.ContainerConfig.User}}" "$src_image")
+    user_id=$(docker inspect -f "{{.Config.User}}" "$src_image")
     # Strip file:// from APP_PATH and copy its contents into current context
     mkdir -p "$local_app"
     cp -r "${app_path/file:\/\//}/." "$local_app"
