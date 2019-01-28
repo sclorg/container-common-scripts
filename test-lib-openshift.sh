@@ -336,6 +336,17 @@ function ct_os_upload_image() {
   docker push ${output_name}
 }
 
+# ct_os_is_tag_exists IS_NAME TAG
+# --------------------
+# Checks whether the specified tag exists for an image stream
+# Arguments: is_name - name of the image stream
+# Arguments: tag - name of the tag (usually version)
+function ct_os_is_tag_exists() {
+  local is_name=$1 ; shift
+  local tag=$1 ; shift
+  oc get is "${is_name}" -n openshift -o=jsonpath='{.spec.tags[*].name}' | grep -qw "${tag}"
+}
+
 # ct_os_install_in_centos
 # --------------------
 # Installs os cluster in CentOS
