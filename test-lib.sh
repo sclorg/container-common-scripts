@@ -505,3 +505,5 @@ EOF
     docker build -f "$df_name" -t "$dst_image" .
     popd
 }
+
+# vim: set tabstop=2:shiftwidth=2:expandtab:

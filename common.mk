@@ -11,6 +11,7 @@ endif
 
 build = $(SHELL) $(common_dir)/build.sh
 test =  $(SHELL) $(common_dir)/test.sh
+testr = $(SHELL) $(common_dir)/test-remote-cluster.sh
 tag =   $(SHELL) $(common_dir)/tag.sh
 clean = $(SHELL) $(common_dir)/clean.sh
 
@@ -92,10 +93,14 @@ test-with-conu: script_env += TEST_CONU_MODE=true
 test-with-conu: tag
 	VERSIONS="$(VERSIONS)" $(script_env) $(test)
 
+.PHONY: test-openshift-remote-cluster
+test-openshift-remote-cluster:
+	VERSIONS="$(VERSIONS)" BASE_IMAGE_NAME="$(BASE_IMAGE_NAME)" $(script_env) $(testr)
+
 .PHONY: test-openshift
 test-openshift: script_env += TEST_OPENSHIFT_MODE=true
 test-openshift: tag
-	VERSIONS="$(VERSIONS)" $(script_env) $(test)
+	VERSIONS="$(VERSIONS)" BASE_IMAGE_NAME="$(BASE_IMAGE_NAME)" $(script_env) $(test)
 
 .PHONY: tag
 tag: build

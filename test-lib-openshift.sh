@@ -9,6 +9,7 @@ source $(dirname ${BASH_SOURCE[0]})/test-lib.sh
 # And the following trap must be set, in the beginning of the test script:
 #   trap ct_os_cleanup EXIT SIGINT
 OS_TESTSUITE_RESULT=1
+OS_CLUSTER_STARTED_BY_TEST=0
 
 function ct_os_cleanup() {
   if [ $OS_TESTSUITE_RESULT -eq 0 ] ; then
@@ -347,6 +348,15 @@ function ct_os_is_tag_exists() {
   oc get is "${is_name}" -n openshift -o=jsonpath='{.spec.tags[*].name}' | grep -qw "${tag}"
 }
 
+# ct_os_template_exists T_NAME
+# --------------------
+# Checks whether the specified template exists for an image stream
+# Arguments: t_name - template name of the image stream
+function ct_os_template_exists() {
+  local t_name=$1 ; shift
+  oc get templates -n openshift | grep -q "^${t_name}\s"
+}
+
 # ct_os_install_in_centos
 # --------------------
 # Installs os cluster in CentOS
@@ -412,6 +422,7 @@ function ct_os_cluster_up() {
   ct_os_wait_rc_ready docker-registry 180
   ct_os_wait_rc_ready router 30
   oc login -u developer -p developer
+  OS_CLUSTER_STARTED_BY_TEST=1
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
 }
@@ -420,7 +431,12 @@ function ct_os_cluster_up() {
 # --------------------
 # Shuts down the local OpenShift cluster using 'oc cluster down'
 function ct_os_cluster_down() {
-  oc cluster down
+  if [ ${OS_CLUSTER_STARTED_BY_TEST:-0} -eq 1 ] ; then
+    echo "Cluster started by the test, shutting down."
+    oc cluster down
+  else
+    echo "Cluster not started by the test, shutting down skipped."
+  fi
 }
 
 # ct_os_cluster_running
@@ -701,7 +717,7 @@ function ct_os_test_template_app_func() {
   # get the template file from remote or local location; if not found, it is
   # considered an internal template name, like 'mysql', so use the name
   # explicitly
-  local local_template=$(ct_obtain_input "${template}" || echo "${template}")
+  local local_template=$(ct_obtain_input "${template}" 2>/dev/null || echo "--template=${template}")
   local namespace=${CT_NAMESPACE:-$(oc project -q)}
   oc new-app ${local_template} \
              --name "${name_in_template}" \
@@ -969,3 +985,4 @@ function ct_os_check_cmd_internal() {
   return 1
 }
 
+# vim: set tabstop=2:shiftwidth=2:expandtab:
