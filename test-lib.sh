@@ -456,13 +456,37 @@ ct_s2i_build_as_df()
     local user_id=
     local df_name=
     local tmpdir=
+    local incremental=false
     # Use /tmp to not pollute cwd
     tmpdir=$(mktemp -d)
     df_name=$(mktemp -p "$tmpdir" Dockerfile.XXXX)
     pushd "$tmpdir"
     # Check if the image is available locally and try to pull it if it is not
     docker images "$src_image" &>/dev/null || echo "$s2i_args" | grep -q "pull-policy=never" || docker pull "$src_image"
-    user_id=$(docker inspect -f "{{.Config.User}}" "$src_image")
+    user=$(docker inspect -f "{{.Config.User}}" "$src_image")
+    # Default to root if no user is set by the image
+    user=${user:-0}
+    # run the user through the image in case it is non-numeric or does not exist
+    # NOTE: The '-eq' test is used to check if $user is numeric as it will fail if $user is not an integer
+    if ! [ "$user" -eq "$user" ] 2>/dev/null && ! user_id=$(docker run --rm "$src_image" bash -c "id -u $user 2>/dev/null"); then
+        echo "ERROR: id of user $user not found inside image $src_image."
+        echo "Terminating s2i build."
+        return 1
+    else
+        user_id=${user_id:-$user}
+    fi
+    echo "$s2i_args" | grep -q "\-\-incremental" && incremental=true
+    if $incremental; then
+        inc_tmp=$(mktemp -d --tmpdir incremental.XXXX)
+        setfacl -m "u:$user_id:rwx" "$inc_tmp"
+        # Check if the image exists, build should fail (for testing use case) if it does not
+        docker images "$dst_image" &>/dev/null || (echo "Image $dst_image not found."; false)
+        # Run the original image with a mounted in volume and get the artifacts out of it
+        cmd="if [ -s /usr/libexec/s2i/save-artifacts ]; then /usr/libexec/s2i/save-artifacts > \"$inc_tmp/artifacts.tar\"; else touch \"$inc_tmp/artifacts.tar\"; fi"
+        docker run --rm -ti -v "$inc_tmp:$inc_tmp:Z" "$dst_image" bash -c "$cmd"
+        # Move the created content into the $tmpdir for the build to pick it up
+        mv "$inc_tmp/artifacts.tar" "$tmpdir/"
+    fi
     # Strip file:// from APP_PATH and copy its contents into current context
     mkdir -p "$local_app"
     cp -r "${app_path/file:\/\//}/." "$local_app"
@@ -488,6 +512,13 @@ EOF
     fi
     # Filter out env var definitions from $s2i_args and create Dockerfile ENV commands out of them
     echo "$s2i_args" | grep -o -e '\(-e\|--env\)[[:space:]=]\S*=\S*' | sed -e 's/-e /ENV /' -e 's/--env[ =]/ENV /' >>"$df_name"
+    # Add in artifacts if doing an incremental build
+    if $incremental; then
+        echo "RUN mkdir /tmp/artifacts" >>"$df_name"
+        echo "ADD artifacts.tar /tmp/artifacts" >>"$df_name"
+        echo "RUN chown -R $user_id:0 /tmp/artifacts" >>"$df_name"
+    fi
+
     echo "USER $user_id" >>"$df_name"
     # If exists, run the custom assemble script, else default to /usr/libexec/s2i/assemble
     if [ -x "$local_scripts/assemble" ]; then
