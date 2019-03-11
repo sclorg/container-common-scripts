@@ -28,7 +28,8 @@ analyse_commits ()
     # TODO: If we wanted to test "after PR merge", this needs to take some
     # argument specifying how long we should look in the commit history.
     git merge-base --is-ancestor "$MERGE_INTO" HEAD \
-        || die "Can not be --ff merged into $MERGE_INTO"
+        || die "Please rebase the commit '$(git rev-parse --short HEAD)'" \
+               "to allow --ff merge into '$MERGE_INTO' branch"
 
     while read line; do
         case $line in
