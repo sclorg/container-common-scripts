@@ -456,7 +456,13 @@ ct_s2i_build_as_df()
     local user_id=
     local df_name=
     local tmpdir=
+    local oldstate=
     local incremental=false
+
+    oldstate=$(set +o)
+    # Error out if any part of the build fails
+    set -e
+
     # Use /tmp to not pollute cwd
     tmpdir=$(mktemp -d)
     df_name=$(mktemp -p "$tmpdir" Dockerfile.XXXX)
@@ -535,6 +541,7 @@ EOF
     # Run the build and tag the result
     docker build -f "$df_name" -t "$dst_image" .
     popd
+    eval "$oldstate"
 }
 
 # vim: set tabstop=2:shiftwidth=2:expandtab:
