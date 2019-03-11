@@ -1,5 +1,7 @@
 #! /bin/bash
 
+set -e
+
 declare -A IMAGES
 
 for image in ${TESTED_IMAGES}; do
@@ -46,13 +48,9 @@ analyse_commits ()
 
 analyse_commits
 
-rc=true
 for image in "${!IMAGES[@]}"; do
-    if test -e "$image"; then
-        rc=false
-        error "directory '$image' exists"
-        continue
-    fi
+    # We don't want to remove user's WIP stuff.
+    test -e "$image" && die "directory '$image' exists"
 
     (   set -e
         testdir=$PWD
@@ -98,11 +96,7 @@ for image in "${!IMAGES[@]}"; do
         make clean
     )
 
-    # Note that '( set -e ; false ) || blah' doesn't work as one expects.
     if test $? -ne 0; then
-        rc=false
-        error "Tests for $image failed"
+        die "Tests for $image failed"
     fi
 done
-
-$rc
