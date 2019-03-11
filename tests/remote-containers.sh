@@ -90,7 +90,8 @@ for image in "${!IMAGES[@]}"; do
         info "Replacing common with PR's version"
         ln -s ../ common
 
-        # TODO: Do we have to test everything?
+        # TODO: Do we have to test all $(VERSION)s?
+        # TODO: The PS4 hack doesn't work if we run the testsuite as UID=0.
         PS4="+ [$image] " make TARGET="$OS" test
 
         # Cleanup.
