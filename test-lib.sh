@@ -483,7 +483,7 @@ ct_s2i_build_as_df()
         docker images "$dst_image" &>/dev/null || (echo "Image $dst_image not found."; false)
         # Run the original image with a mounted in volume and get the artifacts out of it
         cmd="if [ -s /usr/libexec/s2i/save-artifacts ]; then /usr/libexec/s2i/save-artifacts > \"$inc_tmp/artifacts.tar\"; else touch \"$inc_tmp/artifacts.tar\"; fi"
-        docker run --rm -ti -v "$inc_tmp:$inc_tmp:Z" "$dst_image" bash -c "$cmd"
+        docker run --rm -v "$inc_tmp:$inc_tmp:Z" "$dst_image" bash -c "$cmd"
         # Move the created content into the $tmpdir for the build to pick it up
         mv "$inc_tmp/artifacts.tar" "$tmpdir/"
     fi
