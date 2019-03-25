@@ -175,6 +175,10 @@ for dir in ${dirs}; do
     docker_build_with_version Dockerfile.fedora
   elif [ "$OS" == "centos6" -o "$OS" == "centos6-candidate" ]; then
     docker_build_with_version Dockerfile.centos6
+  elif [ "$OS" == "ubi7" -o "$OS" == "ubi7-candidate" ]; then
+    docker_build_with_version Dockerfile.ubi7
+  elif [ "$OS" == "ubi8" -o "$OS" == "ubi8-candidate" ]; then
+    docker_build_with_version Dockerfile.ubi8
   else
     docker_build_with_version Dockerfile
   fi

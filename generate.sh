@@ -74,6 +74,14 @@ parse_rules() {
                     if ! [[ "$DG_CONF" =~ rhel-8-x86_64.yaml ]]; then
                         continue
                     fi
+                elif [[ "$dest" == "Dockerfile.ubi7" ]]; then
+                    if ! [[ "$DG_CONF" =~ ubi-7-x86_64.yaml ]]; then
+                        continue
+                    fi
+                elif [[ "$dest" == "Dockerfile.ubi8" ]]; then
+                    if ! [[ "$DG_CONF" =~ ubi-8-x86_64.yaml ]]; then
+                        continue
+                    fi
                 elif [[ "$dest" == *"Dockerfile.fedora" ]]; then
                     if ! [[ "$DG_CONF" =~ fedora-[0-9]{,2}-x86_64.yaml ]]; then
                         continue
