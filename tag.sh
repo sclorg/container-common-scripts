@@ -15,10 +15,12 @@ for dir in ${VERSIONS}; do
   IMAGE_ID=$(cat .image-id)
   name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
   version=$(docker inspect -f "{{.Config.Labels.version}}" $IMAGE_ID)
+  date_and_hash="$(date +%Y%m%d)-$(git rev-parse --short HEAD)"
 
-  echo "-> Tagging image '$IMAGE_ID' as '$name:$version' and '$name:latest'"
+  echo "-> Tagging image '$IMAGE_ID' as '$name:$version' and '$name:latest' and '$name:$date_and_hash'"
   docker tag $IMAGE_ID "$name:$version"
   docker tag $IMAGE_ID "$name:latest"
+  docker tag $IMAGE_ID "$name:$date_and_hash"
 
   for suffix in squashed raw; do
     id_file=.image-id.$suffix
