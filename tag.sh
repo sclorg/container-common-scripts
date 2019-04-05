@@ -15,7 +15,8 @@ for dir in ${VERSIONS}; do
   IMAGE_ID=$(cat .image-id)
   name=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
   version=$(docker inspect -f "{{.Config.Labels.version}}" $IMAGE_ID)
-  date_and_hash="$(date +%Y%m%d)-$(git rev-parse --short HEAD)"
+  commit_date=$(git show -s HEAD --format=%cd --date=short | sed 's/-//g')
+  date_and_hash="${commit_date}-$(git rev-parse --short HEAD)"
 
   echo "-> Tagging image '$IMAGE_ID' as '$name:$version' and '$name:latest' and '$name:$date_and_hash'"
   docker tag $IMAGE_ID "$name:$version"
