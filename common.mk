@@ -59,7 +59,8 @@ script_env = \
 	CLEAN_AFTER=$(CLEAN_AFTER)                      \
 	DOCKER_BUILD_CONTEXT=$(DOCKER_BUILD_CONTEXT)    \
 	OPENSHIFT_NAMESPACES="$(OPENSHIFT_NAMESPACES)"  \
-	CUSTOM_REPO="$(CUSTOM_REPO)"
+	CUSTOM_REPO="$(CUSTOM_REPO)"                    \
+    ARCH="$(ARCH)"
 
 # TODO: switch to 'build: build-all' once parallel builds are relatively safe
 .PHONY: build build-serial build-all

@@ -13,6 +13,7 @@ script_dir=$(dirname "$script_name")
 
 OS=${1-$OS}
 VERSION=${2-$VERSION}
+ARCH="${3-$ARCH}"
 
 DOCKERFILE_PATH=""
 
@@ -106,6 +107,9 @@ function docker_build_with_version {
     else
       echo "ERROR: file type not known: $CUSTOM_REPO" >&2
     fi
+  fi
+  if [ ! -z "$ARCH" ]; then
+    BUILD_OPTIONS+=" --build-arg TARGETARCH=$ARCH/"
   fi
 
   parse_output 'docker build '"$BUILD_OPTIONS"' -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}"' \
