@@ -1,5 +1,6 @@
 SHELL := /usr/bin/env bash
 
+
 all:
 	@echo >&2 "Only 'make check' allowed"
 
