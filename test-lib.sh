@@ -25,6 +25,7 @@ EXPECTED_EXIT_CODE=0
 # Uses: $CID_FILE_DIR - path to directory containing cid_files
 # Uses: $EXPECTED_EXIT_CODE - expected container exit code
 function ct_cleanup() {
+  ct_show_resources
   for cid_file in "$CID_FILE_DIR"/* ; do
     local container
     container=$(cat "$cid_file")
@@ -786,6 +787,20 @@ ct_check_latest_imagestreams() {
     latest_version=$(grep '^VERSIONS' Makefile | rev | cut -d ' ' -f 1 | rev )
     test_lib_dir=$(dirname "$(readlink -f "$0")")
     python3 "${test_lib_dir}/check_imagestreams.py" "$latest_version"
+}
+
+# ct_show_resources
+# ----------------
+# Prints the available resources
+ct_show_resources()
+{
+  echo "Resources info:"
+  echo "Memory:"
+  free -h
+  echo "Storage:"
+  df -h
+  echo "CPU"
+  lscpu
 }
 
 # vim: set tabstop=2:shiftwidth=2:expandtab:
