@@ -539,7 +539,7 @@ EOF
         echo "CMD /usr/libexec/s2i/run" >>"$df_name"
     fi
     # Run the build and tag the result
-    docker build -f "$df_name" -t "$dst_image" .
+    docker build -f "$df_name" --no-cache=true -t "$dst_image" .
     popd
     eval "$oldstate"
 }
