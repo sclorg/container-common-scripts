@@ -27,7 +27,7 @@ test: check
 
 check-failures: check-test-lib
 	cd tests/failures/check && make tag && ! make check && make clean
-	cd tests/failures/check && make tag SKIP_SQUASH=0
+	grep -q "Red Hat Enterprise Linux release 8" /etc/system-release || cd tests/failures/check && make tag SKIP_SQUASH=0
 
 check-squash:
 	./tests/squash/squash.sh
