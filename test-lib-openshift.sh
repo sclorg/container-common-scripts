@@ -264,6 +264,9 @@ function _ct_os_get_uniq_project_name() {
 # Arguments: project - project name, uses a new random name if omitted
 # Expects 'os' command that is properly logged in to the OpenShift cluster.
 # Not using mktemp, because we cannot use uppercase characters.
+# The OPENSHIFT_CLUSTER_PULLSECRET_PATH environment variable can be set
+# to contain a path to a k8s secret definition which will be used
+# to authenticate to image registries.
 function ct_os_new_project() {
   if [ "${CT_SKIP_NEW_PROJECT:-false}" == 'true' ] ; then
     echo "Creating project skipped."
@@ -273,6 +276,13 @@ function ct_os_new_project() {
   oc new-project ${project_name}
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
+  if test -n "${OPENSHIFT_CLUSTER_PULLSECRET_PATH:-}" -a -e "${OPENSHIFT_CLUSTER_PULLSECRET_PATH:-}"; then
+    oc create -f "$OPENSHIFT_CLUSTER_PULLSECRET_PATH"
+    # add registry pullsecret to the serviceaccount if provided
+    secret_name=$(grep '^\s*name:' "$OPENSHIFT_CLUSTER_PULLSECRET_PATH" | awk '{ print $2 }')
+    secret_json='{"imagePullSecrets": [{"name": "'${secret_name}'"}]}'
+    oc patch serviceaccount default -p "$secret_json"
+  fi
 }
 
 # ct_os_delete_project [PROJECT]
