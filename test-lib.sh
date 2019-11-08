@@ -207,39 +207,37 @@ function ct_doc_content_old() {
   : "  Success!"
 }
 
-
+# full_ca_file_path
+# Return string for full path to CA file
+function full_ca_file_path()
+{
+  echo "/etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt"
+}
 # ct_mount_ca_file
 # ------------------
 # Check if /etc/pki/certs/RH-IT-Root-CA.crt file exists
-# return mount string for containers
-ct_mount_ca_file()
+# return mount string for containers or empty string
+function ct_mount_ca_file()
 {
-    local mount_parameter=""
-    if [ -n $NPM_REGISTRY ]; then
-        local ca_full_path="/etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt"
-        if [ -f "$ca_full_path" ]; then
-            mount_parameter="-v $ca_full_path:$ca_full_path:ro,Z"
-        fi
-    fi
-    echo "$mount_parameter"
+  # mount CA file only if NPM_REGISTRY variable is present.
+  local mount_parameter=""
+  if [ -n "$NPM_REGISTRY" -a -f "$(full_ca_file_path)" ]; then
+    mount_parameter="-v $(full_ca_file_path):$(full_ca_file_path):ro,Z"
+  fi
+  echo "$mount_parameter"
 }
 
 # ct_build_s2i_npm_variables URL_TO_NPM_JS_SERVER
-# ------------------------------
+# ------------------------------------------
 # Function returns -e NPM_MIRROR and -v MOUNT_POINT_FOR_CAFILE
-function ct_build_s2i_npm_variables() {
-    local ca_full_path="/etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt"
-    if [ ! -z $NPM_REGISTRY ]; then
-        # Check if CA file exists and update CA authorities in image.
-        if [ -f "$ca_full_path" ]; then
-          mount_option=$(ct_mount_ca_file)
-          echo "-e NPM_MIRROR=$NPM_REGISTRY $mount_option"
-        else
-          echo ""
-        fi
-    else
-        echo ""
-    fi
+# or empty string
+function ct_build_s2i_npm_variables()
+{
+  npm_variables=""
+  if [ -n "$NPM_REGISTRY" -a -f "$(full_ca_file_path)" ]; then
+    npm_variables="-e NPM_MIRROR=$NPM_REGISTRY $(ct_mount_ca_file)"
+  fi
+  echo "$npm_variables"
 }
 
 # ct_npm_works
@@ -492,6 +490,7 @@ ct_s2i_build_as_df()
     local tmpdir=
     local incremental=false
     local ca_file=false
+    local mount_options=""
 
     # Run the entire thing inside a subshell so that we do not leak shell options outside of the function
     (
@@ -554,7 +553,7 @@ EOF
     # Filter out env var definitions from $s2i_args and create Dockerfile ENV commands out of them
     echo "$s2i_args" | grep -o -e '\(-e\|--env\)[[:space:]=]\S*=\S*' | sed -e 's/-e /ENV /' -e 's/--env[ =]/ENV /' >>"$df_name"
     # Check if CA autority is present on host and add it into Dockerfile
-    if [ -f "/etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt" ]; then
+    if [ -f "$(full_ca_file_path)" ]; then
       echo "RUN cd /etc/pki/ca-trust/source/anchors && update-ca-trust extract" >>"$df_name"
       ca_file=true
     fi
@@ -578,14 +577,14 @@ EOF
     else
         echo "CMD /usr/libexec/s2i/run" >>"$df_name"
     fi
+
     if $ca_file; then
         # Check if -v parameter is present in s2i_args and add it into docker build command
-        mount_ca_option=$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*')
-    else
-        mount_ca_option=""
+        mount_options=$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*')
     fi
+
     # Run the build and tag the result
-    docker build $mount_ca_option -f "$df_name" --no-cache=true -t "$dst_image" .
+    docker build $mount_options -f "$df_name" --no-cache=true -t "$dst_image" .
     )
 }
 
