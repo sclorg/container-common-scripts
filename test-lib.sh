@@ -580,7 +580,7 @@ EOF
 
     if $ca_file; then
         # Check if -v parameter is present in s2i_args and add it into docker build command
-        mount_options=$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*')
+        mount_options=$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)
     fi
 
     # Run the build and tag the result
