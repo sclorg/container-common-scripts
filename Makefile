@@ -6,14 +6,16 @@ all:
 
 TESTED_IMAGES = \
 	postgresql-container \
-	s2i-python-container
+	s2i-python-container \
+	s2i-nodejs-container
 
 .PHONY: check test all check-failures
 
 
 TEST_LIB_TESTS = \
 	path_foreach \
-	random_string
+	random_string \
+	test_npm
 
 $(TEST_LIB_TESTS):
 	@echo "  RUN TEST '$@'" ; \

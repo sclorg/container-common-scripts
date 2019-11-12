@@ -207,6 +207,38 @@ function ct_doc_content_old() {
   : "  Success!"
 }
 
+# full_ca_file_path
+# Return string for full path to CA file
+function full_ca_file_path()
+{
+  echo "/etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt"
+}
+# ct_mount_ca_file
+# ------------------
+# Check if /etc/pki/certs/RH-IT-Root-CA.crt file exists
+# return mount string for containers or empty string
+function ct_mount_ca_file()
+{
+  # mount CA file only if NPM_REGISTRY variable is present.
+  local mount_parameter=""
+  if [ -n "$NPM_REGISTRY" ] && [ -f "$(full_ca_file_path)" ]; then
+    mount_parameter="-v $(full_ca_file_path):$(full_ca_file_path):ro,Z"
+  fi
+  echo "$mount_parameter"
+}
+
+# ct_build_s2i_npm_variables URL_TO_NPM_JS_SERVER
+# ------------------------------------------
+# Function returns -e NPM_MIRROR and -v MOUNT_POINT_FOR_CAFILE
+# or empty string
+function ct_build_s2i_npm_variables()
+{
+  npm_variables=""
+  if [ -n "$NPM_REGISTRY" ] && [ -f "$(full_ca_file_path)" ]; then
+    npm_variables="-e NPM_MIRROR=$NPM_REGISTRY $(ct_mount_ca_file)"
+  fi
+  echo "$npm_variables"
+}
 
 # ct_npm_works
 # --------------------
@@ -215,13 +247,13 @@ function ct_npm_works() {
   local tmpdir=$(mktemp -d)
   : "  Testing npm in the container image"
   docker run --rm ${IMAGE_NAME} /bin/bash -c "npm --version" >${tmpdir}/version
-
   if [ $? -ne 0 ] ; then
     echo "ERROR: 'npm --version' does not work inside the image ${IMAGE_NAME}." >&2
     return 1
   fi
 
-  docker run --rm ${IMAGE_NAME} /bin/bash -c "npm install jquery && test -f node_modules/jquery/src/jquery.js"
+  docker run $(ct_mount_ca_file) --rm ${IMAGE_NAME} /bin/bash -c "npm install jquery && test -f node_modules/jquery/src/jquery.js"
+
   if [ $? -ne 0 ] ; then
     echo "ERROR: npm could not install jquery inside the image ${IMAGE_NAME}." >&2
     return 1
@@ -229,7 +261,6 @@ function ct_npm_works() {
 
   : "  Success!"
 }
-
 
 # ct_path_append PATH_VARNAME DIRECTORY
 # -------------------------------------
@@ -457,6 +488,7 @@ ct_s2i_build_as_df()
     local df_name=
     local tmpdir=
     local incremental=false
+    local mount_options=""
 
     # Run the entire thing inside a subshell so that we do not leak shell options outside of the function
     (
@@ -518,6 +550,9 @@ EOF
     fi
     # Filter out env var definitions from $s2i_args and create Dockerfile ENV commands out of them
     echo "$s2i_args" | grep -o -e '\(-e\|--env\)[[:space:]=]\S*=\S*' | sed -e 's/-e /ENV /' -e 's/--env[ =]/ENV /' >>"$df_name"
+    # Check if CA autority is present on host and add it into Dockerfile
+    [ -f "$(full_ca_file_path)" ] && echo "RUN cd /etc/pki/ca-trust/source/anchors && update-ca-trust extract" >>"$df_name"
+
     # Add in artifacts if doing an incremental build
     if $incremental; then
         echo "RUN mkdir /tmp/artifacts" >>"$df_name"
@@ -538,8 +573,12 @@ EOF
     else
         echo "CMD /usr/libexec/s2i/run" >>"$df_name"
     fi
+
+    # Check if -v parameter is present in s2i_args and add it into docker build command
+    mount_options=$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)
+
     # Run the build and tag the result
-    docker build -f "$df_name" --no-cache=true -t "$dst_image" .
+    docker build $mount_options -f "$df_name" --no-cache=true -t "$dst_image" .
     )
 }
 
