@@ -222,7 +222,7 @@ function ct_mount_ca_file()
   # mount CA file only if NPM_REGISTRY variable is present.
   local mount_parameter=""
   if [ -n "$NPM_REGISTRY" ] && [ -f "$(full_ca_file_path)" ]; then
-    mount_parameter="-v $(full_ca_file_path):$(full_ca_file_path):ro,Z"
+    mount_parameter="-v $(full_ca_file_path):$(full_ca_file_path):Z"
   fi
   echo "$mount_parameter"
 }
@@ -244,6 +244,7 @@ function ct_build_s2i_npm_variables()
 # --------------------
 # Checks existance of the npm tool and runs it.
 function ct_npm_works() {
+  local cid_file=$1; shift
   local tmpdir=$(mktemp -d)
   : "  Testing npm in the container image"
   docker run --rm ${IMAGE_NAME} /bin/bash -c "npm --version" >${tmpdir}/version
@@ -252,7 +253,7 @@ function ct_npm_works() {
     return 1
   fi
 
-  docker run $(ct_mount_ca_file) --rm ${IMAGE_NAME} /bin/bash -c "npm install jquery && test -f node_modules/jquery/src/jquery.js"
+  docker exec $(cat ${cid_file}) /bin/bash -c "npm install jquery && test -f node_modules/jquery/src/jquery.js"
 
   if [ $? -ne 0 ] ; then
     echo "ERROR: npm could not install jquery inside the image ${IMAGE_NAME}." >&2
