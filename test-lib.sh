@@ -246,19 +246,36 @@ function ct_build_s2i_npm_variables()
 function ct_npm_works() {
   local tmpdir=$(mktemp -d)
   : "  Testing npm in the container image"
+  cid_file="${tmpdir}/cid"
   docker run --rm ${IMAGE_NAME} /bin/bash -c "npm --version" >${tmpdir}/version
   if [ $? -ne 0 ] ; then
     echo "ERROR: 'npm --version' does not work inside the image ${IMAGE_NAME}." >&2
     return 1
   fi
 
-  docker run $(ct_mount_ca_file) --rm ${IMAGE_NAME} /bin/bash -c "npm install jquery && test -f node_modules/jquery/src/jquery.js"
+  docker run -d --user=100001 $(ct_mount_ca_file) --rm --cidfile="$cid_file" ${IMAGE_NAME}-testapp
+
+    # Wait for the container to write it's CID file
+  ct_wait_for_cid "$cid_file" || return 1
+
+  docker exec $(cat "$cid_file") /bin/bash -c "npm --verbose install jquery && test -f node_modules/jquery/src/jquery.js" >${tmpdir}/jquery 2>&1
 
   if [ $? -ne 0 ] ; then
     echo "ERROR: npm could not install jquery inside the image ${IMAGE_NAME}." >&2
     return 1
   fi
 
+  if [ -n "$NPM_REGISTRY" ] && [ -f "$(full_ca_file_path)" ]; then
+    grep -o "$NPM_REGISTRY" ${tmpdir}/jquery > /dev/null
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Internal repository is NOT set. Even it is requested."
+    fi
+  fi
+
+  if [ -f "$cid_file" ]; then
+      docker stop $(cat "$cid_file")
+      rm "$cid_file"
+  fi
   : "  Success!"
 }
 
