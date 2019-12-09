@@ -222,7 +222,7 @@ function ct_mount_ca_file()
   # mount CA file only if NPM_REGISTRY variable is present.
   local mount_parameter=""
   if [ -n "$NPM_REGISTRY" ] && [ -f "$(full_ca_file_path)" ]; then
-    mount_parameter="-v $(full_ca_file_path):$(full_ca_file_path):ro,Z"
+    mount_parameter="-v $(full_ca_file_path):$(full_ca_file_path):Z"
   fi
   echo "$mount_parameter"
 }

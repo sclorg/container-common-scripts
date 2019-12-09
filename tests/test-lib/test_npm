@@ -12,5 +12,5 @@ ca_file="/etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt"
 NPM_REGISTRY="https://foobar.registry.org"
 if [ -f "$ca_file" ]; then
     output=$(ct_build_s2i_npm_variables)
-    test x"$output" == "x-e NPM_MIRROR=$NPM_REGISTRY -v $ca_file:$ca_file:ro,Z"
+    test x"$output" == "x-e NPM_MIRROR=$NPM_REGISTRY -v $ca_file:$ca_file:Z"
 fi
