@@ -253,7 +253,7 @@ function ct_npm_works() {
     return 1
   fi
 
-  docker run -d --user=100001 $(ct_mount_ca_file) --rm --cidfile="$cid_file" ${IMAGE_NAME}-testapp
+  docker run -d $(ct_mount_ca_file) --rm --cidfile="$cid_file" ${IMAGE_NAME}-testapp
 
     # Wait for the container to write it's CID file
   ct_wait_for_cid "$cid_file" || return 1
@@ -266,9 +266,9 @@ function ct_npm_works() {
   fi
 
   if [ -n "$NPM_REGISTRY" ] && [ -f "$(full_ca_file_path)" ]; then
-    grep -o "$NPM_REGISTRY" ${tmpdir}/jquery > /dev/null
-    if [ $? -ne 0 ]; then
+    if ! grep -qo "$NPM_REGISTRY" "${tmpdir}/jquery"; then
         echo "ERROR: Internal repository is NOT set. Even it is requested."
+        return 1
     fi
   fi
 
