@@ -266,9 +266,7 @@ function ct_npm_works() {
   # Wait for the container to write it's CID file
   ct_wait_for_cid "$cid_file" || return 1
 
-  docker exec $(cat "$cid_file") /bin/bash -c "npm --verbose install jquery && test -f node_modules/jquery/src/jquery.js" >${tmpdir}/jquery 2>&1
-
-  if [ $? -ne 0 ] ; then
+  if ! docker exec $(cat "$cid_file") /bin/bash -c "npm --verbose install jquery && test -f node_modules/jquery/src/jquery.js" >${tmpdir}/jquery 2>&1 ; then
     echo "ERROR: npm could not install jquery inside the image ${IMAGE_NAME}." >&2
     return 1
   fi
