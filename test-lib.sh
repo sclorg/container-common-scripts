@@ -102,30 +102,32 @@ function ct_assert_container_creation_fails() {
   local cid_file=assert
   set +e
   local old_container_args="${CONTAINER_ARGS-}"
+  # we really work with CONTAINER_ARGS as with a string
+  # shellcheck disable=SC2124
   CONTAINER_ARGS="$@"
-  ct_create_container $cid_file
-  if [ $? -eq 0 ]; then
-    local cid=$(ct_get_cid $cid_file)
+  if ct_create_container "$cid_file" ; then
+    local cid
+    cid=$(ct_get_cid "$cid_file")
 
-    while [ "$(docker inspect -f '{{.State.Running}}' $cid)" == "true" ] ; do
+    while [ "$(docker inspect -f '{{.State.Running}}' "$cid")" == "true" ] ; do
       sleep 2
-      attempt=$(( $attempt + 1 ))
-      if [ $attempt -gt $max_attempts ]; then
-        docker stop $cid
+      attempt=$(( attempt + 1 ))
+      if [ "$attempt" -gt "$max_attempts" ]; then
+        docker stop "$cid"
         ret=1
         break
       fi
     done
-    exit_status=$(docker inspect -f '{{.State.ExitCode}}' $cid)
+    exit_status=$(docker inspect -f '{{.State.ExitCode}}' "$cid")
     if [ "$exit_status" == "0" ]; then
       ret=1
     fi
-    docker rm -v $cid
-    rm $CID_FILE_DIR/$cid_file
+    docker rm -v "$cid"
+    rm "$CID_FILE_DIR/$cid_file"
   fi
-  [ ! -z $old_container_args ] && CONTAINER_ARGS="$old_container_args"
+  [ -n "$old_container_args" ] && CONTAINER_ARGS="$old_container_args"
   set -e
-  return $ret
+  return "$ret"
 }
 
 # ct_create_container [name, command]
@@ -141,9 +143,10 @@ function ct_assert_container_creation_fails() {
 function ct_create_container() {
   local cid_file="$CID_FILE_DIR/$1" ; shift
   # create container with a cidfile in a directory for cleanup
-  docker run --cidfile="$cid_file" -d ${CONTAINER_ARGS:-} $IMAGE_NAME "$@"
-  ct_wait_for_cid $cid_file || return 1
-  : "Created container $(cat $cid_file)"
+  # shellcheck disable=SC2086
+  docker run --cidfile="$cid_file" -d ${CONTAINER_ARGS:-} "$IMAGE_NAME" "$@"
+  ct_wait_for_cid "$cid_file" || return 1
+  : "Created container $(cat "$cid_file")"
 }
 
 # ct_scl_usage_old [name, command, expected]
