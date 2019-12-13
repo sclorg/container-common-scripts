@@ -164,19 +164,19 @@ function ct_scl_usage_old() {
   local expected="$3"
   local out=""
   : "  Testing the image SCL enable"
-  out=$(docker run --rm ${IMAGE_NAME} /bin/bash -c "${command}")
+  out=$(docker run --rm "${IMAGE_NAME}" /bin/bash -c "${command}")
   if ! echo "${out}" | grep -q "${expected}"; then
-    echo "ERROR[/bin/bash -c "${command}"] Expected '${expected}', got '${out}'" >&2
+    echo "ERROR[/bin/bash -c \"${command}\"] Expected '${expected}', got '${out}'" >&2
     return 1
   fi
-  out=$(docker exec $(ct_get_cid $name) /bin/bash -c "${command}" 2>&1)
+  out=$(docker exec "$(ct_get_cid "$name")" /bin/bash -c "${command}" 2>&1)
   if ! echo "${out}" | grep -q "${expected}"; then
-    echo "ERROR[exec /bin/bash -c "${command}"] Expected '${expected}', got '${out}'" >&2
+    echo "ERROR[exec /bin/bash -c \"${command}\"] Expected '${expected}', got '${out}'" >&2
     return 1
   fi
-  out=$(docker exec $(ct_get_cid $name) /bin/sh -ic "${command}" 2>&1)
+  out=$(docker exec "$(ct_get_cid "$name")" /bin/sh -ic "${command}" 2>&1)
   if ! echo "${out}" | grep -q "${expected}"; then
-    echo "ERROR[exec /bin/sh -ic "${command}"] Expected '${expected}', got '${out}'" >&2
+    echo "ERROR[exec /bin/sh -ic \"${command}\"] Expected '${expected}', got '${out}'" >&2
     return 1
   fi
 }
@@ -188,22 +188,24 @@ function ct_scl_usage_old() {
 # Argument: strings - strings expected to appear in the documentation
 # Uses: $IMAGE_NAME - name of the image being tested
 function ct_doc_content_old() {
-  local tmpdir=$(mktemp -d)
+  local tmpdir
+  tmpdir=$(mktemp -d)
   local f
   : "  Testing documentation in the container image"
   # Extract the help files from the container
+  # shellcheck disable=SC2043
   for f in help.1 ; do
-    docker run --rm ${IMAGE_NAME} /bin/bash -c "cat /${f}" >${tmpdir}/$(basename ${f})
+    docker run --rm "${IMAGE_NAME}" /bin/bash -c "cat /${f}" >"${tmpdir}/$(basename "${f}")"
     # Check whether the files contain some important information
-    for term in $@ ; do
-      if ! cat ${tmpdir}/$(basename ${f}) | grep -F -q -e "${term}" ; then
+    for term in "$@" ; do
+      if ! grep -F -q -e "${term}" "${tmpdir}/$(basename "${f}")" ; then
         echo "ERROR: File /${f} does not include '${term}'." >&2
         return 1
       fi
     done
     # Check whether the files use the correct format
     for term in TH PP SH ; do
-      if ! grep -q "^\.${term}" ${tmpdir}/help.1 ; then
+      if ! grep -q "^\.${term}" "${tmpdir}/help.1" ; then
         echo "ERROR: /help.1 is probably not in troff or groff format, since '${term}' is missing." >&2
         return 1
       fi
@@ -249,18 +251,19 @@ function ct_build_s2i_npm_variables()
 # --------------------
 # Checks existance of the npm tool and runs it.
 function ct_npm_works() {
-  local tmpdir=$(mktemp -d)
+  local tmpdir
+  tmpdir=$(mktemp -d)
   : "  Testing npm in the container image"
   cid_file="${tmpdir}/cid"
-  docker run --rm ${IMAGE_NAME} /bin/bash -c "npm --version" >${tmpdir}/version
-  if [ $? -ne 0 ] ; then
+  if ! docker run --rm "${IMAGE_NAME}" /bin/bash -c "npm --version" >"${tmpdir}/version" ; then
     echo "ERROR: 'npm --version' does not work inside the image ${IMAGE_NAME}." >&2
     return 1
   fi
 
+  # shellcheck disable=SC2046
   docker run -d $(ct_mount_ca_file) --rm --cidfile="$cid_file" ${IMAGE_NAME}-testapp
 
-    # Wait for the container to write it's CID file
+  # Wait for the container to write it's CID file
   ct_wait_for_cid "$cid_file" || return 1
 
   docker exec $(cat "$cid_file") /bin/bash -c "npm --verbose install jquery && test -f node_modules/jquery/src/jquery.js" >${tmpdir}/jquery 2>&1
@@ -340,9 +343,9 @@ function ct_run_test_list() {
 ct_gen_self_signed_cert_pem() {
   local output_dir=$1 ; shift
   local base_name=$1 ; shift
-  mkdir -p ${output_dir}
-  openssl req -newkey rsa:2048 -nodes -keyout ${output_dir}/${base_name}-key.pem -subj '/C=GB/ST=Berkshire/L=Newbury/O=My Server Company' > ${base_name}-req.pem
-  openssl req -new -x509 -nodes -key ${output_dir}/${base_name}-key.pem -batch > ${output_dir}/${base_name}-cert-selfsigned.pem
+  mkdir -p "${output_dir}"
+  openssl req -newkey rsa:2048 -nodes -keyout "${output_dir}"/"${base_name}"-key.pem -subj '/C=GB/ST=Berkshire/L=Newbury/O=My Server Company' > "${base_name}"-req.pem
+  openssl req -new -x509 -nodes -key "${output_dir}"/"${base_name}"-key.pem -batch > "${output_dir}"/"${base_name}"-cert-selfsigned.pem
 }
 
 # ct_obtain_input FILE|DIR|URL
