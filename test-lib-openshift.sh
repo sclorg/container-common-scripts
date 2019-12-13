@@ -299,6 +299,7 @@ function ct_os_new_project() {
 # --------------------
 # Deletes the specified project in the openshfit
 # Arguments: project - project name, uses the current project if omitted
+# shellcheck disable=SC2120
 function ct_os_delete_project() {
   if [ "${CT_SKIP_NEW_PROJECT:-false}" == 'true' ] ; then
     echo "Deleting project skipped, cleaning objects only."
@@ -317,7 +318,7 @@ function ct_os_delete_project() {
 # Handy when we have one project and want to run more tests.
 function ct_delete_all_objects() {
   for x in bc builds dc is isimage istag po pv pvc rc routes secrets svc ; do
-    oc delete $x --all
+    oc delete "$x" --all
   done
   # for some objects it takes longer to be really deleted, so a dummy sleep
   # to avoid some races when other test can see not-yet-deleted objects and can fail
@@ -847,6 +848,7 @@ ct_os_test_image_update() {
   local ip="" check_command_exp=""
 
   echo "Running image update test for: $image_name"
+  # shellcheck disable=SC2119
   ct_os_new_project
 
   # Get current image from repository and create an imagestream
@@ -871,6 +873,7 @@ ct_os_test_image_update() {
   check_command_exp=${check_function//<IP>/$ip}
   ct_assert_cmd_success "$check_command_exp"
 
+  # shellcheck disable=SC2119
   ct_os_delete_project
 }
 
@@ -947,31 +950,32 @@ ct_os_test_response_internal() {
   local result=1
   local status
   local response_code
-  local response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
+  local response_file
   local util_image_name='python:3.6'
 
+  response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
   ct_os_deploy_cmd_image "${util_image_name}"
 
-  while [ ${attempt} -le ${max_attempts} ]; do
-    ct_os_cmd_image_run "curl --connect-timeout 10 -s -w '%{http_code}' '${url}'" >${response_file} && status=0 || status=1
-    if [ ${status} -eq 0 ]; then
-      response_code=$(cat ${response_file} | tail -c 3)
+  while [ "${attempt}" -le "${max_attempts}" ]; do
+    ct_os_cmd_image_run "curl --connect-timeout 10 -s -w '%{http_code}' '${url}'" >"${response_file}" && status=0 || status=1
+    if [ "${status}" -eq 0 ]; then
+      response_code=$(tail -c 3 "${response_file}")
       if [ "${response_code}" -eq "${expected_code}" ]; then
         result=0
       fi
-      cat ${response_file} | grep -qP -e "${body_regexp}" || result=1;
+      grep -qP -e "${body_regexp}" "${response_file}" || result=1;
       # Some services return 40x code until they are ready, so let's give them
       # some chance and not end with failure right away
       # Do not wait if we already have expected outcome though
-      if [ ${result} -eq 0 -o ${attempt} -gt ${ignore_error_attempts} -o ${attempt} -eq ${max_attempts} ] ; then
+      if [ "${result}" -eq 0 ] || [ "${attempt}" -gt "${ignore_error_attempts}" ] || [ "${attempt}" -eq "${max_attempts}" ] ; then
         break
       fi
     fi
-    attempt=$(( ${attempt} + 1 ))
-    sleep ${sleep_time}
+    attempt=$(( attempt + 1 ))
+    sleep "${sleep_time}"
   done
-  rm -f ${response_file}
-  return ${result}
+  rm -f "${response_file}"
+  return "${result}"
 }
 
 # ct_os_get_image_from_pod
@@ -980,7 +984,8 @@ ct_os_test_response_internal() {
 # Argument: pod_prefix - prefix or full name of the pod to get image from
 ct_os_get_image_from_pod() {
   local pod_prefix=$1 ; shift
-  local pod_name=$(ct_os_get_pod_name $pod_prefix)
+  local pod_name
+  pod_name=$(ct_os_get_pod_name "$pod_prefix")
   oc get "po/${pod_name}" -o yaml | sed -ne 's/^\s*image:\s*\(.*\)\s*$/\1/ p' | head -1
 }
 
@@ -1006,10 +1011,14 @@ function ct_os_check_cmd_internal() {
 
   local output
   local ret
-  local ip=$(ct_os_get_service_ip "${service_name}")
-  local check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
+  local ip
+  local check_command_exp
 
-  ct_os_deploy_cmd_image $(ct_os_get_image_from_pod "${util_image_name##*/}" | head -n 1)
+  ip=$(ct_os_get_service_ip "${service_name}")
+  # shellcheck disable=SC2001
+  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
+
+  ct_os_deploy_cmd_image "$(ct_os_get_image_from_pod "${util_image_name##*/}" | head -n 1)"
   SECONDS=0
 
   echo -n "Waiting for ${service_name} service becoming ready ..."
@@ -1022,7 +1031,7 @@ function ct_os_check_cmd_internal() {
       return 0
     fi
     echo -n "."
-    [ ${SECONDS} -gt ${timeout} ] && break
+    [ ${SECONDS} -gt "${timeout}" ] && break
     sleep 3
   done
   echo " FAIL"
