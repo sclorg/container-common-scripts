@@ -21,7 +21,7 @@ export NAMESPACE
 export REGISTRY
 
 for dir in ${VERSIONS}; do
-  pushd ${dir} > /dev/null
+  pushd "${dir}" > /dev/null
 
   export IMAGE_NAME="${REGISTRY}${NAMESPACE}${BASE_IMAGE_NAME}-${dir//./}-${OS}"
 
