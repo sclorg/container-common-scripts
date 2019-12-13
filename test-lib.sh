@@ -326,8 +326,10 @@ ct_path_foreach ()
 function ct_run_test_list() {
   for test_case in $TEST_LIST; do
     : "Running test $test_case"
-    [ -f test/$test_case ] && source test/$test_case
-    [ -f ../test/$test_case ] && source ../test/$test_case
+    # shellcheck source=/dev/null
+    [ -f test/"$test_case" ] && source test/"$test_case"
+    # shellcheck source=/dev/null
+    [ -f ../test/"$test_case" ] && source ../test/"$test_case"
     $test_case
   done;
 }
@@ -361,7 +363,8 @@ function ct_obtain_input() {
   # Try to use same extension for the temporary file if possible
   [[ "${extension}" =~ ^[a-z0-9]*$ ]] && extension=".${extension}" || extension=""
 
-  local output=$(mktemp "/var/tmp/test-input-XXXXXX$extension")
+  local output
+  output=$(mktemp "/var/tmp/test-input-XXXXXX$extension")
   if [ -f "${input}" ] ; then
     cp -f "${input}" "${output}"
   elif [ -d "${input}" ] ; then
@@ -398,27 +401,28 @@ ct_test_response() {
   local result=1
   local status
   local response_code
-  local response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
-  while [ ${attempt} -le ${max_attempts} ]; do
-    curl --connect-timeout 10 -s -w '%{http_code}' "${url}" >${response_file} && status=0 || status=1
-    if [ ${status} -eq 0 ]; then
-      response_code=$(cat ${response_file} | tail -c 3)
+  local response_file
+  response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
+  while [ "${attempt}" -le "${max_attempts}" ]; do
+    curl --connect-timeout 10 -s -w '%{http_code}' "${url}" >"${response_file}" && status=0 || status=1
+    if [ "${status}" -eq 0 ]; then
+      response_code=$(tail -c 3 "${response_file}")
       if [ "${response_code}" -eq "${expected_code}" ]; then
         result=0
       fi
-      cat ${response_file} | grep -qP -e "${body_regexp}" || result=1;
+      grep -qP -e "${body_regexp}" "${response_file}" || result=1;
       # Some services return 40x code until they are ready, so let's give them
       # some chance and not end with failure right away
       # Do not wait if we already have expected outcome though
-      if [ ${result} -eq 0 -o ${attempt} -gt ${ignore_error_attempts} -o ${attempt} -eq ${max_attempts} ] ; then
+      if [ "${result}" -eq 0 ] || [ "${attempt}" -gt "${ignore_error_attempts}" ] || [ "${attempt}" -eq "${max_attempts}" ] ; then
         break
       fi
     fi
-    attempt=$(( ${attempt} + 1 ))
-    sleep ${sleep_time}
+    attempt=$(( attempt + 1 ))
+    sleep "${sleep_time}"
   done
-  rm -f ${response_file}
-  return ${result}
+  rm -f "${response_file}"
+  return "${result}"
 }
 
 # ct_registry_from_os OS
@@ -606,9 +610,9 @@ EOF
 
     # Add in artifacts if doing an incremental build
     if $incremental; then
-        echo "RUN mkdir /tmp/artifacts" >>"$df_name"
-        echo "ADD artifacts.tar /tmp/artifacts" >>"$df_name"
-        echo "RUN chown -R $user_id:0 /tmp/artifacts" >>"$df_name"
+        { echo "RUN mkdir /tmp/artifacts"
+          echo "ADD artifacts.tar /tmp/artifacts"
+          echo "RUN chown -R $user_id:0 /tmp/artifacts" ; } >>"$df_name"
     fi
 
     echo "USER $user_id" >>"$df_name"
@@ -629,6 +633,7 @@ EOF
     mount_options=$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)
 
     # Run the build and tag the result
+    # shellcheck disable=SC2086
     docker build $mount_options -f "$df_name" --no-cache=true -t "$dst_image" .
     )
 }
