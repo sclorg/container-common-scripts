@@ -1,5 +1,7 @@
+# shellcheck shell=bash
 # some functions are used from test-lib.sh, that is usually in the same dir
-source $(dirname ${BASH_SOURCE[0]})/test-lib.sh
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")"/test-lib.sh
 
 # Set of functions for testing docker images in OpenShift using 'oc' command
 
@@ -13,8 +15,10 @@ OS_CLUSTER_STARTED_BY_TEST=0
 
 function ct_os_cleanup() {
   if [ $OS_TESTSUITE_RESULT -eq 0 ] ; then
+    # shellcheck disable=SC2153
     echo "OpenShift tests for ${IMAGE_NAME} succeeded."
   else
+    # shellcheck disable=SC2153
     echo "OpenShift tests for ${IMAGE_NAME} failed."
   fi
 }
@@ -26,8 +30,11 @@ function ct_os_cleanup() {
 # * VERSION specifies the major version of the MariaDB in format of X.Y
 # * OS specifies RHEL version (e.g. OS=rhel7)
 function ct_os_check_compulsory_vars() {
+  # shellcheck disable=SC2016
   test -n "${IMAGE_NAME-}" || ( echo 'make sure $IMAGE_NAME is defined' >&2 ; exit 1)
+  # shellcheck disable=SC2016
   test -n "${VERSION-}" || ( echo 'make sure $VERSION is defined' >&2 ; exit 1)
+  # shellcheck disable=SC2016
   test -n "${OS-}" || ( echo 'make sure $OS is defined' >&2 ; exit 1)
 }
 
@@ -44,9 +51,9 @@ function ct_os_get_status() {
 # Returns status of all objects and logs from all pods.
 function ct_os_print_logs() {
   ct_os_get_status
-  while read pod_name; do
+  while read -r pod_name; do
     echo "INFO: printing logs for pod ${pod_name}"
-    oc logs ${pod_name}
+    oc logs "${pod_name}"
   done < <(oc get pods --no-headers=true -o custom-columns=NAME:.metadata.name)
 }
 
@@ -322,8 +329,10 @@ function ct_delete_all_objects() {
 function ct_os_docker_login() {
   [ -n "${REGISTRY_ADDRESS:-}" ] && "REGISTRY_ADDRESS set, not trying to docker login." && return 0
   # docker login fails with "404 page not found" error sometimes, just try it more times
-  for i in `seq 12` ; do
-    docker login -u developer -p $(oc whoami -t) ${REGISRTY_ADDRESS:-172.30.1.1:5000} && return 0 || :
+  # shellcheck disable=SC2034
+  for i in $(seq 12) ; do
+    # shellcheck disable=SC2015
+    docker login -u developer -p "$(oc whoami -t)" "${REGISRTY_ADDRESS:-172.30.1.1:5000}" && return 0 || :
     sleep 5
   done
   return 1
@@ -340,11 +349,13 @@ function ct_os_upload_image() {
   local input_name="${1}" ; shift
   local image_name=${input_name##*/}
   local imagestream=${1:-$image_name:latest}
-  local output_name="${REGISRTY_ADDRESS:-172.30.1.1:5000}/$(oc project -q)/$imagestream"
+  local output_name
+
+  output_name="${REGISRTY_ADDRESS:-172.30.1.1:5000}/$(oc project -q)/$imagestream"
 
   ct_os_docker_login
-  docker tag ${input_name} ${output_name}
-  docker push ${output_name}
+  docker tag "${input_name}" "${output_name}"
+  docker push "${output_name}"
 }
 
 # ct_os_is_tag_exists IS_NAME TAG
@@ -412,7 +423,7 @@ function ct_os_cluster_up() {
     ct_os_set_path_oc "${cluster_version}"
   fi
 
-  mkdir -p ${dir}/{config,data,pv}
+  mkdir -p "${dir}"/{config,data,pv}
   case $(oc version| head -n 1) in
     "oc v3.1"?.*)
       oc cluster up --base-dir="${dir}/data" --public-hostname="${cluster_ip}"
@@ -473,11 +484,13 @@ function ct_os_logged_in() {
 # In the end the PATH variable is changed, so the other tests can still use just 'oc'.
 # Arguments: oc_version - X.Y part of the version of OSE (e.g. 3.9)
 function ct_os_set_path_oc() {
-  local oc_version=$(ct_os_get_latest_ver $1)
+  local oc_version
   local oc_path
 
+  oc_version=$(ct_os_get_latest_ver "$1")
+
   if oc version | grep -q "oc ${oc_version%.*}." ; then
-    echo "Binary oc found already available in version ${oc_version}: `which oc` Doing noting."
+    echo "Binary oc found already available in version ${oc_version}: $(command -v oc) Doing noting."
     return 0
   fi
 
@@ -492,7 +505,7 @@ function ct_os_set_path_oc() {
     oc_path="/tmp/oc-${oc_version}-bin"
     ct_os_download_upstream_oc "${oc_version}" "${oc_path}"
   fi
-  if [ -z "${oc_path}/oc" ] ; then
+  if [ -z "${oc_path}" ] ; then
     echo "ERROR: oc not found installed, nor downloaded" >&1
     return 1
   fi
@@ -501,7 +514,7 @@ function ct_os_set_path_oc() {
     echo "ERROR: something went wrong, oc located at ${oc_path}, but oc of version ${oc_version} not found in PATH ($PATH)" >&1
     return 1
   else
-    echo "PATH set correctly, binary oc found in version ${oc_version}: `which oc`"
+    echo "PATH set correctly, binary oc found in version ${oc_version}: $(command -v oc)"
   fi
 }
 
@@ -539,7 +552,7 @@ function ct_os_download_upstream_oc() {
 
   # download, unpack the binaries and then put them into output directory
   echo "Downloading https://github.com/openshift/origin/releases/download/${oc_version}/${tarball} into ${output_dir}/" >&2
-  curl -sL https://github.com/openshift/origin/releases/download/${oc_version}/"${tarball}" | tar -C "${output_dir}" -xz
+  curl -sL https://github.com/openshift/origin/releases/download/"${oc_version}"/"${tarball}" | tar -C "${output_dir}" -xz
   mv -f "${output_dir}"/"${tarball%.tar.gz}"/* "${output_dir}/"
 
   rmdir "${output_dir}"/"${tarball%.tar.gz}"
