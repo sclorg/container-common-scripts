@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 #
 # Test a container image.
 #
@@ -24,20 +25,21 @@ EXPECTED_EXIT_CODE=0
 # Uses: $CID_FILE_DIR - path to directory containing cid_files
 # Uses: $EXPECTED_EXIT_CODE - expected container exit code
 function ct_cleanup() {
-  for cid_file in $CID_FILE_DIR/* ; do
-    local container=$(cat $cid_file)
+  for cid_file in "$CID_FILE_DIR"/* ; do
+    local container
+    container=$(cat "$cid_file")
 
     : "Stopping and removing container $container..."
-    docker stop $container
-    exit_status=$(docker inspect -f '{{.State.ExitCode}}' $container)
+    docker stop "$container"
+    exit_status=$(docker inspect -f '{{.State.ExitCode}}' "$container")
     if [ "$exit_status" != "$EXPECTED_EXIT_CODE" ]; then
       : "Dumping logs for $container"
-      docker logs $container
+      docker logs "$container"
     fi
-    docker rm -v $container
-    rm $cid_file
+    docker rm -v "$container"
+    rm "$cid_file"
   done
-  rmdir $CID_FILE_DIR
+  rmdir "$CID_FILE_DIR"
   : "Done."
 }
 
@@ -55,7 +57,7 @@ function ct_enable_cleanup() {
 # Uses: $CID_FILE_DIR - path to directory containing cid_files
 function ct_get_cid() {
   local name="$1" ; shift || return 1
-  echo $(cat "$CID_FILE_DIR/$name")
+  cat "$CID_FILE_DIR/$name"
 }
 
 # ct_get_cip [id]
@@ -64,7 +66,7 @@ function ct_get_cid() {
 # Argument: id - container id
 function ct_get_cip() {
   local id="$1" ; shift
-  docker inspect --format='{{.NetworkSettings.IPAddress}}' $(ct_get_cid "$id")
+  docker inspect --format='{{.NetworkSettings.IPAddress}}' "$(ct_get_cid "$id")"
 }
 
 # ct_wait_for_cid [cid_file]
@@ -79,9 +81,9 @@ function ct_wait_for_cid() {
   local attempt=1
   local result=1
   while [ $attempt -le $max_attempts ]; do
-    [ -f $cid_file ] && [ -s $cid_file ] && return 0
+    [ -f "$cid_file" ] && [ -s "$cid_file" ] && return 0
     : "Waiting for container start..."
-    attempt=$(( $attempt + 1 ))
+    attempt=$(( attempt + 1 ))
     sleep $sleep_time
   done
   return 1
