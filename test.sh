@@ -10,10 +10,12 @@ set -e
 
 for dir in ${VERSIONS}; do
   [ ! -e "${dir}/.image-id" ] && echo "-> Image for version $dir not built, skipping tests." && continue
-  pushd ${dir} > /dev/null
-  export IMAGE_ID=$(cat .image-id)
+  pushd "${dir}" > /dev/null
+  IMAGE_ID=$(cat .image-id)
+  export IMAGE_ID
   # Kept also IMAGE_NAME as some tests might still use that.
-  export IMAGE_NAME=$(docker inspect -f "{{.Config.Labels.name}}" $IMAGE_ID)
+  IMAGE_NAME=$(docker inspect -f "{{.Config.Labels.name}}" "$IMAGE_ID")
+  export IMAGE_NAME
 
   if [ -n "${TEST_MODE}" ]; then
     VERSION=$dir test/run
