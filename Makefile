@@ -15,7 +15,9 @@ TESTED_IMAGES = \
 TEST_LIB_TESTS = \
 	path_foreach \
 	random_string \
-	test_npm
+	test_npm \
+	image_availability \
+	public_image_name
 
 $(TEST_LIB_TESTS):
 	@echo "  RUN TEST '$@'" ; \

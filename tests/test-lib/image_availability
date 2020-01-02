@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -e
+
+. test-lib.sh
+
+# This should succeed
+if ! ct_check_image_availability docker.io/centos/postgresql-10-centos7; then
+  echo "image_availability test failed"
+fi
+
+# This should fail
+if ct_check_image_availability docker.io/centos/postgresql-98-centos7; then
+  echo "image_availability test failed"
+fi
+
+echo "image_availability test completed successfully."

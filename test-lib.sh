@@ -421,13 +421,39 @@ ct_registry_from_os() {
   local registry=""
   case $1 in
     rhel*)
-        registry=registry.access.redhat.com
+        registry=registry.redhat.io
         ;;
     *)
         registry=docker.io
         ;;
     esac
   echo "$registry"
+}
+
+ # ct_get_public_image_name OS BASE_IMAGE_NAME VERSION
+# ----------------
+# Transform the arguments into public image name
+# Argument: OS - string containing the os version
+# Argument: BASE_IMAGE_NAME - string containing the base name of the image as defined in the Makefile
+# Argument: VERSION - string containing the version of the image as defined in the Makefile
+ct_get_public_image_name() {
+  local os=$1; shift
+  local base_image_name=$1; shift
+  local version=$1; shift
+
+  local public_image_name
+  local registry
+
+  registry=$(ct_registry_from_os "$os")
+  if [ "x$os" == "xrhel7" ]; then
+    public_image_name=$registry/rhscl/$base_image_name-${version//./}-rhel7
+  elif [ "x$os" == "xrhel8" ]; then
+    public_image_name=$registry/rhel8/$base_image_name-${version//./}
+  elif [ "x$os" == "xcentos7" ]; then
+    public_image_name=$registry/centos/$base_image_name-${version//./}-centos7
+  fi
+
+  echo "$public_image_name"
 }
 
 # ct_assert_cmd_success CMD
@@ -597,6 +623,20 @@ EOF
     # Run the build and tag the result
     docker build $mount_options -f "$df_name" --no-cache=true -t "$dst_image" .
     )
+}
+
+# ct_check_image_availability PUBLIC_IMAGE_NAME
+# ----------------------------
+# Pull an image from the public repositories to see if the image is already available.
+# Argument: PUBLIC_IMAGE_NAME - string containing the public name of the image to pull
+ct_check_image_availability() {
+  local public_image_name=$1;
+
+  # Try pulling the image to see if it is accessible
+  if ! docker pull "$public_image_name" &>/dev/null; then
+    echo "$public_image_name could not be downloaded via 'docker'"
+    return 1
+  fi
 }
 
 # vim: set tabstop=2:shiftwidth=2:expandtab:
