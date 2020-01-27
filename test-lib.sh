@@ -261,12 +261,12 @@ function ct_npm_works() {
   fi
 
   # shellcheck disable=SC2046
-  docker run -d $(ct_mount_ca_file) --rm --cidfile="$cid_file" ${IMAGE_NAME}-testapp
+  docker run -d $(ct_mount_ca_file) --rm --cidfile="$cid_file" "${IMAGE_NAME}-testapp"
 
   # Wait for the container to write it's CID file
   ct_wait_for_cid "$cid_file" || return 1
 
-  if ! docker exec $(cat "$cid_file") /bin/bash -c "npm --verbose install jquery && test -f node_modules/jquery/src/jquery.js" >${tmpdir}/jquery 2>&1 ; then
+  if ! docker exec "$(cat "$cid_file")" /bin/bash -c "npm --verbose install jquery && test -f node_modules/jquery/src/jquery.js" >"${tmpdir}/jquery" 2>&1 ; then
     echo "ERROR: npm could not install jquery inside the image ${IMAGE_NAME}." >&2
     return 1
   fi
@@ -279,7 +279,7 @@ function ct_npm_works() {
   fi
 
   if [ -f "$cid_file" ]; then
-      docker stop $(cat "$cid_file")
+      docker stop "$(cat "$cid_file")"
       rm "$cid_file"
   fi
   : "  Success!"
