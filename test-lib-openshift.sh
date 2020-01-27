@@ -753,7 +753,9 @@ function ct_os_test_template_app_func() {
   # considered an internal template name, like 'mysql', so use the name
   # explicitly
   local local_template
-  local namespace=${CT_NAMESPACE:-$(oc project -q)}
+  local namespace
+  
+  namespace=${CT_NAMESPACE:-$(oc project -q)}
 
   local_template=$(ct_obtain_input "${template}" 2>/dev/null || echo "--template=${template}")
   # shellcheck disable=SC2086
