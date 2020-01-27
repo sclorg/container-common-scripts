@@ -327,7 +327,7 @@ function ct_run_test_list() {
     # shellcheck source=/dev/null
     [ -f "test/$test_case" ] && source "test/$test_case"
     # shellcheck source=/dev/null
-    [ -f ../test/"$test_case" ] && source ../test/"$test_case"
+    [ -f "../test/$test_case" ] && source "../test/$test_case"
     $test_case
   done;
 }
