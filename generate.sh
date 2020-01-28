@@ -14,6 +14,7 @@
 # Supported type rules are now COPY_RULES, DISTGEN_RULES and SYMLINKS_RULES
 # for real example see https://github.com/sclorg/postgresql-container/blob/master/manifest.sh
 
+# shellcheck disable=SC1090
 source "$MANIFEST_FILE"
 
 die () { echo "FATAL: $*" ; exit 1 ; }
@@ -42,12 +43,13 @@ parse_rules() {
     OLD_IFS=$IFS
     IFS=";"
     for rule in $rules; do
-        if [ -z $(echo "$rule"| tr -d '[:space:]') ]; then
+        if [ -z "$(echo "$rule"| tr -d '[:space:]')" ]; then
             continue
         fi
         clean_rule_variables
-        eval $rule
+        eval "$rule"
 
+        # shellcheck disable=SC2016
         cdir='$(CDIR)'
         case "$creator" in
             copy)
@@ -90,7 +92,8 @@ parse_rules() {
                 [[ -z "$link_name" ]] && echo "link_name has to be specified in link rule" && exit 1
                 [[ -z "$link_target" ]] && echo "link_target has to be specified in link rule" && exit 1
                 dest="$link_name"
-                core_subst=$(echo $core | sed -e "s~__link_target__~"${link_target}"~g")
+                # shellcheck disable=SC2001
+                core_subst=$(echo "$core" | sed -e "s~__link_target__~${link_target}~g")
                 prolog="\$(V_LN)$cdir"
                 ;;
         esac

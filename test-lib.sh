@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 #
 # Test a container image.
 #
@@ -24,20 +25,21 @@ EXPECTED_EXIT_CODE=0
 # Uses: $CID_FILE_DIR - path to directory containing cid_files
 # Uses: $EXPECTED_EXIT_CODE - expected container exit code
 function ct_cleanup() {
-  for cid_file in $CID_FILE_DIR/* ; do
-    local container=$(cat $cid_file)
+  for cid_file in "$CID_FILE_DIR"/* ; do
+    local container
+    container=$(cat "$cid_file")
 
     : "Stopping and removing container $container..."
-    docker stop $container
-    exit_status=$(docker inspect -f '{{.State.ExitCode}}' $container)
+    docker stop "$container"
+    exit_status=$(docker inspect -f '{{.State.ExitCode}}' "$container")
     if [ "$exit_status" != "$EXPECTED_EXIT_CODE" ]; then
       : "Dumping logs for $container"
-      docker logs $container
+      docker logs "$container"
     fi
-    docker rm -v $container
-    rm $cid_file
+    docker rm -v "$container"
+    rm "$cid_file"
   done
-  rmdir $CID_FILE_DIR
+  rmdir "$CID_FILE_DIR"
   : "Done."
 }
 
@@ -55,7 +57,7 @@ function ct_enable_cleanup() {
 # Uses: $CID_FILE_DIR - path to directory containing cid_files
 function ct_get_cid() {
   local name="$1" ; shift || return 1
-  echo $(cat "$CID_FILE_DIR/$name")
+  cat "$CID_FILE_DIR/$name"
 }
 
 # ct_get_cip [id]
@@ -64,7 +66,7 @@ function ct_get_cid() {
 # Argument: id - container id
 function ct_get_cip() {
   local id="$1" ; shift
-  docker inspect --format='{{.NetworkSettings.IPAddress}}' $(ct_get_cid "$id")
+  docker inspect --format='{{.NetworkSettings.IPAddress}}' "$(ct_get_cid "$id")"
 }
 
 # ct_wait_for_cid [cid_file]
@@ -79,9 +81,9 @@ function ct_wait_for_cid() {
   local attempt=1
   local result=1
   while [ $attempt -le $max_attempts ]; do
-    [ -f $cid_file ] && [ -s $cid_file ] && return 0
+    [ -f "$cid_file" ] && [ -s "$cid_file" ] && return 0
     : "Waiting for container start..."
-    attempt=$(( $attempt + 1 ))
+    attempt=$(( attempt + 1 ))
     sleep $sleep_time
   done
   return 1
@@ -100,30 +102,32 @@ function ct_assert_container_creation_fails() {
   local cid_file=assert
   set +e
   local old_container_args="${CONTAINER_ARGS-}"
+  # we really work with CONTAINER_ARGS as with a string
+  # shellcheck disable=SC2124
   CONTAINER_ARGS="$@"
-  ct_create_container $cid_file
-  if [ $? -eq 0 ]; then
-    local cid=$(ct_get_cid $cid_file)
+  if ct_create_container "$cid_file" ; then
+    local cid
+    cid=$(ct_get_cid "$cid_file")
 
-    while [ "$(docker inspect -f '{{.State.Running}}' $cid)" == "true" ] ; do
+    while [ "$(docker inspect -f '{{.State.Running}}' "$cid")" == "true" ] ; do
       sleep 2
-      attempt=$(( $attempt + 1 ))
-      if [ $attempt -gt $max_attempts ]; then
-        docker stop $cid
+      attempt=$(( attempt + 1 ))
+      if [ "$attempt" -gt "$max_attempts" ]; then
+        docker stop "$cid"
         ret=1
         break
       fi
     done
-    exit_status=$(docker inspect -f '{{.State.ExitCode}}' $cid)
+    exit_status=$(docker inspect -f '{{.State.ExitCode}}' "$cid")
     if [ "$exit_status" == "0" ]; then
       ret=1
     fi
-    docker rm -v $cid
-    rm $CID_FILE_DIR/$cid_file
+    docker rm -v "$cid"
+    rm "$CID_FILE_DIR/$cid_file"
   fi
-  [ ! -z $old_container_args ] && CONTAINER_ARGS="$old_container_args"
+  [ -n "$old_container_args" ] && CONTAINER_ARGS="$old_container_args"
   set -e
-  return $ret
+  return "$ret"
 }
 
 # ct_create_container [name, command]
@@ -139,9 +143,10 @@ function ct_assert_container_creation_fails() {
 function ct_create_container() {
   local cid_file="$CID_FILE_DIR/$1" ; shift
   # create container with a cidfile in a directory for cleanup
-  docker run --cidfile="$cid_file" -d ${CONTAINER_ARGS:-} $IMAGE_NAME "$@"
-  ct_wait_for_cid $cid_file || return 1
-  : "Created container $(cat $cid_file)"
+  # shellcheck disable=SC2086
+  docker run --cidfile="$cid_file" -d ${CONTAINER_ARGS:-} "$IMAGE_NAME" "$@"
+  ct_wait_for_cid "$cid_file" || return 1
+  : "Created container $(cat "$cid_file")"
 }
 
 # ct_scl_usage_old [name, command, expected]
@@ -159,19 +164,19 @@ function ct_scl_usage_old() {
   local expected="$3"
   local out=""
   : "  Testing the image SCL enable"
-  out=$(docker run --rm ${IMAGE_NAME} /bin/bash -c "${command}")
+  out=$(docker run --rm "${IMAGE_NAME}" /bin/bash -c "${command}")
   if ! echo "${out}" | grep -q "${expected}"; then
-    echo "ERROR[/bin/bash -c "${command}"] Expected '${expected}', got '${out}'" >&2
+    echo "ERROR[/bin/bash -c \"${command}\"] Expected '${expected}', got '${out}'" >&2
     return 1
   fi
-  out=$(docker exec $(ct_get_cid $name) /bin/bash -c "${command}" 2>&1)
+  out=$(docker exec "$(ct_get_cid "$name")" /bin/bash -c "${command}" 2>&1)
   if ! echo "${out}" | grep -q "${expected}"; then
-    echo "ERROR[exec /bin/bash -c "${command}"] Expected '${expected}', got '${out}'" >&2
+    echo "ERROR[exec /bin/bash -c \"${command}\"] Expected '${expected}', got '${out}'" >&2
     return 1
   fi
-  out=$(docker exec $(ct_get_cid $name) /bin/sh -ic "${command}" 2>&1)
+  out=$(docker exec "$(ct_get_cid "$name")" /bin/sh -ic "${command}" 2>&1)
   if ! echo "${out}" | grep -q "${expected}"; then
-    echo "ERROR[exec /bin/sh -ic "${command}"] Expected '${expected}', got '${out}'" >&2
+    echo "ERROR[exec /bin/sh -ic \"${command}\"] Expected '${expected}', got '${out}'" >&2
     return 1
   fi
 }
@@ -183,22 +188,24 @@ function ct_scl_usage_old() {
 # Argument: strings - strings expected to appear in the documentation
 # Uses: $IMAGE_NAME - name of the image being tested
 function ct_doc_content_old() {
-  local tmpdir=$(mktemp -d)
+  local tmpdir
+  tmpdir=$(mktemp -d)
   local f
   : "  Testing documentation in the container image"
   # Extract the help files from the container
+  # shellcheck disable=SC2043
   for f in help.1 ; do
-    docker run --rm ${IMAGE_NAME} /bin/bash -c "cat /${f}" >${tmpdir}/$(basename ${f})
+    docker run --rm "${IMAGE_NAME}" /bin/bash -c "cat /${f}" >"${tmpdir}/$(basename "${f}")"
     # Check whether the files contain some important information
-    for term in $@ ; do
-      if ! cat ${tmpdir}/$(basename ${f}) | grep -F -q -e "${term}" ; then
+    for term in "$@" ; do
+      if ! grep -F -q -e "${term}" "${tmpdir}/$(basename "${f}")" ; then
         echo "ERROR: File /${f} does not include '${term}'." >&2
         return 1
       fi
     done
     # Check whether the files use the correct format
     for term in TH PP SH ; do
-      if ! grep -q "^\.${term}" ${tmpdir}/help.1 ; then
+      if ! grep -q "^\.${term}" "${tmpdir}/help.1" ; then
         echo "ERROR: /help.1 is probably not in troff or groff format, since '${term}' is missing." >&2
         return 1
       fi
@@ -244,23 +251,22 @@ function ct_build_s2i_npm_variables()
 # --------------------
 # Checks existance of the npm tool and runs it.
 function ct_npm_works() {
-  local tmpdir=$(mktemp -d)
+  local tmpdir
+  tmpdir=$(mktemp -d)
   : "  Testing npm in the container image"
   cid_file="${tmpdir}/cid"
-  docker run --rm ${IMAGE_NAME} /bin/bash -c "npm --version" >${tmpdir}/version
-  if [ $? -ne 0 ] ; then
+  if ! docker run --rm "${IMAGE_NAME}" /bin/bash -c "npm --version" >"${tmpdir}/version" ; then
     echo "ERROR: 'npm --version' does not work inside the image ${IMAGE_NAME}." >&2
     return 1
   fi
 
-  docker run -d $(ct_mount_ca_file) --rm --cidfile="$cid_file" ${IMAGE_NAME}-testapp
+  # shellcheck disable=SC2046
+  docker run -d $(ct_mount_ca_file) --rm --cidfile="$cid_file" "${IMAGE_NAME}-testapp"
 
-    # Wait for the container to write it's CID file
+  # Wait for the container to write it's CID file
   ct_wait_for_cid "$cid_file" || return 1
 
-  docker exec $(cat "$cid_file") /bin/bash -c "npm --verbose install jquery && test -f node_modules/jquery/src/jquery.js" >${tmpdir}/jquery 2>&1
-
-  if [ $? -ne 0 ] ; then
+  if ! docker exec "$(cat "$cid_file")" /bin/bash -c "npm --verbose install jquery && test -f node_modules/jquery/src/jquery.js" >"${tmpdir}/jquery" 2>&1 ; then
     echo "ERROR: npm could not install jquery inside the image ${IMAGE_NAME}." >&2
     return 1
   fi
@@ -273,7 +279,7 @@ function ct_npm_works() {
   fi
 
   if [ -f "$cid_file" ]; then
-      docker stop $(cat "$cid_file")
+      docker stop "$(cat "$cid_file")"
       rm "$cid_file"
   fi
   : "  Success!"
@@ -318,8 +324,10 @@ ct_path_foreach ()
 function ct_run_test_list() {
   for test_case in $TEST_LIST; do
     : "Running test $test_case"
-    [ -f test/$test_case ] && source test/$test_case
-    [ -f ../test/$test_case ] && source ../test/$test_case
+    # shellcheck source=/dev/null
+    [ -f "test/$test_case" ] && source "test/$test_case"
+    # shellcheck source=/dev/null
+    [ -f "../test/$test_case" ] && source "../test/$test_case"
     $test_case
   done;
 }
@@ -335,9 +343,9 @@ function ct_run_test_list() {
 ct_gen_self_signed_cert_pem() {
   local output_dir=$1 ; shift
   local base_name=$1 ; shift
-  mkdir -p ${output_dir}
-  openssl req -newkey rsa:2048 -nodes -keyout ${output_dir}/${base_name}-key.pem -subj '/C=GB/ST=Berkshire/L=Newbury/O=My Server Company' > ${base_name}-req.pem
-  openssl req -new -x509 -nodes -key ${output_dir}/${base_name}-key.pem -batch > ${output_dir}/${base_name}-cert-selfsigned.pem
+  mkdir -p "${output_dir}"
+  openssl req -newkey rsa:2048 -nodes -keyout "${output_dir}"/"${base_name}"-key.pem -subj '/C=GB/ST=Berkshire/L=Newbury/O=My Server Company' > "${base_name}"-req.pem
+  openssl req -new -x509 -nodes -key "${output_dir}"/"${base_name}"-key.pem -batch > "${output_dir}"/"${base_name}"-cert-selfsigned.pem
 }
 
 # ct_obtain_input FILE|DIR|URL
@@ -353,7 +361,8 @@ function ct_obtain_input() {
   # Try to use same extension for the temporary file if possible
   [[ "${extension}" =~ ^[a-z0-9]*$ ]] && extension=".${extension}" || extension=""
 
-  local output=$(mktemp "/var/tmp/test-input-XXXXXX$extension")
+  local output
+  output=$(mktemp "/var/tmp/test-input-XXXXXX$extension")
   if [ -f "${input}" ] ; then
     cp -f "${input}" "${output}"
   elif [ -d "${input}" ] ; then
@@ -390,27 +399,28 @@ ct_test_response() {
   local result=1
   local status
   local response_code
-  local response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
-  while [ ${attempt} -le ${max_attempts} ]; do
-    curl --connect-timeout 10 -s -w '%{http_code}' "${url}" >${response_file} && status=0 || status=1
-    if [ ${status} -eq 0 ]; then
-      response_code=$(cat ${response_file} | tail -c 3)
+  local response_file
+  response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
+  while [ "${attempt}" -le "${max_attempts}" ]; do
+    curl --connect-timeout 10 -s -w '%{http_code}' "${url}" >"${response_file}" && status=0 || status=1
+    if [ "${status}" -eq 0 ]; then
+      response_code=$(tail -c 3 "${response_file}")
       if [ "${response_code}" -eq "${expected_code}" ]; then
         result=0
       fi
-      cat ${response_file} | grep -qP -e "${body_regexp}" || result=1;
+      grep -qP -e "${body_regexp}" "${response_file}" || result=1;
       # Some services return 40x code until they are ready, so let's give them
       # some chance and not end with failure right away
       # Do not wait if we already have expected outcome though
-      if [ ${result} -eq 0 -o ${attempt} -gt ${ignore_error_attempts} -o ${attempt} -eq ${max_attempts} ] ; then
+      if [ "${result}" -eq 0 ] || [ "${attempt}" -gt "${ignore_error_attempts}" ] || [ "${attempt}" -eq "${max_attempts}" ] ; then
         break
       fi
     fi
-    attempt=$(( ${attempt} + 1 ))
-    sleep ${sleep_time}
+    attempt=$(( attempt + 1 ))
+    sleep "${sleep_time}"
   done
-  rm -f ${response_file}
-  return ${result}
+  rm -f "${response_file}"
+  return "${result}"
 }
 
 # ct_registry_from_os OS
@@ -598,9 +608,9 @@ EOF
 
     # Add in artifacts if doing an incremental build
     if $incremental; then
-        echo "RUN mkdir /tmp/artifacts" >>"$df_name"
-        echo "ADD artifacts.tar /tmp/artifacts" >>"$df_name"
-        echo "RUN chown -R $user_id:0 /tmp/artifacts" >>"$df_name"
+        { echo "RUN mkdir /tmp/artifacts"
+          echo "ADD artifacts.tar /tmp/artifacts"
+          echo "RUN chown -R $user_id:0 /tmp/artifacts" ; } >>"$df_name"
     fi
 
     echo "USER $user_id" >>"$df_name"
@@ -621,6 +631,7 @@ EOF
     mount_options=$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)
 
     # Run the build and tag the result
+    # shellcheck disable=SC2086
     docker build $mount_options -f "$df_name" --no-cache=true -t "$dst_image" .
     )
 }

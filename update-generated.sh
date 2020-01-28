@@ -54,6 +54,7 @@ done
 # source directory is not needed anymore
 rm -rf "$srcdir"
 
+# shellcheck disable=SC2086
 git add $versions
 
 # Add deleted files to the index as well

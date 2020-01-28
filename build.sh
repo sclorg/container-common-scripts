@@ -14,8 +14,6 @@ script_dir=$(dirname "$script_name")
 OS=${1-$OS}
 VERSION=${2-$VERSION}
 
-DOCKERFILE_PATH=""
-
 error() { echo "ERROR: $*" ; false ; }
 
 
@@ -31,15 +29,15 @@ _parse_output_inner ()
     {
         case $stream in
         stdout|1|"")
-            eval "$command" | tee >(cat - >&$stdout_fd)
+            eval "$command" | tee >(cat - >&"$stdout_fd")
             ;;
         stderr|2)
             set +x # avoid stderr pollution
-            eval "$command" {free_fd}>&1 1>&$stdout_fd 2>&$free_fd | tee >(cat - >&$stderr_fd)
+            eval "$command" {free_fd}>&1 1>&"$stdout_fd" 2>&"$free_fd" | tee >(cat - >&"$stderr_fd")
             ;;
         esac
         # Inherit correct exit status.
-        (exit ${PIPESTATUS[0]})
+        (exit "${PIPESTATUS[0]}")
     } | eval "$filter"
 }
 
@@ -55,8 +53,9 @@ _parse_output_inner ()
 parse_output ()
 {
   local command=$1 filter=$2 var=$3 stream=$4
-  local raw_output= rc=0
+  local raw_output='' rc=0
   {
+      # shellcheck disable=SC2034
       raw_output=$(_parse_output_inner)
   } {stdout_fd}>&1 {stderr_fd}>&2
   rc=$?
@@ -98,7 +97,7 @@ function docker_build_with_version {
   if [[ "${UPDATE_BASE}" == "1" ]]; then
     BUILD_OPTIONS+=" --pull=true"
   fi
-  if [ ! -z "$CUSTOM_REPO" ]; then
+  if [ -n "$CUSTOM_REPO" ]; then
     if [ -f "$CUSTOM_REPO" ]; then
       BUILD_OPTIONS+=" -v $CUSTOM_REPO:/etc/yum.repos.d/sclorg_custom.repo:Z"
     elif [ -d "$CUSTOM_REPO" ]; then
@@ -108,6 +107,7 @@ function docker_build_with_version {
     fi
   fi
 
+  # shellcheck disable=SC2016
   parse_output 'docker build '"$BUILD_OPTIONS"' -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}"' \
                "tail -n 1 | awk '/Successfully built|(^--> )?(Using cache )?[a-fA-F0-9]+$/{print \$NF}'" \
                IMAGE_ID
@@ -129,7 +129,7 @@ function docker_build_with_version {
 #   $IMAGE_ID
 squash ()
 {
-  local base squashed_from squashed= unsquashed=$IMAGE_ID
+  local base squashed_from squashed='' unsquashed=$IMAGE_ID
   test "$SKIP_SQUASH" = 1 && return 0
 
   if test -f .image-id.squashed; then
@@ -166,14 +166,14 @@ squash ()
 dirs=${VERSION:-$VERSIONS}
 
 for dir in ${dirs}; do
-  pushd ${dir} > /dev/null
-  if [ "$OS" == "rhel8" -o "$OS" == "rhel8-candidate" ]; then
+  pushd "${dir}" > /dev/null
+  if [ "$OS" == "rhel8" ] || [ "$OS" == "rhel8-candidate" ]; then
     docker_build_with_version Dockerfile.rhel8
-  elif [ "$OS" == "rhel7" -o "$OS" == "rhel7-candidate" ]; then
+  elif [ "$OS" == "rhel7" ] || [ "$OS" == "rhel7-candidate" ]; then
     docker_build_with_version Dockerfile.rhel7
-  elif [ "$OS" == "fedora" -o "$OS" == "fedora-candidate" ]; then
+  elif [ "$OS" == "fedora" ] || [ "$OS" == "fedora-candidate" ]; then
     docker_build_with_version Dockerfile.fedora
-  elif [ "$OS" == "centos6" -o "$OS" == "centos6-candidate" ]; then
+  elif [ "$OS" == "centos6" ] || [ "$OS" == "centos6-candidate" ]; then
     docker_build_with_version Dockerfile.centos6
   else
     docker_build_with_version Dockerfile

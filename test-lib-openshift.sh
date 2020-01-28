@@ -1,5 +1,7 @@
+# shellcheck shell=bash
 # some functions are used from test-lib.sh, that is usually in the same dir
-source $(dirname ${BASH_SOURCE[0]})/test-lib.sh
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")"/test-lib.sh
 
 # Set of functions for testing docker images in OpenShift using 'oc' command
 
@@ -13,8 +15,10 @@ OS_CLUSTER_STARTED_BY_TEST=0
 
 function ct_os_cleanup() {
   if [ $OS_TESTSUITE_RESULT -eq 0 ] ; then
+    # shellcheck disable=SC2153
     echo "OpenShift tests for ${IMAGE_NAME} succeeded."
   else
+    # shellcheck disable=SC2153
     echo "OpenShift tests for ${IMAGE_NAME} failed."
   fi
 }
@@ -26,8 +30,11 @@ function ct_os_cleanup() {
 # * VERSION specifies the major version of the MariaDB in format of X.Y
 # * OS specifies RHEL version (e.g. OS=rhel7)
 function ct_os_check_compulsory_vars() {
+  # shellcheck disable=SC2016
   test -n "${IMAGE_NAME-}" || ( echo 'make sure $IMAGE_NAME is defined' >&2 ; exit 1)
+  # shellcheck disable=SC2016
   test -n "${VERSION-}" || ( echo 'make sure $VERSION is defined' >&2 ; exit 1)
+  # shellcheck disable=SC2016
   test -n "${OS-}" || ( echo 'make sure $OS is defined' >&2 ; exit 1)
 }
 
@@ -44,9 +51,9 @@ function ct_os_get_status() {
 # Returns status of all objects and logs from all pods.
 function ct_os_print_logs() {
   ct_os_get_status
-  while read pod_name; do
+  while read -r pod_name; do
     echo "INFO: printing logs for pod ${pod_name}"
-    oc logs ${pod_name}
+    oc logs "${pod_name}"
   done < <(oc get pods --no-headers=true -o custom-columns=NAME:.metadata.name)
 }
 
@@ -65,13 +72,15 @@ function ct_os_enable_print_logs() {
 # hostname -I returns and de-prioritizes IP addresses commonly used for local
 # addressing. The rest of addresses are taken as public with higher probability.
 function ct_get_public_ip() {
-  local hostnames=$(hostname -I)
+  local hostnames
   local public_ip=''
   local found_ip
+  hostnames=$(hostname -I)
   for guess_exp in '127\.0\.0\.1' '192\.168\.[0-9\.]*' '172\.[0-9\.]*' \
                    '10\.[0-9\.]*' '[0-9\.]*' ; do
     found_ip=$(echo "${hostnames}" | grep -oe "${guess_exp}")
     if [ -n "${found_ip}" ] ; then
+      # shellcheck disable=SC2001
       hostnames=$(echo "${hostnames}" | sed -e "s/${found_ip}//")
       public_ip="${found_ip}"
     fi
@@ -157,7 +166,7 @@ function ct_os_get_pod_ip() {
 function ct_os_check_pod_readiness() {
   local pod_prefix="${1}" ; shift
   local status="${1}" ; shift
-  test "$(ct_os_get_pod_status ${pod_prefix})" == "${status}"
+  test "$(ct_os_get_pod_status "${pod_prefix}")" == "${status}"
 }
 
 # ct_os_wait_pod_ready POD_PREFIX TIMEOUT
@@ -172,7 +181,7 @@ function ct_os_wait_pod_ready() {
   echo -n "Waiting for ${pod_prefix} pod becoming ready ..."
   while ! ct_os_check_pod_readiness "${pod_prefix}" "true" ; do
     echo -n "."
-    [ ${SECONDS} -gt ${timeout} ] && echo " FAIL" && return 1
+    [ "${SECONDS}" -gt "${timeout}" ] && echo " FAIL" && return 1
     sleep 3
   done
   echo " DONE"
@@ -188,10 +197,10 @@ function ct_os_wait_rc_ready() {
   local timeout="${1}" ; shift
   SECONDS=0
   echo -n "Waiting for ${pod_prefix} pod becoming ready ..."
-  while ! test "$((oc get --no-headers statefulsets; oc get --no-headers rc) 2>/dev/null \
+  while ! test "$( (oc get --no-headers statefulsets; oc get --no-headers rc) 2>/dev/null \
                  | grep "^${pod_prefix}" | awk '$2==$3 {print "ready"}')" == "ready" ; do
     echo -n "."
-    [ ${SECONDS} -gt ${timeout} ] && echo " FAIL" && return 1
+    [ "${SECONDS}" -gt "${timeout}" ] && echo " FAIL" && return 1
     sleep 3
   done
   echo " DONE"
@@ -206,7 +215,7 @@ function ct_os_wait_rc_ready() {
 function ct_os_deploy_pure_image() {
   local image="${1}" ; shift
   # ignore error exit code, because oc new-app returns error when image exists
-  oc new-app ${image} "$@" || :
+  oc new-app "${image}" "$@" || :
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
 }
@@ -267,13 +276,14 @@ function _ct_os_get_uniq_project_name() {
 # The OPENSHIFT_CLUSTER_PULLSECRET_PATH environment variable can be set
 # to contain a path to a k8s secret definition which will be used
 # to authenticate to image registries.
+# shellcheck disable=SC2120
 function ct_os_new_project() {
   if [ "${CT_SKIP_NEW_PROJECT:-false}" == 'true' ] ; then
     echo "Creating project skipped."
     return
   fi
   local project_name="${1:-$(_ct_os_get_uniq_project_name)}" ; shift || :
-  oc new-project ${project_name}
+  oc new-project "${project_name}"
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
   if test -n "${OPENSHIFT_CLUSTER_PULLSECRET_PATH:-}" -a -e "${OPENSHIFT_CLUSTER_PULLSECRET_PATH:-}"; then
@@ -289,6 +299,7 @@ function ct_os_new_project() {
 # --------------------
 # Deletes the specified project in the openshfit
 # Arguments: project - project name, uses the current project if omitted
+# shellcheck disable=SC2120
 function ct_os_delete_project() {
   if [ "${CT_SKIP_NEW_PROJECT:-false}" == 'true' ] ; then
     echo "Deleting project skipped, cleaning objects only."
@@ -307,7 +318,7 @@ function ct_os_delete_project() {
 # Handy when we have one project and want to run more tests.
 function ct_delete_all_objects() {
   for x in bc builds dc is isimage istag po pv pvc rc routes secrets svc ; do
-    oc delete $x --all
+    oc delete "$x" --all
   done
   # for some objects it takes longer to be really deleted, so a dummy sleep
   # to avoid some races when other test can see not-yet-deleted objects and can fail
@@ -322,8 +333,10 @@ function ct_delete_all_objects() {
 function ct_os_docker_login() {
   [ -n "${REGISTRY_ADDRESS:-}" ] && "REGISTRY_ADDRESS set, not trying to docker login." && return 0
   # docker login fails with "404 page not found" error sometimes, just try it more times
-  for i in `seq 12` ; do
-    docker login -u developer -p $(oc whoami -t) ${REGISRTY_ADDRESS:-172.30.1.1:5000} && return 0 || :
+  # shellcheck disable=SC2034
+  for i in $(seq 12) ; do
+    # shellcheck disable=SC2015
+    docker login -u developer -p "$(oc whoami -t)" "${REGISRTY_ADDRESS:-172.30.1.1:5000}" && return 0 || :
     sleep 5
   done
   return 1
@@ -340,11 +353,13 @@ function ct_os_upload_image() {
   local input_name="${1}" ; shift
   local image_name=${input_name##*/}
   local imagestream=${1:-$image_name:latest}
-  local output_name="${REGISRTY_ADDRESS:-172.30.1.1:5000}/$(oc project -q)/$imagestream"
+  local output_name
+
+  output_name="${REGISRTY_ADDRESS:-172.30.1.1:5000}/$(oc project -q)/$imagestream"
 
   ct_os_docker_login
-  docker tag ${input_name} ${output_name}
-  docker push ${output_name}
+  docker tag "${input_name}" "${output_name}"
+  docker push "${output_name}"
 }
 
 # ct_os_is_tag_exists IS_NAME TAG
@@ -412,7 +427,7 @@ function ct_os_cluster_up() {
     ct_os_set_path_oc "${cluster_version}"
   fi
 
-  mkdir -p ${dir}/{config,data,pv}
+  mkdir -p "${dir}"/{config,data,pv}
   case $(oc version| head -n 1) in
     "oc v3.1"?.*)
       oc cluster up --base-dir="${dir}/data" --public-hostname="${cluster_ip}"
@@ -473,11 +488,13 @@ function ct_os_logged_in() {
 # In the end the PATH variable is changed, so the other tests can still use just 'oc'.
 # Arguments: oc_version - X.Y part of the version of OSE (e.g. 3.9)
 function ct_os_set_path_oc() {
-  local oc_version=$(ct_os_get_latest_ver $1)
+  local oc_version
   local oc_path
 
+  oc_version=$(ct_os_get_latest_ver "$1")
+
   if oc version | grep -q "oc ${oc_version%.*}." ; then
-    echo "Binary oc found already available in version ${oc_version}: `which oc` Doing noting."
+    echo "Binary oc found already available in version ${oc_version}: $(command -v oc) Doing noting."
     return 0
   fi
 
@@ -492,7 +509,7 @@ function ct_os_set_path_oc() {
     oc_path="/tmp/oc-${oc_version}-bin"
     ct_os_download_upstream_oc "${oc_version}" "${oc_path}"
   fi
-  if [ -z "${oc_path}/oc" ] ; then
+  if [ -z "${oc_path}" ] ; then
     echo "ERROR: oc not found installed, nor downloaded" >&1
     return 1
   fi
@@ -501,7 +518,7 @@ function ct_os_set_path_oc() {
     echo "ERROR: something went wrong, oc located at ${oc_path}, but oc of version ${oc_version} not found in PATH ($PATH)" >&1
     return 1
   else
-    echo "PATH set correctly, binary oc found in version ${oc_version}: `which oc`"
+    echo "PATH set correctly, binary oc found in version ${oc_version}: $(command -v oc)"
   fi
 }
 
@@ -539,7 +556,7 @@ function ct_os_download_upstream_oc() {
 
   # download, unpack the binaries and then put them into output directory
   echo "Downloading https://github.com/openshift/origin/releases/download/${oc_version}/${tarball} into ${output_dir}/" >&2
-  curl -sL https://github.com/openshift/origin/releases/download/${oc_version}/"${tarball}" | tar -C "${output_dir}" -xz
+  curl -sL https://github.com/openshift/origin/releases/download/"${oc_version}"/"${tarball}" | tar -C "${output_dir}" -xz
   mv -f "${output_dir}"/"${tarball%.tar.gz}"/* "${output_dir}/"
 
   rmdir "${output_dir}"/"${tarball%.tar.gz}"
@@ -569,17 +586,18 @@ function ct_os_test_s2i_app_func() {
   local service_name="${image_name_no_namespace}-testing"
   local image_tagged="${image_name_no_namespace}:${VERSION}"
 
-  if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
+  if [ $# -lt 4 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ] || [ -z "${4}" ]; then
     echo "ERROR: ct_os_test_s2i_app_func() requires at least 4 arguments that cannot be emtpy." >&2
     return 1
   fi
 
+  # shellcheck disable=SC2119
   ct_os_new_project
   # Create a specific imagestream tag for the image so that oc cannot use anything else
   if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
     if [ -n "${import_image}" ] ; then
       echo "Importing image ${import_image} as ${image_name}:${VERSION}"
-      oc import-image ${image_name}:${VERSION} --from ${import_image} --confirm
+      oc import-image "${image_name}":"${VERSION}" --from "${import_image}" --confirm
     else
       echo "Uploading and importing image skipped."
     fi
@@ -597,6 +615,7 @@ function ct_os_test_s2i_app_func() {
     app_param=$(ct_obtain_input "${app}")
   fi
 
+  # shellcheck disable=SC2086
   ct_os_deploy_s2i_image "${image_tagged}" "${app_param}" \
                           --context-dir="${context_dir}" \
                           --name "${service_name}" \
@@ -611,8 +630,12 @@ function ct_os_test_s2i_app_func() {
 
   ct_os_wait_pod_ready "${service_name}" 300
 
-  local ip=$(ct_os_get_service_ip "${service_name}")
-  local check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
+  local ip
+  local check_command_exp
+
+  ip=$(ct_os_get_service_ip "${service_name}")
+  # shellcheck disable=SC2001
+  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
 
   echo "  Checking APP using $check_command_exp ..."
   local result=0
@@ -624,6 +647,7 @@ function ct_os_test_s2i_app_func() {
     echo "  Check failed."
   fi
 
+  # shellcheck disable=SC2119
   ct_os_delete_project
   return $result
 }
@@ -652,7 +676,7 @@ function ct_os_test_s2i_app() {
   local oc_args=${8:-}
   local import_image=${9:-}
 
-  if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
+  if [ $# -lt 4 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ] || [ -z "${4}" ]; then
     echo "ERROR: ct_os_test_s2i_app() requires at least 4 arguments that cannot be emtpy." >&2
     return 1
   fi
@@ -689,7 +713,7 @@ function ct_os_test_template_app_func() {
   local other_images=${6:-}
   local import_image=${7:-}
 
-  if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
+  if [ $# -lt 4 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ] || [ -z "${4}" ]; then
     echo "ERROR: ct_os_test_template_app_func() requires at least 4 arguments that cannot be emtpy." >&2
     return 1
   fi
@@ -697,13 +721,14 @@ function ct_os_test_template_app_func() {
   local service_name="${name_in_template}-testing"
   local image_tagged="${name_in_template}:${VERSION}"
 
+  # shellcheck disable=SC2119
   ct_os_new_project
 
   # Create a specific imagestream tag for the image so that oc cannot use anything else
   if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
     if [ -n "${import_image}" ] ; then
       echo "Importing image ${import_image} as ${image_name}:${VERSION}"
-      oc import-image ${image_name}:${VERSION} --from ${import_image} --confirm
+      oc import-image "${image_name}":"${VERSION}" --from "${import_image}" --confirm
     else
       echo "Uploading and importing image skipped."
     fi
@@ -714,7 +739,7 @@ function ct_os_test_template_app_func() {
     ct_os_upload_image "${image_name}" "${image_tagged}"
 
     # upload also other images, that template might need (list of pairs in the format <image>|<tag>
-    local images_tags_a
+    local image_tag_a
     local i_t
     for i_t in ${other_images} ; do
       echo "${i_t}"
@@ -727,17 +752,26 @@ function ct_os_test_template_app_func() {
   # get the template file from remote or local location; if not found, it is
   # considered an internal template name, like 'mysql', so use the name
   # explicitly
-  local local_template=$(ct_obtain_input "${template}" 2>/dev/null || echo "--template=${template}")
-  local namespace=${CT_NAMESPACE:-$(oc project -q)}
-  oc new-app ${local_template} \
+  local local_template
+  local namespace
+  
+  namespace=${CT_NAMESPACE:-$(oc project -q)}
+
+  local_template=$(ct_obtain_input "${template}" 2>/dev/null || echo "--template=${template}")
+  # shellcheck disable=SC2086
+  oc new-app "${local_template}" \
              --name "${name_in_template}" \
              -p NAMESPACE="${namespace}" \
              ${oc_args}
 
   ct_os_wait_pod_ready "${service_name}" 300
 
-  local ip=$(ct_os_get_service_ip "${service_name}")
-  local check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
+  local ip
+  local check_command_exp
+
+  ip=$(ct_os_get_service_ip "${service_name}")
+  # shellcheck disable=SC2001
+  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
 
   echo "  Checking APP using $check_command_exp ..."
   local result=0
@@ -749,6 +783,7 @@ function ct_os_test_template_app_func() {
     echo "  Check failed."
   fi
 
+  # shellcheck disable=SC2119
   ct_os_delete_project
   return $result
 }
@@ -783,7 +818,7 @@ function ct_os_test_template_app() {
   local other_images=${9:-}
   local import_image=${10:-}
 
-  if [ $# -lt 4 ] || [ -z "${1}" -o -z "${2}" -o -z "${3}" -o -z "${4}" ]; then
+  if [ $# -lt 4 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ] || [ -z "${4}" ]; then
     echo "ERROR: ct_os_test_template_app() requires at least 4 arguments that cannot be emtpy." >&2
     return 1
   fi
@@ -815,6 +850,7 @@ ct_os_test_image_update() {
   local ip="" check_command_exp=""
 
   echo "Running image update test for: $image_name"
+  # shellcheck disable=SC2119
   ct_os_new_project
 
   # Get current image from repository and create an imagestream
@@ -839,6 +875,7 @@ ct_os_test_image_update() {
   check_command_exp=${check_function//<IP>/$ip}
   ct_assert_cmd_success "$check_command_exp"
 
+  # shellcheck disable=SC2119
   ct_os_delete_project
 }
 
@@ -870,7 +907,9 @@ EOF
   SECONDS=0
   echo -n "Waiting for command POD ."
   while [ $SECONDS -lt 180 ] ; do
+    # shellcheck disable=SC2016
     sout="$(ct_os_cmd_image_run 'echo $((11*11))' 2>/dev/null)"
+    # shellcheck disable=SC2015
     grep -q '^121$' <<< "$sout" && echo "DONE" && return 0 || :
     sleep 3
     echo -n "."
@@ -913,31 +952,32 @@ ct_os_test_response_internal() {
   local result=1
   local status
   local response_code
-  local response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
+  local response_file
   local util_image_name='python:3.6'
 
+  response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
   ct_os_deploy_cmd_image "${util_image_name}"
 
-  while [ ${attempt} -le ${max_attempts} ]; do
-    ct_os_cmd_image_run "curl --connect-timeout 10 -s -w '%{http_code}' '${url}'" >${response_file} && status=0 || status=1
-    if [ ${status} -eq 0 ]; then
-      response_code=$(cat ${response_file} | tail -c 3)
+  while [ "${attempt}" -le "${max_attempts}" ]; do
+    ct_os_cmd_image_run "curl --connect-timeout 10 -s -w '%{http_code}' '${url}'" >"${response_file}" && status=0 || status=1
+    if [ "${status}" -eq 0 ]; then
+      response_code=$(tail -c 3 "${response_file}")
       if [ "${response_code}" -eq "${expected_code}" ]; then
         result=0
       fi
-      cat ${response_file} | grep -qP -e "${body_regexp}" || result=1;
+      grep -qP -e "${body_regexp}" "${response_file}" || result=1;
       # Some services return 40x code until they are ready, so let's give them
       # some chance and not end with failure right away
       # Do not wait if we already have expected outcome though
-      if [ ${result} -eq 0 -o ${attempt} -gt ${ignore_error_attempts} -o ${attempt} -eq ${max_attempts} ] ; then
+      if [ "${result}" -eq 0 ] || [ "${attempt}" -gt "${ignore_error_attempts}" ] || [ "${attempt}" -eq "${max_attempts}" ] ; then
         break
       fi
     fi
-    attempt=$(( ${attempt} + 1 ))
-    sleep ${sleep_time}
+    attempt=$(( attempt + 1 ))
+    sleep "${sleep_time}"
   done
-  rm -f ${response_file}
-  return ${result}
+  rm -f "${response_file}"
+  return "${result}"
 }
 
 # ct_os_get_image_from_pod
@@ -946,7 +986,8 @@ ct_os_test_response_internal() {
 # Argument: pod_prefix - prefix or full name of the pod to get image from
 ct_os_get_image_from_pod() {
   local pod_prefix=$1 ; shift
-  local pod_name=$(ct_os_get_pod_name $pod_prefix)
+  local pod_name
+  pod_name=$(ct_os_get_pod_name "$pod_prefix")
   oc get "po/${pod_name}" -o yaml | sed -ne 's/^\s*image:\s*\(.*\)\s*$/\1/ p' | head -1
 }
 
@@ -972,10 +1013,14 @@ function ct_os_check_cmd_internal() {
 
   local output
   local ret
-  local ip=$(ct_os_get_service_ip "${service_name}")
-  local check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
+  local ip
+  local check_command_exp
 
-  ct_os_deploy_cmd_image $(ct_os_get_image_from_pod "${util_image_name##*/}" | head -n 1)
+  ip=$(ct_os_get_service_ip "${service_name}")
+  # shellcheck disable=SC2001
+  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
+
+  ct_os_deploy_cmd_image "$(ct_os_get_image_from_pod "${util_image_name##*/}" | head -n 1)"
   SECONDS=0
 
   echo -n "Waiting for ${service_name} service becoming ready ..."
@@ -988,7 +1033,7 @@ function ct_os_check_cmd_internal() {
       return 0
     fi
     echo -n "."
-    [ ${SECONDS} -gt ${timeout} ] && break
+    [ ${SECONDS} -gt "${timeout}" ] && break
     sleep 3
   done
   echo " FAIL"

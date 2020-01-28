@@ -12,6 +12,7 @@ endif
 build = $(SHELL) $(common_dir)/build.sh
 test =  $(SHELL) $(common_dir)/test.sh
 testr = $(SHELL) $(common_dir)/test-remote-cluster.sh
+shellcheck =  $(SHELL) $(common_dir)/run-shellcheck.sh
 tag =   $(SHELL) $(common_dir)/tag.sh
 clean = $(SHELL) $(common_dir)/clean.sh
 
@@ -51,6 +52,7 @@ endif
 
 SKIP_SQUASH ?= 1
 DOCKER_BUILD_CONTEXT ?= .
+SHELLCHECK_FILES ?= .
 
 script_env = \
 	SKIP_SQUASH=$(SKIP_SQUASH)                      \
@@ -101,6 +103,10 @@ test-openshift-remote-cluster:
 test-openshift: script_env += TEST_OPENSHIFT_MODE=true
 test-openshift: tag
 	VERSIONS="$(VERSIONS)" BASE_IMAGE_NAME="$(BASE_IMAGE_NAME)" $(script_env) $(test)
+
+.PHONY: shellcheck
+shellcheck:
+	$(shellcheck) $(SHELLCHECK_FILES)
 
 .PHONY: tag
 tag: build
