@@ -54,6 +54,9 @@ and additional clean rules can be provided through the `clean-hook` variable.
 `make clean-images`  
 Best-effort to remove the last set of images that have been built using the scripts.
 
+`make shellcheck`  
+Check the shell syntax of all `*.sh` files tracked by the git.
+
 **There are additional variables that you can use that the default rules are prepared to
 work with:**
 
