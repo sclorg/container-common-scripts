@@ -55,7 +55,15 @@ and additional clean rules can be provided through the `clean-hook` variable.
 Best-effort to remove the last set of images that have been built using the scripts.
 
 `make shellcheck`  
-Check the shell syntax of all `*.sh` files tracked by the git.
+Check the shell syntax of the files specified by `$SHELLCHECK_FILES` variable (one or more
+files or directories to be set in Makefile in the container image repo, default is `.`, which
+means a whole directory). The files matching this specification are then filtered, to not show
+results twice for symlinks and only files with a suffix `.sh` or shell shebang are scanned
+with the `shellcheck` utility. See `run-shellcheck.sh` in this repo for more detailed info.
+Once the shell syntax issues are fixed, CI that runs `make shellcheck` for each PR can be
+turned on by putting `.travis.yml` file into the root of the image's repository, see
+[.travis.yml](https://github.com/sclorg/container-common-scripts/blob/master/.travis.yml)
+for its content.
 
 **There are additional variables that you can use that the default rules are prepared to
 work with:**
@@ -84,6 +92,10 @@ Set to 1 if you want the build script to always pull the base image when availab
 Use this variable in case you want to have a different context for your builds. By default
 the context of the build is the versioned directory the Dockerfiles are contained in.
 
+`SHELLCHECK_FILES`  
+One or more files or directories to be scanned by the shellcheck, default is `.`, which
+means a whole repository directory.
+
 `clean-hook`  
 Append Makefile rules to this variable to make sure additional cleaning actions are run
 when `make clean` is called.
@@ -91,7 +103,12 @@ when `make clean` is called.
 Regression tests
 ----------------
 
-Just run `make check`
+`make check`  
+Runs the tests of few images that use this set of scripts. If the tests of those
+images pass, this repo is considered to be working.
+
+`make shellcheck`  
+Check the shell syntax of all `*.sh` files tracked by the git in this repository.
 
 Dependencies for testsuite:
 
@@ -101,3 +118,4 @@ Dependencies for testsuite:
 - go-md2man
 - make
 - source-to-image
+- shellcheck
