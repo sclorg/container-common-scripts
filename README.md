@@ -55,11 +55,11 @@ and additional clean rules can be provided through the `clean-hook` variable.
 Best-effort to remove the last set of images that have been built using the scripts.
 
 `make shellcheck`  
-Check the shell syntax of the files specified by `$SHELLCHECK_FILES` variable (one or more
-files or directories to be set in Makefile in the container image repo, default is `.`, which
-means a whole directory). The files matching this specification are then filtered, to not show
-results twice for symlinks and only files with a suffix `.sh` or shell shebang are scanned
-with the `shellcheck` utility. See `run-shellcheck.sh` in this repo for more detailed info.
+Check the shell syntax of the files specified by `$SHELLCHECK_FILES` variable.
+See `SHELLCHECK_FILES` variable description below for more info (default is `.`).
+The files matching this specification are then filtered, to not show results twice
+for symlinks. Only files with a suffix `.sh` or shell shebang are scanned with
+the `shellcheck` utility. See `run-shellcheck.sh` in this repo for more detailed info.
 Once the shell syntax issues are fixed, CI that runs `make shellcheck` for each PR can be
 turned on by putting `.travis.yml` file into the root of the image's repository, see
 [.travis.yml](https://github.com/sclorg/container-common-scripts/blob/master/.travis.yml)
@@ -94,7 +94,8 @@ the context of the build is the versioned directory the Dockerfiles are containe
 
 `SHELLCHECK_FILES`  
 One or more files or directories to be scanned by the shellcheck, default is `.`, which
-means a whole repository directory. If a directory is provided then all of its content is scanned as well.
+means a whole repository directory. If a directory is provided then all of its content
+is scanned as well.
 
 `clean-hook`  
 Append Makefile rules to this variable to make sure additional cleaning actions are run
