@@ -94,7 +94,7 @@ the context of the build is the versioned directory the Dockerfiles are containe
 
 `SHELLCHECK_FILES`  
 One or more files or directories to be scanned by the shellcheck, default is `.`, which
-means a whole repository directory.
+means a whole repository directory. If a directory is provided then all of its content is scanned as well.
 
 `clean-hook`  
 Append Makefile rules to this variable to make sure additional cleaning actions are run
