@@ -254,7 +254,7 @@ function ct_npm_works() {
   local tmpdir
   tmpdir=$(mktemp -d)
   : "  Testing npm in the container image"
-  cid_file="${tmpdir}/cid"
+  local cid_file="${tmpdir}/cid"
   if ! docker run --rm "${IMAGE_NAME}" /bin/bash -c "npm --version" >"${tmpdir}/version" ; then
     echo "ERROR: 'npm --version' does not work inside the image ${IMAGE_NAME}." >&2
     return 1
