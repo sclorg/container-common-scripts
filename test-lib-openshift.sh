@@ -290,8 +290,7 @@ function ct_os_new_project() {
     oc create -f "$OPENSHIFT_CLUSTER_PULLSECRET_PATH"
     # add registry pullsecret to the serviceaccount if provided
     secret_name=$(grep '^\s*name:' "$OPENSHIFT_CLUSTER_PULLSECRET_PATH" | awk '{ print $2 }')
-    secret_json='{"imagePullSecrets": [{"name": "'${secret_name}'"}]}'
-    oc patch serviceaccount default -p "$secret_json"
+    oc secrets link --for=pull default "$secret_name"
   fi
 }
 
@@ -602,10 +601,7 @@ function ct_os_test_s2i_app_func() {
       echo "Uploading and importing image skipped."
     fi
   else
-    if [ -n "${import_image}" ] ; then
-      echo "Warning: Import image ${import_image} requested, but uploading image ${image_name} instead."
-    fi
-    ct_os_upload_image "${image_name}" "${image_tagged}"
+    ct_os_upload_image "${import_image:-$image_name}" "${image_tagged}"
   fi
 
   local app_param="${app}"
@@ -733,10 +729,7 @@ function ct_os_test_template_app_func() {
       echo "Uploading and importing image skipped."
     fi
   else
-    if [ -n "${import_image}" ] ; then
-      echo "Warning: Import image ${import_image} requested, but uploading image ${image_name} instead."
-    fi
-    ct_os_upload_image "${image_name}" "${image_tagged}"
+    ct_os_upload_image "${import_image:-$image_name}" "${image_tagged}"
 
     # upload also other images, that template might need (list of pairs in the format <image>|<tag>
     local image_tag_a
