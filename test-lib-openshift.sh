@@ -290,7 +290,7 @@ function ct_os_new_project() {
     oc create -f "$OPENSHIFT_CLUSTER_PULLSECRET_PATH"
     # add registry pullsecret to the serviceaccount if provided
     secret_name=$(grep '^\s*name:' "$OPENSHIFT_CLUSTER_PULLSECRET_PATH" | awk '{ print $2 }')
-    oc secrets link --for=pull default "$secret_name"
+    oc secrets link --for=pull "${project_name}" "$secret_name"
   fi
 }
 
