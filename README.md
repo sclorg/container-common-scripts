@@ -61,7 +61,7 @@ The files matching this specification are then filtered, to not show results twi
 for symlinks. Only files with a suffix `.sh` or shell shebang are scanned with
 the `shellcheck` utility. See [run-shellcheck.sh](./run-shellcheck.sh) in this repo for more detailed info.
 Once the shell syntax issues are fixed, CI that runs `make shellcheck` for each PR can be
-turned on by putting `.travis.yml` file into the root of the image's repository, see
+turned on by putting [.travis.yml](.travis.yml) file into the root of the image's repository.
 [.travis.yml](https://github.com/sclorg/container-common-scripts/blob/master/.travis.yml)
 for its content.
 
