@@ -59,7 +59,7 @@ Check the shell syntax of the files specified by `$SHELLCHECK_FILES` variable.
 See `SHELLCHECK_FILES` variable description below for more info (default is `.`).
 The files matching this specification are then filtered, to not show results twice
 for symlinks. Only files with a suffix `.sh` or shell shebang are scanned with
-the `shellcheck` utility. See `run-shellcheck.sh` in this repo for more detailed info.
+the `shellcheck` utility. See [run-shellcheck.sh](./run-shellcheck.sh) in this repo for more detailed info.
 Once the shell syntax issues are fixed, CI that runs `make shellcheck` for each PR can be
 turned on by putting `.travis.yml` file into the root of the image's repository, see
 [.travis.yml](https://github.com/sclorg/container-common-scripts/blob/master/.travis.yml)
