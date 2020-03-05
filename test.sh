@@ -46,6 +46,14 @@ for dir in ${VERSIONS}; do
     fi
   fi
 
+  if [ -n "${TEST_OPENSHIFT_4}" ]; then
+    if [[ -x test/run-openshift-remote-cluster ]]; then
+        VERSION=$dir test/run-openshift-remote-cluster
+    else
+      echo "-> Tests for OpenShift 4 are not present. Add run-openshift-remote-cluster script, skipping"
+    fi
+  fi
+
   if [ -n "${TEST_OPENSHIFT_MODE}" ]; then
     if [[ -x test/run-openshift ]]; then
       VERSION=$dir test/run-openshift
