@@ -596,7 +596,9 @@ function ct_os_test_s2i_app_func() {
   if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
     if [ -n "${import_image}" ] ; then
       echo "Importing image ${import_image} as ${image_name}:${VERSION}"
-      oc import-image "${image_name}":"${VERSION}" --from "${import_image}" --confirm
+      # Use --reference-policy=local to pull remote image content to the cluster
+      # Works around the issue of builder pods not having access to registry.redhat.io
+      oc import-image "${image_name}":"${VERSION}" --from "${import_image}" --confirm --reference-policy=local
     else
       echo "Uploading and importing image skipped."
     fi
@@ -724,7 +726,9 @@ function ct_os_test_template_app_func() {
   if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
     if [ -n "${import_image}" ] ; then
       echo "Importing image ${import_image} as ${image_name}:${VERSION}"
-      oc import-image "${image_name}":"${VERSION}" --from "${import_image}" --confirm
+      # Use --reference-policy=local to pull remote image content to the cluster
+      # Works around the issue of builder pods not having access to registry.redhat.io
+      oc import-image "${image_name}":"${VERSION}" --from "${import_image}" --confirm --reference-policy=local
     else
       echo "Uploading and importing image skipped."
     fi
