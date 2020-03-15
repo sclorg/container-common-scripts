@@ -25,6 +25,10 @@ EXPECTED_EXIT_CODE=0
 # Uses: $CID_FILE_DIR - path to directory containing cid_files
 # Uses: $EXPECTED_EXIT_CODE - expected container exit code
 function ct_cleanup() {
+  if [ -z "${CID_FILE_DIR:-}" ] ; then
+    echo "ERROR: CID_FILE_DIR variable not set."
+    return 1
+  fi
   for cid_file in "$CID_FILE_DIR"/* ; do
     local container
     container=$(cat "$cid_file")
@@ -228,7 +232,7 @@ function ct_mount_ca_file()
 {
   # mount CA file only if NPM_REGISTRY variable is present.
   local mount_parameter=""
-  if [ -n "$NPM_REGISTRY" ] && [ -f "$(full_ca_file_path)" ]; then
+  if [ -n "${NPM_REGISTRY:-}" ] && [ -f "$(full_ca_file_path)" ]; then
     mount_parameter="-v $(full_ca_file_path):$(full_ca_file_path):Z"
   fi
   echo "$mount_parameter"
@@ -241,7 +245,7 @@ function ct_mount_ca_file()
 function ct_build_s2i_npm_variables()
 {
   npm_variables=""
-  if [ -n "$NPM_REGISTRY" ] && [ -f "$(full_ca_file_path)" ]; then
+  if [ -n "${NPM_REGISTRY:-}" ] && [ -f "$(full_ca_file_path)" ]; then
     npm_variables="-e NPM_MIRROR=$NPM_REGISTRY $(ct_mount_ca_file)"
   fi
   echo "$npm_variables"
@@ -261,17 +265,17 @@ function ct_npm_works() {
   fi
 
   # shellcheck disable=SC2046
-  docker run -d $(ct_mount_ca_file) --rm --cidfile="$cid_file" "${IMAGE_NAME}-testapp"
+  docker run -d $(ct_mount_ca_file) --rm --cidfile="$cid_file" "${IMAGE_NAME}" sleep 5m
 
   # Wait for the container to write it's CID file
   ct_wait_for_cid "$cid_file" || return 1
 
-  if ! docker exec "$(cat "$cid_file")" /bin/bash -c "npm --verbose install jquery && test -f node_modules/jquery/src/jquery.js" >"${tmpdir}/jquery" 2>&1 ; then
+  if ! echo "npm --verbose install jquery && test -f node_modules/jquery/src/jquery.js" | docker exec -i "$(cat "$cid_file")" /bin/bash >"${tmpdir}/jquery" 2>&1 ; then
     echo "ERROR: npm could not install jquery inside the image ${IMAGE_NAME}." >&2
     return 1
   fi
 
-  if [ -n "$NPM_REGISTRY" ] && [ -f "$(full_ca_file_path)" ]; then
+  if [ -n "${NPM_REGISTRY:-}" ] && [ -f "$(full_ca_file_path)" ]; then
     if ! grep -qo "$NPM_REGISTRY" "${tmpdir}/jquery"; then
         echo "ERROR: Internal repository is NOT set. Even it is requested."
         return 1
