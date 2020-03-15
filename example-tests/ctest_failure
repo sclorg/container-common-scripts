@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")"/../test-lib.sh
+
+function ctest_that_fails() {
+  ct_info "Testing use case for a test that fails"
+  ct_run echo "One command that succeeds."
+  ct_verbose "This is more verbose output"
+  ct_run false
+  echo "ERROR: We should never get here"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  ct_init
+  ctest_that_fails "$@"
+  ct_finish
+fi
+

@@ -1,0 +1,108 @@
+#!/bin/bash
+
+# This script tests the features of pretty-debug
+# Use it like this:
+# example-tests/check_pretty_debug ; echo $?
+
+set -e
+
+report_failure() {
+  set +x
+  if [ "$OVERALL_RESULTS" -eq 0 ] ; then
+    echo "Selftest passed."
+  else
+    echo "[FAILED] Selftest failed."
+    echo "Last test was: $LAST_TEST_CASE"
+    return 1
+  fi
+}
+
+test_begin() {
+  LAST_TEST_CASE="$*"
+  echo "--> Starting test: $*"
+}
+
+test_end() {
+  echo "[PASS] Test passed: '$LAST_TEST_CASE'."
+}
+
+OVERALL_RESULTS=1
+trap report_failure EXIT SIGINT
+
+test_begin 'check all the available tests'
+set +e
+out=$(IMAGE_NAME=ubi8/s2i-base VERSION=1 OS=rhel8 example-tests/run 2>&1)
+set -e
+echo "$out" | grep -qe 'FAILED.*ctest_failure'
+echo "$out" | grep -qe 'PASSED.*ctest_pass'
+echo "$out" | grep -qe 'PASSED.*ctest_npm'
+echo "$out" | grep -qe 'PASSED.*ctest_doc_content'
+test_end
+
+test_begin 'check a test that passes'
+out=$(IMAGE_NAME=ubi8/s2i-base VERSION=1 OS=rhel8 example-tests/run ctest_pass 2>&1)
+echo "$out" | grep -qe 'PASSED.*ctest_pass'
+echo "$out" | grep -qe 'Tests for ubi8/s2i-base succeeded.'
+test_end
+
+test_begin 'check a test that fails'
+set +e
+out=$(IMAGE_NAME=ubi8/s2i-base VERSION=1 OS=rhel8 example-tests/run ctest_failure 2>&1)
+ret=$?
+set -e
+[ "$ret" -ne 0 ]
+echo "$out" | grep -qe 'FAILED.*ctest_failure'
+echo "$out" | grep -qe 'Tests for ubi8/s2i-base failed.'
+test_end
+
+test_begin 'check that one test failed does not end the suite'
+set +e
+out=$(IMAGE_NAME=ubi8/s2i-base VERSION=1 OS=rhel8 example-tests/run ctest_failure ctest_pass 2>&1)
+ret=$?
+set -e
+[ "$ret" -ne 0 ]
+echo "$out" | grep -qe 'FAILED.*ctest_failure'
+echo "$out" | grep -qe 'PASSED.*ctest_pass'
+echo "$out" | grep -qe 'Tests for ubi8/s2i-base failed.'
+test_end
+
+test_begin 'check that with CT_FAIL_QUICKLY set, suite is ended after first failure'
+set +e
+out=$(CT_FAIL_QUICKLY=1 IMAGE_NAME=ubi8/s2i-base VERSION=1 OS=rhel8 example-tests/run ctest_failure ctest_pass 2>&1)
+ret=$?
+set -e
+[ "$ret" -ne 0 ]
+echo "$out" | grep -qe 'FAILED.*ctest_failure'
+! echo "$out" | grep -qe 'PASSED.*ctest_pass'
+echo "$out" | grep -qe 'Tests for ubi8/s2i-base failed.'
+test_end
+
+test_begin 'test verbose output for test that passes'
+out=$(CT_VERBOSE=1 IMAGE_NAME=ubi8/s2i-base VERSION=1 OS=rhel8 example-tests/run ctest_pass 2>&1)
+echo "$out" | grep -qe '^  This is more verbose output'
+! echo "$out" | grep -qe '^  # This is more verbose output'
+test_end
+
+test_begin 'test verbose output for test that fails'
+set +e
+out=$(CT_VERBOSE=1 IMAGE_NAME=ubi8/s2i-base VERSION=1 OS=rhel8 example-tests/run ctest_failure 2>&1)
+echo "$out" | grep -qe '^  This is more verbose output'
+echo "$out" | grep -qe '^  # This is more verbose output'
+set -e
+test_end
+
+test_begin 'test debug output'
+set +e
+out=$(CT_DEBUG=1 IMAGE_NAME=ubi8/s2i-base VERSION=1 OS=rhel8 example-tests/run ctest_failure 2>&1)
+echo "$out" | grep -qe '+ ct_run false'
+set -e
+test_end
+
+test_begin 'test TEST_LIST specified by TESTS variable'
+out=$(TESTS=ctest_pass IMAGE_NAME=ubi8/s2i-base VERSION=1 OS=rhel8 example-tests/run 2>&1)
+! echo "$out" | grep -qe 'FAILED.*ctest_failure'
+test_end
+
+OVERALL_RESULTS=0
+
+# vim: set tabstop=2:shiftwidth=2:expandtab:

@@ -14,6 +14,9 @@
 # Container CI tests
 # abbreviated as "ct"
 
+# shellcheck source=/dev/null
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"/test-lib-pretty-debug.sh
+
 # may be redefined in the specific container testfile
 EXPECTED_EXIT_CODE=0
 
@@ -33,18 +36,23 @@ function ct_cleanup() {
     local container
     container=$(cat "$cid_file")
 
-    : "Stopping and removing container $container..."
+    ct_verbose "Stopping and removing container $container..."
     docker stop "$container"
     exit_status=$(docker inspect -f '{{.State.ExitCode}}' "$container")
     if [ "$exit_status" != "$EXPECTED_EXIT_CODE" ]; then
-      : "Dumping logs for $container"
+      ct_verbose "Dumping logs for $container"
       docker logs "$container"
     fi
     docker rm -v "$container"
     rm "$cid_file"
   done
   rmdir "$CID_FILE_DIR"
-  : "Done."
+
+  if declare -f ct_cleanup_extra > /dev/null ; then
+    ct_cleanup_extra
+  fi
+
+  ct_verbose "Cleanup done."
 }
 
 # ct_enable_cleanup
@@ -86,7 +94,7 @@ function ct_wait_for_cid() {
   local result=1
   while [ $attempt -le $max_attempts ]; do
     [ -f "$cid_file" ] && [ -s "$cid_file" ] && return 0
-    : "Waiting for container start..."
+    ct_verbose "Waiting for container start..."
     attempt=$(( attempt + 1 ))
     sleep $sleep_time
   done
@@ -122,8 +130,9 @@ function ct_assert_container_creation_fails() {
         break
       fi
     done
-    exit_status=$(docker inspect -f '{{.State.ExitCode}}' "$cid")
-    if [ "$exit_status" == "0" ]; then
+    ct_verbose 'Checking container exit_status is 0'
+    ct_run exit_status="$(docker inspect -f '{{.State.ExitCode}}' "$cid")"
+    if ct_run [ "$exit_status" == "0" ] ; then
       ret=1
     fi
     docker rm -v "$cid"
@@ -148,9 +157,9 @@ function ct_create_container() {
   local cid_file="$CID_FILE_DIR/$1" ; shift
   # create container with a cidfile in a directory for cleanup
   # shellcheck disable=SC2086
-  docker run --cidfile="$cid_file" -d ${CONTAINER_ARGS:-} "$IMAGE_NAME" "$@"
+  ct_run docker run --cidfile="$cid_file" -d ${CONTAINER_ARGS:-} "$IMAGE_NAME" "$@"
   ct_wait_for_cid "$cid_file" || return 1
-  : "Created container $(cat "$cid_file")"
+  ct_verbose "Created container $(cat "$cid_file")"
 }
 
 # ct_scl_usage_old [name, command, expected]
@@ -167,18 +176,20 @@ function ct_scl_usage_old() {
   local command="$2"
   local expected="$3"
   local out=""
-  : "  Testing the image SCL enable"
-  out=$(docker run --rm "${IMAGE_NAME}" /bin/bash -c "${command}")
+  ct_verbose "Testing the image SCL enable"
+
+  out=$(ct_run --no-redirect "echo '${command}' | docker run --rm -i ${IMAGE_NAME} /bin/bash")
   if ! echo "${out}" | grep -q "${expected}"; then
     echo "ERROR[/bin/bash -c \"${command}\"] Expected '${expected}', got '${out}'" >&2
     return 1
   fi
-  out=$(docker exec "$(ct_get_cid "$name")" /bin/bash -c "${command}" 2>&1)
+  ct_run docker run -d --cidfile="$CID_FILE_DIR/$name" "${IMAGE_NAME}" sleep 5m
+  out=$(ct_run --no-redirect "echo '${command}' | docker exec -i $(ct_get_cid "$name") /bin/bash 2>&1")
   if ! echo "${out}" | grep -q "${expected}"; then
     echo "ERROR[exec /bin/bash -c \"${command}\"] Expected '${expected}', got '${out}'" >&2
     return 1
   fi
-  out=$(docker exec "$(ct_get_cid "$name")" /bin/sh -ic "${command}" 2>&1)
+  out=$(ct_run --no-redirect "echo ${command} | docker exec -i $(ct_get_cid "$name") /bin/sh -i 2>&1")
   if ! echo "${out}" | grep -q "${expected}"; then
     echo "ERROR[exec /bin/sh -ic \"${command}\"] Expected '${expected}', got '${out}'" >&2
     return 1
@@ -195,27 +206,27 @@ function ct_doc_content_old() {
   local tmpdir
   tmpdir=$(mktemp -d)
   local f
-  : "  Testing documentation in the container image"
+  ct_verbose "Testing documentation in the container image"
   # Extract the help files from the container
   # shellcheck disable=SC2043
   for f in help.1 ; do
-    docker run --rm "${IMAGE_NAME}" /bin/bash -c "cat /${f}" >"${tmpdir}/$(basename "${f}")"
+    ct_run "echo 'cat /${f}' | docker run --rm -i '${IMAGE_NAME}' /bin/bash >'${tmpdir}/$(basename "${f}")'"
     # Check whether the files contain some important information
     for term in "$@" ; do
-      if ! grep -F -q -e "${term}" "${tmpdir}/$(basename "${f}")" ; then
+      if ! ct_run grep -F -q -e "${term}" "${tmpdir}/$(basename "${f}")" ; then
         echo "ERROR: File /${f} does not include '${term}'." >&2
         return 1
       fi
     done
     # Check whether the files use the correct format
     for term in TH PP SH ; do
-      if ! grep -q "^\.${term}" "${tmpdir}/help.1" ; then
-        echo "ERROR: /help.1 is probably not in troff or groff format, since '${term}' is missing." >&2
+      if ! ct_run grep -q -e "^\.${term}" "${tmpdir}/$(basename "${f}")" ; then
+        echo "ERROR: /help.1 is probably not in troff or groff format, since '.${term}' is missing." >&2
         return 1
       fi
     done
   done
-  : "  Success!"
+  ct_verbose "Success!"
 }
 
 # full_ca_file_path
@@ -257,26 +268,28 @@ function ct_build_s2i_npm_variables()
 function ct_npm_works() {
   local tmpdir
   tmpdir=$(mktemp -d)
-  : "  Testing npm in the container image"
+  ct_verbose "Testing npm in the container image"
   local cid_file="${tmpdir}/cid"
-  if ! docker run --rm "${IMAGE_NAME}" /bin/bash -c "npm --version" >"${tmpdir}/version" ; then
+  # shellcheck disable=SC2016
+  if ! ct_run 'echo "npm --version" | docker run --rm -i "${IMAGE_NAME}" /bin/bash  >"${tmpdir}/version"' ; then
     echo "ERROR: 'npm --version' does not work inside the image ${IMAGE_NAME}." >&2
     return 1
   fi
 
   # shellcheck disable=SC2046
-  docker run -d $(ct_mount_ca_file) --rm --cidfile="$cid_file" "${IMAGE_NAME}" sleep 5m
+  ct_run docker run -d $(ct_mount_ca_file) --rm --cidfile="$cid_file" "${IMAGE_NAME}" sleep 5m
 
   # Wait for the container to write it's CID file
   ct_wait_for_cid "$cid_file" || return 1
 
-  if ! echo "npm --verbose install jquery && test -f node_modules/jquery/src/jquery.js" | docker exec -i "$(cat "$cid_file")" /bin/bash >"${tmpdir}/jquery" 2>&1 ; then
+  # shellcheck disable=SC2016
+  if ! ct_run 'echo "npm --verbose install jquery && test -f node_modules/jquery/src/jquery.js" | docker exec -i "$(cat "$cid_file")" /bin/bash >"${tmpdir}/jquery" 2>&1' ; then
     echo "ERROR: npm could not install jquery inside the image ${IMAGE_NAME}." >&2
     return 1
   fi
 
   if [ -n "${NPM_REGISTRY:-}" ] && [ -f "$(full_ca_file_path)" ]; then
-    if ! grep -qo "$NPM_REGISTRY" "${tmpdir}/jquery"; then
+    if ! ct_run grep -qo "$NPM_REGISTRY" "${tmpdir}/jquery"; then
         echo "ERROR: Internal repository is NOT set. Even it is requested."
         return 1
     fi
@@ -286,7 +299,7 @@ function ct_npm_works() {
       docker stop "$(cat "$cid_file")"
       rm "$cid_file"
   fi
-  : "  Success!"
+  ct_verbose "Success!"
 }
 
 # ct_path_append PATH_VARNAME DIRECTORY
@@ -327,7 +340,7 @@ ct_path_foreach ()
 # Uses: $TEST_LIST - list of test names
 function ct_run_test_list() {
   for test_case in $TEST_LIST; do
-    : "Running test $test_case"
+    ct_verbose "Running test $test_case"
     # shellcheck source=/dev/null
     [ -f "test/$test_case" ] && source "test/$test_case"
     # shellcheck source=/dev/null
@@ -348,8 +361,8 @@ ct_gen_self_signed_cert_pem() {
   local output_dir=$1 ; shift
   local base_name=$1 ; shift
   mkdir -p "${output_dir}"
-  openssl req -newkey rsa:2048 -nodes -keyout "${output_dir}"/"${base_name}"-key.pem -subj '/C=GB/ST=Berkshire/L=Newbury/O=My Server Company' > "${base_name}"-req.pem
-  openssl req -new -x509 -nodes -key "${output_dir}"/"${base_name}"-key.pem -batch > "${output_dir}"/"${base_name}"-cert-selfsigned.pem
+  ct_run openssl req -newkey rsa:2048 -nodes -keyout "${output_dir}"/"${base_name}"-key.pem -subj '/C=GB/ST=Berkshire/L=Newbury/O=My Server Company' > "${base_name}"-req.pem
+  ct_run openssl req -new -x509 -nodes -key "${output_dir}"/"${base_name}"-key.pem -batch > "${output_dir}"/"${base_name}"-cert-selfsigned.pem
 }
 
 # ct_obtain_input FILE|DIR|URL
@@ -373,7 +386,7 @@ function ct_obtain_input() {
     rm -f "${output}"
     cp -r -LH "${input}" "${output}"
   elif echo "${input}" | grep -qe '^http\(s\)\?://' ; then
-    curl "${input}" > "${output}"
+    ct_run curl "${input}" > "${output}"
   else
     echo "ERROR: file type not known: ${input}" >&2
     return 1
@@ -397,7 +410,7 @@ ct_test_response() {
   local max_attempts=${4:-20}
   local ignore_error_attempts=${5:-10}
 
-  : "  Testing the HTTP(S) response for <${url}>"
+  ct_verbose "Testing the HTTP(S) response for <${url}>"
   local sleep_time=3
   local attempt=1
   local result=1
@@ -406,7 +419,7 @@ ct_test_response() {
   local response_file
   response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
   while [ "${attempt}" -le "${max_attempts}" ]; do
-    curl --connect-timeout 10 -s -w '%{http_code}' "${url}" >"${response_file}" && status=0 || status=1
+    ct_run curl --connect-timeout 10 -s -w '%{http_code}' "${url}" >"${response_file}" && status=0 || status=1
     if [ "${status}" -eq 0 ]; then
       response_code=$(tail -c 3 "${response_file}")
       if [ "${response_code}" -eq "${expected_code}" ]; then
@@ -522,7 +535,7 @@ ct_s2i_usage()
     local img_name=$1; shift
     local s2i_args="$*";
     local usage_command="/usr/libexec/s2i/usage"
-    docker run --rm "$img_name" bash -c "$usage_command"
+    ct_run echo "$usage_command" | docker run --rm -i "$img_name" bash
 }
 
 # ct_s2i_build_as_df APP_PATH SRC_IMAGE DST_IMAGE [S2I_ARGS]
@@ -578,7 +591,7 @@ ct_s2i_build_as_df()
         docker images "$dst_image" &>/dev/null || (echo "Image $dst_image not found."; false)
         # Run the original image with a mounted in volume and get the artifacts out of it
         cmd="if [ -s /usr/libexec/s2i/save-artifacts ]; then /usr/libexec/s2i/save-artifacts > \"$inc_tmp/artifacts.tar\"; else touch \"$inc_tmp/artifacts.tar\"; fi"
-        docker run --rm -v "$inc_tmp:$inc_tmp:Z" "$dst_image" bash -c "$cmd"
+        ct_run docker run --rm -v "$inc_tmp:$inc_tmp:Z" "$dst_image" bash -c "$cmd"
         # Move the created content into the $tmpdir for the build to pick it up
         mv "$inc_tmp/artifacts.tar" "$tmpdir/"
     fi
@@ -635,8 +648,9 @@ EOF
     mount_options=$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)
 
     # Run the build and tag the result
+    ct_verbose "Dockerfile content: $(cat "$df_name")"
     # shellcheck disable=SC2086
-    docker build $mount_options -f "$df_name" --no-cache=true -t "$dst_image" .
+    ct_run docker build $mount_options -f "$df_name" --no-cache=true -t "$dst_image" .
     )
 }
 

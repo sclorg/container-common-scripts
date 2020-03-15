@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")"/../test-lib.sh
+
+function ctest_scl_works() {
+  ct_info "  Testing of SCL configuration"
+  ct_scl_usage_old admin 'mongo --version' 3.6
+  ct_info "  Success!"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  ct_init
+  ctest_scl_works "$@"
+  ct_finish
+fi
+
+# vim: set tabstop=2:shiftwidth=2:expandtab:

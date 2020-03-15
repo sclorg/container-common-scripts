@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")"/../test-lib.sh
+
+function ctest_that_passes() {
+  ct_info "Testing use case for a test that pass"
+  ct_verbose "This is more verbose output"
+  ct_run ping -c 3 8.8.8.8
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  ct_init
+  ctest_that_passes "$@"
+  ct_finish
+fi
+
+# vim: set tabstop=2:shiftwidth=2:expandtab:

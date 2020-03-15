@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")"/../test-lib.sh
+
+function ctest_doc_content() {
+  ct_info "Testing documentation content"
+  ct_doc_content_old Node.js
+  ct_info "Success!"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  ct_init
+  ctest_doc_content "$@"
+  ct_finish
+fi
+

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# This is an example how the wrapper that runs all test cases looks like
+
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")"/../test-lib.sh
+
+# run as: IMAGE_NAME=ubi8/s2i-base VERSION=1 OS=rhel8 ./run
+
+# shellcheck disable=SC2034
+TEST_LIST="
+  ctest_doc_content
+  ctest_failure
+  ctest_npm ctest_pass"
+
+ct_init
+# shellcheck disable=SC2068
+ct_run_all_tests $@
+ct_finish
+
+# vim: set tabstop=2:shiftwidth=2:expandtab:
