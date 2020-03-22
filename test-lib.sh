@@ -650,4 +650,40 @@ ct_check_image_availability() {
   fi
 }
 
+# ct_wait_container_port CONTAINER_ID PORT [ VERBOSE TIMEOUT ]
+# ----------------------------
+# Uses 'nc' for checking whether the container specified by CONTAINER_ID is still
+# running and exits with 0 once the PORT of that container listens for connections.
+# Argument: CONTAINER_ID - id of the container to query the status and ip
+# Argument: PORT - what port to look at
+# Argument: VERBOSE(optional) - if set to 1, progress output will be printed
+# Argument: TIMEOUT(optional) - how long to wait for a port
+ct_wait_container_port() {
+  local container_id=$1
+  local port=$2
+  local verbose=${3:-0}
+  local timeout=${4:-60}
+  local cip
+  local status
+
+  cip=$(docker inspect --format='{{.NetworkSettings.IPAddress}}' "${container_id}")
+  SECONDS=0
+  [ "$verbose" == "1" ] && echo -n "Checking whether port $cip:$port is listening ..." >&2
+  while [ "$SECONDS" -lt "$timeout" ] ; do
+    status=$(docker inspect -f '{{.State.Status}}' "${container_id}")
+    if [ "${status}" != 'running' ] ; then
+      echo "ERROR: Container ${container_id} not running any more." >&2
+      return 1;
+    fi
+    if nc -z "${cip}" "${port}" ; then
+      [ "$verbose" == "1" ] && echo ' OK' >&2
+      return 0
+    fi
+    sleep 2
+    [ "$verbose" == "1" ] && echo -n '.' >&2
+  done
+  echo " FAIL" >&2
+  return 1
+}
+
 # vim: set tabstop=2:shiftwidth=2:expandtab:
