@@ -185,6 +185,15 @@ function ct_run_all_tests() {
 
     else
       suite_result=$?
+
+      if [ "$suite_result" -eq 132 ] ; then
+        # This happens if the container runs on an older s390x that it was built
+        # for https://bugzilla.redhat.com/show_bug.cgi?id=1639763
+	      ct_error "Test case ${test_case} failed with exit code 132, which means it got SIGILL "
+								 "(Illegal Instruction) signal. This might happen for example in case a binary "
+								 "is built on RHEL-8 s390x machine and run on older RHEL-7 with a different "
+								 "instruction set (see example: https://bugzilla.redhat.com/show_bug.cgi?id=1639763)"
+      fi
       printf -v _CT_SHORT_SUMMARY "%s[FAILED] %s\n" "${_CT_SHORT_SUMMARY}" "${test_case}"
       ct_error "Tests for ${test_case} failed with $suite_result."
       _ct_aggregate_pretty_debug >>"$(_ct_pretty_debug_file)"
