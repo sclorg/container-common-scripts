@@ -1060,4 +1060,27 @@ function ct_os_check_cmd_internal() {
   return 1
 }
 
+# ct_os_test_image_stream
+# ------------------------
+# Creates an image stream and deploys a specified template. Then checks that a pod runs.
+# Argument: image_stream_file - local file name with an image stream
+# Argument: template_file - local file name with a template
+# Argument: service_name - how the pod will be named (prefix)
+function ct_os_test_image_stream() {
+  local image_stream_file=$1
+  local template_file=$2
+  local service_name=$3
+
+  echo "Running image stream test for stream $image_stream_file and template $template_file"
+  # shellcheck disable=SC2119
+  ct_os_new_project
+
+  oc create -f "${image_stream_file}"
+  oc process -p NAMESPACE=$(oc project -q) -f "${template_file}" | oc create -f -
+  ct_os_wait_pod_ready "${service_name}" 120
+
+  # shellcheck disable=SC2119
+  ct_os_delete_project
+}
+
 # vim: set tabstop=2:shiftwidth=2:expandtab:
