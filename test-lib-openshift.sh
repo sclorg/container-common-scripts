@@ -139,6 +139,17 @@ function ct_os_get_pod_status() {
                             | awk '{print $1}' | head -n 1
 }
 
+# ct_os_get_build_pod_status POD_PREFIX
+# --------------------
+# Returns status of the build pod specified by prefix [pod_prefix].
+# Arguments: pod_prefix - prefix or whole ID of the pod
+function ct_os_get_build_pod_status() {
+  local pod_prefix="${1}" ; shift
+  local query="custom-columns=Ready:status.containerStatuses[0].state.terminated.reason,NAME:.metadata.name"
+  oc get pods -o "$query" | grep -e "${pod_prefix}" | grep -E "\-build$" \
+                          | awk '{print $1}' | head -n 1
+}
+
 # ct_os_get_pod_name POD_PREFIX
 # --------------------
 # Returns the full name of pods specified by prefix [pod_prefix].
@@ -177,6 +188,18 @@ function ct_os_check_pod_readiness() {
 function ct_os_wait_pod_ready() {
   local pod_prefix="${1}" ; shift
   local timeout="${1}" ; shift
+  # If there is a build pod - wait for it to finish first
+  sleep 3
+  if ct_os_get_all_pods_name | grep -E "${pod_prefix}.*-build"; then
+    SECONDS=0
+    echo -n "Waiting for ${pod_prefix} build pod to finish ..."
+    while ! [ "$(ct_os_get_build_pod_status "${pod_prefix}")" == "Completed" ] ; do
+      echo -n "."
+      [ "${SECONDS}" -gt "${timeout}0" ] && echo " FAIL" && return 1
+      sleep 3
+    done
+    echo " DONE"
+  fi
   SECONDS=0
   echo -n "Waiting for ${pod_prefix} pod becoming ready ..."
   while ! ct_os_check_pod_readiness "${pod_prefix}" "true" ; do
