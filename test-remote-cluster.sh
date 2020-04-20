@@ -25,7 +25,11 @@ for dir in ${VERSIONS}; do
 
   export IMAGE_NAME="${REGISTRY}${NAMESPACE}${BASE_IMAGE_NAME}-${dir//./}-${OS}"
 
-  VERSION=$dir test/run-openshift-remote-cluster
+  if [[ -x test/run-openshift-remote-cluster ]]; then
+    VERSION=$dir test/run-openshift-remote-cluster
+  else
+    echo "-> Tests for OpenShift 4 are not present. Add run-openshift-remote-cluster script, skipping"
+  fi
 
   popd > /dev/null
 done
