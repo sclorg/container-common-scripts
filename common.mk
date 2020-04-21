@@ -96,8 +96,8 @@ test-with-conu: tag
 	VERSIONS="$(VERSIONS)" $(script_env) $(test)
 
 .PHONY: test-openshift-4
-test-openshift-remote-cluster: script_env += TEST_OPENSHIFT_4=true
-test-openshift-remote-cluster:
+test-openshift-4: script_env += TEST_OPENSHIFT_4=true
+test-openshift-4:
 	VERSIONS="$(VERSIONS)" BASE_IMAGE_NAME="$(BASE_IMAGE_NAME)" $(script_env) $(testr)
 
 .PHONY: test-openshift
