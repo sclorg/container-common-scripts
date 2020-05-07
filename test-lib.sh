@@ -285,6 +285,32 @@ function ct_npm_works() {
   : "  Success!"
 }
 
+# ct_binary_found_from_df binary [path]
+# --------------------
+# Checks if a binary can be found in PATH during Dockerfile build
+# Argument: binary - name of the binary to test accessibility for
+# Argument: path - optional path in which the binary should reside in
+#                  /opt/rh by default
+function ct_binary_found_from_df() {
+  local tmpdir
+  local binary=$1; shift
+  local binary_path=${1:-"^/opt/rh"}
+  tmpdir=$(mktemp -d)
+  : "  Testing $binary in build from Dockerfile"
+
+  # Create Dockerfile that looks for the binary
+  cat <<EOF >"$tmpdir/Dockerfile"
+FROM $IMAGE_NAME
+RUN which $binary | grep "$binary_path"
+EOF
+  # Build an image, looking for expected path in the output
+  if ! docker build -f "$tmpdir/Dockerfile" --no-cache "$tmpdir"; then
+    echo "  ERROR: Failed to find $binary in Dockerfile!" >&2
+    return 1
+  fi
+  : "  Success!"
+}
+
 # ct_path_append PATH_VARNAME DIRECTORY
 # -------------------------------------
 # Append DIRECTORY to VARIABLE of name PATH_VARNAME, the VARIABLE must consist
