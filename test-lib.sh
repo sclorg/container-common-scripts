@@ -305,7 +305,7 @@ RUN which $binary
 EOF
   # Build an image, looking for expected path in the output
   if ! docker build -f "$tmpdir/Dockerfile" --no-cache "$tmpdir" 2>&1 | grep "$binary_path"; then
-    : "  ERROR: Failed to find $binary in Dockerfile!" >&2
+    echo "  ERROR: Failed to find $binary in Dockerfile!" >&2
     return 1
   fi
   : "  Success!"
