@@ -145,7 +145,7 @@ function ct_os_get_pod_status() {
 # Arguments: pod_prefix - prefix or whole ID of the pod
 function ct_os_get_build_pod_status() {
   local pod_prefix="${1}" ; shift
-  local query="custom-columns=NAME:.metadata.name,Ready:status.containerStatuses[0].state.terminated.reason"
+  local query="custom-columns=NAME:.metadata.name,Ready:status.phase"
   oc get pods -o "$query" | grep -e "${pod_prefix}" | grep -E "\-build\s" \
                           | sort -u | awk '{print $2}' | tail -n 1
 }
@@ -193,7 +193,7 @@ function ct_os_wait_pod_ready() {
   if ct_os_get_all_pods_name | grep -E "${pod_prefix}.*-build"; then
     SECONDS=0
     echo -n "Waiting for ${pod_prefix} build pod to finish ..."
-    while ! [ "$(ct_os_get_build_pod_status "${pod_prefix}")" == "Completed" ] ; do
+    while ! [ "$(ct_os_get_build_pod_status "${pod_prefix}")" == "Succeeded" ] ; do
       echo -n "."
       [ "${SECONDS}" -gt "${timeout}0" ] && echo " FAIL" && return 1
       sleep 3
@@ -219,7 +219,7 @@ function ct_os_wait_rc_ready() {
   local pod_prefix="${1}" ; shift
   local timeout="${1}" ; shift
   SECONDS=0
-  echo -n "Waiting for ${pod_prefix} pod becoming ready ..."
+  echo -n "Waiting for ${pod_prefix} having desired numbers of replicas ..."
   while ! test "$( (oc get --no-headers statefulsets; oc get --no-headers rc) 2>/dev/null \
                  | grep "^${pod_prefix}" | awk '$2==$3 {print "ready"}')" == "ready" ; do
     echo -n "."
@@ -412,6 +412,7 @@ function ct_os_install_in_centos() {
   yum install -y wget git net-tools bind-utils iptables-services bridge-utils\
                  bash-completion origin-clients docker origin-clients
 }
+
 
 # ct_os_cluster_up [DIR, IS_PUBLIC, CLUSTER_VERSION]
 # --------------------
@@ -617,16 +618,20 @@ function ct_os_test_s2i_app_func() {
 
   namespace=${CT_NAMESPACE:-"$(oc project -q)"}
 
-  # Create a specific imagestream tag for the image so that oc cannot use anything else
-  if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
-    echo "Importing image ${image_name} as ${namespace}/${image_name_no_namespace}"
-    # Use --reference-policy=local to pull remote image content to the cluster
-    # Works around the issue of builder pods not having access to registry.redhat.io
-    oc tag --source=docker "${image_name}" "${namespace}/${image_name_no_namespace}" --insecure=true --reference-policy=local
-    ct_os_wait_stream_ready "${image_name_no_namespace}" "${namespace}"
+  if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
+    ct_os_import_image_ocp4 "${image_name}" "${image_name_no_namespace}"
   else
-    echo "Uploading image ${image_name} as ${image_name_no_namespace}"
-    ct_os_upload_image "${image_name}" "${image_name_no_namespace}"
+    # Create a specific imagestream tag for the image so that oc cannot use anything else
+    if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
+      echo "Importing image ${image_name} as ${namespace}/${image_name_no_namespace}"
+      # Use --reference-policy=local to pull remote image content to the cluster
+      # Works around the issue of builder pods not having access to registry.redhat.io
+      oc tag --source=docker "${image_name}" "${namespace}/${image_name_no_namespace}" --insecure=true --reference-policy=local
+      ct_os_wait_stream_ready "${image_name_no_namespace}" "${namespace}"
+    else
+      echo "Uploading image ${image_name} as ${image_name_no_namespace}"
+      ct_os_upload_image "${image_name}" "${image_name_no_namespace}"
+    fi
   fi
 
   local app_param="${app}"
@@ -751,27 +756,30 @@ function ct_os_test_template_app_func() {
   ct_os_new_project
 
   namespace=${CT_NAMESPACE:-"$(oc project -q)"}
-
   # Create a specific imagestream tag for the image so that oc cannot use anything else
-  if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
-    echo "Importing image ${image_name} as ${image_tagged}"
-    # Use --reference-policy=local to pull remote image content to the cluster
-    # Works around the issue of builder pods not having access to registry.redhat.io
-    oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
-    ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
+  if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
+    ct_os_import_image_ocp4 "${image_name}" "${image_tagged}"
   else
-    echo "Uploading image ${image_name} as ${image_tagged}"
-    ct_os_upload_image "${image_name}" "${image_tagged}"
+    if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
+      echo "Importing image ${image_name} as ${image_tagged}"
+      # Use --reference-policy=local to pull remote image content to the cluster
+      # Works around the issue of builder pods not having access to registry.redhat.io
+      oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
+      ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
+    else
+      echo "Uploading image ${image_name} as ${image_tagged}"
+      ct_os_upload_image "${image_name}" "${image_tagged}"
 
-    # upload also other images, that template might need (list of pairs in the format <image>|<tag>
-    local image_tag_a
-    local i_t
-    for i_t in ${other_images} ; do
-      echo "${i_t}"
-      IFS='|' read -ra image_tag_a <<< "${i_t}"
-      docker pull "${image_tag_a[0]}"
-      ct_os_upload_image "${image_tag_a[0]}" "${image_tag_a[1]}"
-    done
+      # upload also other images, that template might need (list of pairs in the format <image>|<tag>
+      local image_tag_a
+      local i_t
+      for i_t in ${other_images} ; do
+        echo "${i_t}"
+        IFS='|' read -ra image_tag_a <<< "${i_t}"
+        docker pull "${image_tag_a[0]}"
+        ct_os_upload_image "${image_tag_a[0]}" "${image_tag_a[1]}"
+      done
+    fi
   fi
 
   # get the template file from remote or local location; if not found, it is
