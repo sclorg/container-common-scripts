@@ -311,15 +311,19 @@ EOF
   : "  Success!"
 }
 
-# ct_check_exec_env_vars
+# ct_check_exec_env_vars [env_filter]
 # --------------------
 # Checks if all relevant environment variables from `docker run`
 # can be found in `docker exec` as well.
+# Argument: env_filter - optional string passed to grep used for
+#   choosing which variables to check in the test case.
+#   Defaults to X_SCLS and variables containing /opt/app-root, /opt/rh
 # Uses: $CID_FILE_DIR - path to directory containing cid_files
 # Uses: $IMAGE_NAME - name of the image being tested
 function ct_check_exec_env_vars() {
-  local tmpdir exec_envs run_envs cid old_IFS
+  local tmpdir exec_envs cid old_IFS env_filter
   local var_name stripped filtered_envs
+  env_filter=${1:-"^X_SCLS=\|/opt/rh\|/opt/app-root"}
   tmpdir=$(mktemp -d)
   CID_FILE_DIR=${CID_FILE_DIR:-$(mktemp -d)}
   # Get environment variables from `docker run`
@@ -332,8 +336,7 @@ function ct_check_exec_env_vars() {
   # Always check X_SCLS, ignore PWD
   # Check variables from `docker run` that have alternative paths inside (/opt/rh, /opt/app-root)
   exec_envs=$(cat "$tmpdir/exec_envs")
-  run_envs=$(grep "^X_SCLS=\|/opt/rh\|/opt/app-root" "$tmpdir/run_envs" | grep -v "^PWD=")
-  for variable in $run_envs; do
+  while read -r variable; do
     var_name=$(echo "$variable" | awk -F= '{ print $1 }')
     stripped=$(echo "$variable" | awk -F= '{ print $2 }')
     filtered_envs=$(echo "$exec_envs" | grep "^$var_name=")
@@ -347,10 +350,9 @@ function ct_check_exec_env_vars() {
             return 1
         fi
     done
-  done
+  done <<< "$(grep "$env_filter" "$tmpdir/run_envs" | grep -v "^PWD=")"
   IFS=$old_IFS
   echo " All values present in \`docker exec\`"
-  ct_cleanup
   return 0
 }
 
