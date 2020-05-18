@@ -311,6 +311,51 @@ EOF
   : "  Success!"
 }
 
+# ct_check_exec_env_vars [env_filter]
+# --------------------
+# Checks if all relevant environment variables from `docker run`
+# can be found in `docker exec` as well.
+# Argument: env_filter - optional string passed to grep used for
+#   choosing which variables to check in the test case.
+#   Defaults to X_SCLS and variables containing /opt/app-root, /opt/rh
+# Uses: $CID_FILE_DIR - path to directory containing cid_files
+# Uses: $IMAGE_NAME - name of the image being tested
+function ct_check_exec_env_vars() {
+  local tmpdir exec_envs cid old_IFS env_filter
+  local var_name stripped filtered_envs
+  env_filter=${1:-"^X_SCLS=\|/opt/rh\|/opt/app-root"}
+  tmpdir=$(mktemp -d)
+  CID_FILE_DIR=${CID_FILE_DIR:-$(mktemp -d)}
+  # Get environment variables from `docker run`
+  docker run --rm "$IMAGE_NAME" /bin/bash -c "env" | sort > "$tmpdir/run_envs"
+  # Get environment variables from `docker exec`
+  ct_create_container "test_exec_envs" bash -c "sleep 1000" >/dev/null
+  cid=$(ct_get_cid "test_exec_envs")
+  docker exec "$cid" env | sort > "$tmpdir/exec_envs"
+  # Filter out variables we are not interested in
+  # Always check X_SCLS, ignore PWD
+  # Check variables from `docker run` that have alternative paths inside (/opt/rh, /opt/app-root)
+  exec_envs=$(cat "$tmpdir/exec_envs")
+  while read -r variable; do
+    var_name=$(echo "$variable" | awk -F= '{ print $1 }')
+    stripped=$(echo "$variable" | awk -F= '{ print $2 }')
+    filtered_envs=$(echo "$exec_envs" | grep "^$var_name=")
+    [ -z "$filtered_envs" ] && { echo "$var_name not found during \` docker exec\`"; return 1; }
+    old_IFS=$IFS
+    # For each such variable compare its content with the `docker exec` result, use `:` as delimiter
+    IFS=:
+    for value in $stripped; do
+        if [ -n "${filtered_envs##*$value*}" ]; then
+            echo " Value $value is missing from variable $var_name"
+            return 1
+        fi
+    done
+  done <<< "$(grep "$env_filter" "$tmpdir/run_envs" | grep -v "^PWD=")"
+  IFS=$old_IFS
+  echo " All values present in \`docker exec\`"
+  return 0
+}
+
 # ct_path_append PATH_VARNAME DIRECTORY
 # -------------------------------------
 # Append DIRECTORY to VARIABLE of name PATH_VARNAME, the VARIABLE must consist
