@@ -50,6 +50,17 @@ function ct_enable_cleanup() {
   trap ct_cleanup EXIT SIGINT
 }
 
+# ct_check_envs_set env_filter check_envs loop_envs [env_format]
+# --------------------
+# Compares values from one list of environment variable definitions against such list,
+# checking if the values are present and have a specific format.
+# Argument: env_filter - optional string passed to grep used for
+#   choosing which variables to filter out in env var lists.
+# Argument: check_envs - list of env var definitions to check values against
+# Argument: loop_envs - list of env var definitions to check values for
+# Argument: env_format (optional) - format string for bash substring deletion used
+#   for checking whether the value is contained in check_envs.
+#   Defaults to: "*VALUE*", VALUE string gets replaced by actual value from loop_envs
 function ct_check_envs_set {
   local env_filter check_envs env_format
   env_filter=$1; shift
@@ -349,12 +360,12 @@ EOF
 # Uses: $IMAGE_NAME - name of the image being tested
 function ct_check_exec_env_vars() {
   local tmpdir exec_envs cid old_IFS env_filter
-  local var_name stripped filtered_envs loop_envs
+  local var_name stripped filtered_envs run_envs
   env_filter=${1:-"^X_SCLS=\|/opt/rh\|/opt/app-root"}
   tmpdir=$(mktemp -d)
   CID_FILE_DIR=${CID_FILE_DIR:-$(mktemp -d)}
   # Get environment variables from `docker run`
-  loop_envs=$(docker run --rm "$IMAGE_NAME" /bin/bash -c "env")
+  run_envs=$(docker run --rm "$IMAGE_NAME" /bin/bash -c "env")
   # Get environment variables from `docker exec`
   ct_create_container "test_exec_envs" bash -c "sleep 1000" >/dev/null
   cid=$(ct_get_cid "test_exec_envs")
@@ -362,7 +373,7 @@ function ct_check_exec_env_vars() {
   # Filter out variables we are not interested in
   # Always check X_SCLS, ignore PWD
   # Check variables from `docker run` that have alternative paths inside (/opt/rh, /opt/app-root)
-  ct_check_envs_set "$env_filter" "$exec_envs" "$loop_envs" "*VALUE*" || return 1
+  ct_check_envs_set "$env_filter" "$exec_envs" "$run_envs" "*VALUE*" || return 1
   echo " All values present in \`docker exec\`"
   return 0
 }
@@ -383,7 +394,7 @@ function ct_check_scl_enable_vars() {
   enabled_scls=$(docker run --rm "$IMAGE_NAME" /bin/bash -c "echo \$X_SCLS")
   if [ -z "$env_filter" ]; then
     for scl in $enabled_scls; do
-      [ -z "$env_filter" ] && env_filter=/$scl && continue
+      [ -z "$env_filter" ] && env_filter="/$scl" && continue
       # env_filter not empty, append to the existing list
       env_filter="$env_filter|/$scl"
     done
