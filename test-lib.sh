@@ -50,6 +50,44 @@ function ct_enable_cleanup() {
   trap ct_cleanup EXIT SIGINT
 }
 
+# ct_check_envs_set env_filter check_envs loop_envs [env_format]
+# --------------------
+# Compares values from one list of environment variable definitions against such list,
+# checking if the values are present and have a specific format.
+# Argument: env_filter - optional string passed to grep used for
+#   choosing which variables to filter out in env var lists.
+# Argument: check_envs - list of env var definitions to check values against
+# Argument: loop_envs - list of env var definitions to check values for
+# Argument: env_format (optional) - format string for bash substring deletion used
+#   for checking whether the value is contained in check_envs.
+#   Defaults to: "*VALUE*", VALUE string gets replaced by actual value from loop_envs
+function ct_check_envs_set {
+  local env_filter check_envs env_format
+  env_filter=$1; shift
+  check_envs=$1; shift
+  loop_envs=$1; shift
+  env_format=${1:-"*VALUE*"}
+  while read -r variable; do
+    var_name=$(echo "$variable" | awk -F= '{ print $1 }')
+    stripped=$(echo "$variable" | awk -F= '{ print $2 }')
+    filtered_envs=$(echo "$check_envs" | grep "^$var_name=")
+    [ -z "$filtered_envs" ] && { echo "$var_name not found during \` docker exec\`"; return 1; }
+    old_IFS=$IFS
+    # For each such variable compare its content with the `docker exec` result, use `:` as delimiter
+    IFS=:
+    for value in $stripped; do
+        # If the falue checked does not go through env_filter we do not care about it
+        echo "$value" | grep -q "$env_filter" || continue
+        if [ -n "${filtered_envs##${env_format//VALUE/$value}}" ]; then
+            echo " Value $value is missing from variable $var_name"
+            echo "$filtered_envs"
+            return 1
+        fi
+    done
+  done <<< "$(echo "$loop_envs" | grep "$env_filter" | grep -v "^PWD=")"
+  IFS=$old_IFS
+}
+
 # ct_get_cid [name]
 # --------------------
 # Prints container id from cid_file based on the name of the file.
@@ -322,37 +360,51 @@ EOF
 # Uses: $IMAGE_NAME - name of the image being tested
 function ct_check_exec_env_vars() {
   local tmpdir exec_envs cid old_IFS env_filter
-  local var_name stripped filtered_envs
+  local var_name stripped filtered_envs run_envs
   env_filter=${1:-"^X_SCLS=\|/opt/rh\|/opt/app-root"}
   tmpdir=$(mktemp -d)
   CID_FILE_DIR=${CID_FILE_DIR:-$(mktemp -d)}
   # Get environment variables from `docker run`
-  docker run --rm "$IMAGE_NAME" /bin/bash -c "env" | sort > "$tmpdir/run_envs"
+  run_envs=$(docker run --rm "$IMAGE_NAME" /bin/bash -c "env")
   # Get environment variables from `docker exec`
   ct_create_container "test_exec_envs" bash -c "sleep 1000" >/dev/null
   cid=$(ct_get_cid "test_exec_envs")
-  docker exec "$cid" env | sort > "$tmpdir/exec_envs"
+  exec_envs=$(docker exec "$cid" env)
   # Filter out variables we are not interested in
   # Always check X_SCLS, ignore PWD
   # Check variables from `docker run` that have alternative paths inside (/opt/rh, /opt/app-root)
-  exec_envs=$(cat "$tmpdir/exec_envs")
-  while read -r variable; do
-    var_name=$(echo "$variable" | awk -F= '{ print $1 }')
-    stripped=$(echo "$variable" | awk -F= '{ print $2 }')
-    filtered_envs=$(echo "$exec_envs" | grep "^$var_name=")
-    [ -z "$filtered_envs" ] && { echo "$var_name not found during \` docker exec\`"; return 1; }
-    old_IFS=$IFS
-    # For each such variable compare its content with the `docker exec` result, use `:` as delimiter
-    IFS=:
-    for value in $stripped; do
-        if [ -n "${filtered_envs##*$value*}" ]; then
-            echo " Value $value is missing from variable $var_name"
-            return 1
-        fi
-    done
-  done <<< "$(grep "$env_filter" "$tmpdir/run_envs" | grep -v "^PWD=")"
-  IFS=$old_IFS
+  ct_check_envs_set "$env_filter" "$exec_envs" "$run_envs" "*VALUE*" || return 1
   echo " All values present in \`docker exec\`"
+  return 0
+}
+
+# ct_check_scl_enable_vars [env_filter]
+# --------------------
+# Checks if all relevant environment variables from `docker run`
+# are set twice after a second call of `scl enable $SCLS`.
+# Argument: env_filter - optional string passed to grep used for
+#   choosing which variables to check in the test case.
+#   Defaults to paths containing enabled SCLS in the image
+# Uses: $IMAGE_NAME - name of the image being tested
+function ct_check_scl_enable_vars() {
+  local tmpdir exec_envs cid old_IFS env_filter enabled_scls
+  local var_name stripped filtered_envs loop_envs
+  env_filter=$1
+  tmpdir=$(mktemp -d)
+  enabled_scls=$(docker run --rm "$IMAGE_NAME" /bin/bash -c "echo \$X_SCLS")
+  if [ -z "$env_filter" ]; then
+    for scl in $enabled_scls; do
+      [ -z "$env_filter" ] && env_filter="/$scl" && continue
+      # env_filter not empty, append to the existing list
+      env_filter="$env_filter|/$scl"
+    done
+  fi
+  # Get environment variables from `docker run`
+  loop_envs=$(docker run --rm "$IMAGE_NAME" /bin/bash -c "env")
+  run_envs=$(docker run  --rm "$IMAGE_NAME" /bin/bash -c "X_SCLS= scl enable $enabled_scls env")
+  # Check if the values are set twice in the second set of envs
+  ct_check_envs_set "$env_filter" "$run_envs" "$loop_envs" "*VALUE*VALUE*" || return 1
+  echo " All scl_enable values present"
   return 0
 }
 
