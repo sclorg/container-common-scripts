@@ -796,7 +796,7 @@ function ct_os_test_template_app_func() {
   echo "  Information about the image we work with:"
   oc get deploymentconfig.apps.openshift.io/"${service_name}" -o yaml | grep lastTriggeredImage
   image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
-  oc get isimage ${image_id##*/} -o yaml
+  oc get isimage "${image_id##*/}" -o yaml
 
   if [ $result -eq 0 ] ; then
     echo "  Check passed."
