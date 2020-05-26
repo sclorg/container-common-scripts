@@ -1079,7 +1079,7 @@ function ct_os_test_image_stream() {
 
   oc create -f "${image_stream_file}"
   # shellcheck disable=SC2086
-  oc process -p NAMESPACE=$(oc project -q) ${template_params} -f "${template_file}" | oc create -f -
+  oc process -p NAMESPACE="$(oc project -q)" ${template_params} -f "${template_file}" | oc create -f -
   ct_os_wait_pod_ready "${service_name}" 120
 
   # shellcheck disable=SC2119
