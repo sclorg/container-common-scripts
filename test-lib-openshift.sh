@@ -1034,7 +1034,7 @@ function ct_os_check_cmd_internal() {
   # shellcheck disable=SC2001
   check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
 
-  ct_os_deploy_cmd_image "$(ct_os_get_image_from_pod "${util_image_name##*/}" | head -n 1)"
+  ct_os_deploy_cmd_image "${util_image_name}"
   SECONDS=0
 
   echo -n "Waiting for ${service_name} service becoming ready ..."
