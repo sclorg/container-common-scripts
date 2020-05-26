@@ -785,9 +785,12 @@ function ct_os_test_template_app_func() {
   local ip
   local check_command_exp
 
+  # get image ID from the deployment config
+  image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
+
   ip=$(ct_os_get_service_ip "${service_name}")
   # shellcheck disable=SC2001
-  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
+  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g" -e "s|<SAME_IMAGE>|${image_id}|g")
 
   echo "  Checking APP using $check_command_exp ..."
   local result=0
@@ -795,7 +798,6 @@ function ct_os_test_template_app_func() {
 
   echo "  Information about the image we work with:"
   oc get deploymentconfig.apps.openshift.io/"${service_name}" -o yaml | grep lastTriggeredImage
-  image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
   oc get isimage "${image_id##*/}" -o yaml
 
   if [ $result -eq 0 ] ; then
