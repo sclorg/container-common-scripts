@@ -603,7 +603,6 @@ function ct_os_test_s2i_app_func() {
   local context_dir=${3}
   local check_command=${4}
   local oc_args=${5:-}
-  local import_image=${6:-}
   local image_name_no_namespace=${image_name##*/}
   local service_name="${image_name_no_namespace}-testing"
   local image_tagged="${image_name_no_namespace}:${VERSION}"
@@ -621,16 +620,13 @@ function ct_os_test_s2i_app_func() {
 
   # Create a specific imagestream tag for the image so that oc cannot use anything else
   if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
-    if [ -n "${import_image}" ] ; then
-      echo "Importing image ${import_image} as ${image_name}:${VERSION}"
-      # Use --reference-policy=local to pull remote image content to the cluster
-      # Works around the issue of builder pods not having access to registry.redhat.io
-      oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
-    else
-      echo "Uploading and importing image skipped."
-    fi
+    echo "Importing image ${image_name} as ${namespace}/${image_tagged}"
+    # Use --reference-policy=local to pull remote image content to the cluster
+    # Works around the issue of builder pods not having access to registry.redhat.io
+    oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
   else
-    ct_os_upload_image "${import_image:-$image_name}" "${image_tagged}"
+    echo "Uploading image ${image_name} as ${image_tagged}"
+    ct_os_upload_image "${image_name}" "${image_tagged}"
   fi
 
   local app_param="${app}"
@@ -707,7 +703,6 @@ function ct_os_test_s2i_app() {
   local protocol=${6:-http}
   local response_code=${7:-200}
   local oc_args=${8:-}
-  local import_image=${9:-}
 
   if [ $# -lt 4 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ] || [ -z "${4}" ]; then
     echo "ERROR: ct_os_test_s2i_app() requires at least 4 arguments that cannot be emtpy." >&2
@@ -718,7 +713,7 @@ function ct_os_test_s2i_app() {
                           "${app}" \
                           "${context_dir}" \
                           "ct_os_test_response_internal '${protocol}://<IP>:${port}' '${response_code}' '${expected_output}'" \
-                          "${oc_args}" "${import_image}"
+                          "${oc_args}"
 }
 
 # ct_os_test_template_app_func IMAGE APP IMAGE_IN_TEMPLATE CHECK_CMD [OC_ARGS]
