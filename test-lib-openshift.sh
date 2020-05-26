@@ -621,7 +621,7 @@ function ct_os_test_s2i_app_func() {
       echo "Importing image ${import_image} as ${image_name}:${VERSION}"
       # Use --reference-policy=local to pull remote image content to the cluster
       # Works around the issue of builder pods not having access to registry.redhat.io
-      oc import-image "${image_name}":"${VERSION}" --from "${import_image}" --confirm --reference-policy=local
+      oc tag --source=docker "${image_name}" "openshift/${image_tagged}" --insecure=true --reference-policy=local
     else
       echo "Uploading and importing image skipped."
     fi
@@ -749,7 +749,7 @@ function ct_os_test_template_app_func() {
     echo "Importing image ${image_name} as ${image_tagged}"
     # Use --reference-policy=local to pull remote image content to the cluster
     # Works around the issue of builder pods not having access to registry.redhat.io
-    oc import-image "${image_tagged}" --from "${image_name}" --confirm --reference-policy=local
+    oc tag --source=docker "${image_name}" "openshift/${image_tagged}" --insecure=true --reference-policy=local
   else
     echo "Uploading image ${image_name} as ${image_tagged}"
     ct_os_upload_image "${image_name}" "${image_tagged}"
@@ -798,7 +798,7 @@ function ct_os_test_template_app_func() {
 
   echo "  Information about the image we work with:"
   oc get deploymentconfig.apps.openshift.io/"${service_name}" -o yaml | grep lastTriggeredImage
-  oc get isimage "${image_id##*/}" -o yaml
+  oc get isimage -n "${namespace}" "${image_id##*/}" -o yaml
 
   if [ $result -eq 0 ] ; then
     echo "  Check passed."
