@@ -732,7 +732,6 @@ function ct_os_test_template_app_func() {
   local check_command=${4}
   local oc_args=${5:-}
   local other_images=${6:-}
-  local import_image=${7:-}
 
   if [ $# -lt 4 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ] || [ -z "${4}" ]; then
     echo "ERROR: ct_os_test_template_app_func() requires at least 4 arguments that cannot be emtpy." >&2
@@ -747,16 +746,13 @@ function ct_os_test_template_app_func() {
 
   # Create a specific imagestream tag for the image so that oc cannot use anything else
   if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
-    if [ -n "${import_image}" ] ; then
-      echo "Importing image ${import_image} as ${image_name}:${VERSION}"
-      # Use --reference-policy=local to pull remote image content to the cluster
-      # Works around the issue of builder pods not having access to registry.redhat.io
-      oc import-image "${image_name}":"${VERSION}" --from "${import_image}" --confirm --reference-policy=local
-    else
-      echo "Uploading and importing image skipped."
-    fi
+    echo "Importing image ${image_name} as ${image_tagged}"
+    # Use --reference-policy=local to pull remote image content to the cluster
+    # Works around the issue of builder pods not having access to registry.redhat.io
+    oc import-image "${image_tagged}" --from "${image_name}" --confirm --reference-policy=local
   else
-    ct_os_upload_image "${import_image:-$image_name}" "${image_tagged}"
+    echo "Uploading image ${image_name} as ${image_tagged}"
+    ct_os_upload_image "${image_name}" "${image_tagged}"
 
     # upload also other images, that template might need (list of pairs in the format <image>|<tag>
     local image_tag_a
@@ -836,7 +832,6 @@ function ct_os_test_template_app() {
   local response_code=${7:-200}
   local oc_args=${8:-}
   local other_images=${9:-}
-  local import_image=${10:-}
 
   if [ $# -lt 4 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ] || [ -z "${4}" ]; then
     echo "ERROR: ct_os_test_template_app() requires at least 4 arguments that cannot be emtpy." >&2
@@ -848,8 +843,7 @@ function ct_os_test_template_app() {
                                "${name_in_template}" \
                                "ct_os_test_response_internal '${protocol}://<IP>:${port}' '${response_code}' '${expected_output}'" \
                                "${oc_args}" \
-                               "${other_images}" \
-                               "${import_image}"
+                               "${other_images}"
 }
 
 # ct_os_test_image_update IMAGE_NAME OLD_IMAGE ISTAG CHECK_FUNCTION OC_ARGS
