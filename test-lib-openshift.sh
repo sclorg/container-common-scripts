@@ -623,7 +623,12 @@ function ct_os_test_s2i_app_func() {
     echo "Importing image ${image_name} as ${namespace}/${image_tagged}"
     # Use --reference-policy=local to pull remote image content to the cluster
     # Works around the issue of builder pods not having access to registry.redhat.io
-    oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
+    SECONDS=0
+    while ! oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local ; do
+      [ "$SECONDS" -gt 20 ] && echo "oc tag ${image_name} ${namespace}/${image_tagged} did not work several times." && return 1
+      sleep 3
+      echo "oc tag ${image_name} ${namespace}/${image_tagged} did not work, trying again"
+    done
   else
     echo "Uploading image ${image_name} as ${image_tagged}"
     ct_os_upload_image "${image_name}" "${image_tagged}"
@@ -760,7 +765,12 @@ function ct_os_test_template_app_func() {
     echo "Importing image ${image_name} as ${image_tagged}"
     # Use --reference-policy=local to pull remote image content to the cluster
     # Works around the issue of builder pods not having access to registry.redhat.io
-    oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
+    SECONDS=0
+    while ! oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local ; do
+      [ "$SECONDS" -gt 20 ] && echo "oc tag ${image_name} ${namespace}/${image_tagged} did not work several times." && return 1
+      sleep 3
+      echo "oc tag ${image_name} ${namespace}/${image_tagged} did not work, trying again"
+    done
   else
     echo "Uploading image ${image_name} as ${image_tagged}"
     ct_os_upload_image "${image_name}" "${image_tagged}"
