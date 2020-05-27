@@ -623,12 +623,8 @@ function ct_os_test_s2i_app_func() {
     echo "Importing image ${image_name} as ${namespace}/${image_tagged}"
     # Use --reference-policy=local to pull remote image content to the cluster
     # Works around the issue of builder pods not having access to registry.redhat.io
-    SECONDS=0
-    while ! oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local ; do
-      [ "$SECONDS" -gt 20 ] && echo "oc tag ${image_name} ${namespace}/${image_tagged} did not work several times." && return 1
-      sleep 3
-      echo "oc tag ${image_name} ${namespace}/${image_tagged} did not work, trying again"
-    done
+    oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
+    ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
   else
     echo "Uploading image ${image_name} as ${image_tagged}"
     ct_os_upload_image "${image_name}" "${image_tagged}"
@@ -765,12 +761,8 @@ function ct_os_test_template_app_func() {
     echo "Importing image ${image_name} as ${image_tagged}"
     # Use --reference-policy=local to pull remote image content to the cluster
     # Works around the issue of builder pods not having access to registry.redhat.io
-    SECONDS=0
-    while ! oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local ; do
-      [ "$SECONDS" -gt 20 ] && echo "oc tag ${image_name} ${namespace}/${image_tagged} did not work several times." && return 1
-      sleep 3
-      echo "oc tag ${image_name} ${namespace}/${image_tagged} did not work, trying again"
-    done
+    oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
+    ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
   else
     echo "Uploading image ${image_name} as ${image_tagged}"
     ct_os_upload_image "${image_name}" "${image_tagged}"
@@ -1116,6 +1108,31 @@ function ct_os_test_image_stream() {
 
   # shellcheck disable=SC2119
   ct_os_delete_project
+}
+
+# ct_os_wait_stream_ready
+# ------------------------
+# Waits max timeout seconds till a [stream] is available in the [namespace].
+# Argument: image_stream - stream name (usuallly <image>:<version>)
+# Argument: namespace - namespace name
+function ct_os_wait_stream_ready() {
+  local image_stream=$1
+  local namespace=$2
+  local timeout=${3:-60}
+  # It takes some time for the first time before the image is pulled in
+  SECONDS=0
+  echo -n "Waiting for ${namespace}/${image_stream} to become available ..."
+  while ! oc get -n "${namespace}" istag "${image_stream}" &>/dev/null; do
+    if [ "$SECONDS" -gt "${timeout}" ] ; then
+      echo "FAIL: ${namespace}/${image_stream} not available after ${timeout}s:"
+      echo "oc get -n ${namespace} istag ${image_stream}"
+      oc get -n "${namespace}" istag "${image_stream}"
+      return 1
+    fi
+    sleep 3
+    echo -n .
+  done
+  echo " DONE"
 }
 
 # vim: set tabstop=2:shiftwidth=2:expandtab:
