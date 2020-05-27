@@ -145,9 +145,9 @@ function ct_os_get_pod_status() {
 # Arguments: pod_prefix - prefix or whole ID of the pod
 function ct_os_get_build_pod_status() {
   local pod_prefix="${1}" ; shift
-  local query="custom-columns=Ready:status.containerStatuses[0].state.terminated.reason,NAME:.metadata.name"
-  oc get pods -o "$query" | grep -e "${pod_prefix}" | grep -E "\-build$" \
-                          | awk '{print $1}' | head -n 1
+  local query="custom-columns=NAME:.metadata.name,Ready:status.containerStatuses[0].state.terminated.reason"
+  oc get pods -o "$query" | grep -e "${pod_prefix}" | grep -E "\-build\s" \
+                          | sort -u | awk '{print $2}' | tail -n 1
 }
 
 # ct_os_get_pod_name POD_PREFIX
