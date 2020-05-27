@@ -668,7 +668,8 @@ function ct_os_test_s2i_app_func() {
 
   echo "  Information about the image we work with:"
   oc get deploymentconfig.apps.openshift.io/"${service_name}" -o yaml | grep lastTriggeredImage
-  oc get isimage -n "${namespace}" "${image_id##*/}" -o yaml
+  # for s2i builds, the resulting image is actually in the current namespace
+  oc get isimage -n "${namespace}" "${image_id##*/}" -o yaml || oc get isimage "${image_id##*/}" -o yaml
 
   if [ $result -eq 0 ] ; then
     echo "  Check passed."
@@ -806,7 +807,8 @@ function ct_os_test_template_app_func() {
 
   echo "  Information about the image we work with:"
   oc get deploymentconfig.apps.openshift.io/"${service_name}" -o yaml | grep lastTriggeredImage
-  oc get isimage -n "${namespace}" "${image_id##*/}" -o yaml
+  # for s2i builds, the resulting image is actually in the current namespace
+  oc get isimage -n "${namespace}" "${image_id##*/}" -o yaml || oc get isimage "${image_id##*/}" -o yaml
 
   if [ $result -eq 0 ] ; then
     echo "  Check passed."
