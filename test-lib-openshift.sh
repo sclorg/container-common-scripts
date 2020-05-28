@@ -1073,13 +1073,24 @@ function ct_os_test_image_stream() {
   local service_name=$3
   local template_params=${4:-}
 
+  if [ $# -lt 3 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ]; then
+    echo "ERROR: ct_os_test_image_stream() requires at least 3 arguments that cannot be emtpy." >&2
+    return 1
+  fi
+
   echo "Running image stream test for stream $image_stream_file and template $template_file"
   # shellcheck disable=SC2119
   ct_os_new_project
 
   oc create -f "${image_stream_file}"
   # shellcheck disable=SC2086
-  oc process -p NAMESPACE="$(oc project -q)" ${template_params} -f "${template_file}" | oc create -f -
+  if ! ct_os_deploy_template_image "${template_file}" -p NAMESPACE="$(oc project -q)" ${template_params} ; then
+    echo "ERROR: ${template_file} could not be loaded"
+    return 1
+    # Deliberately not runnig ct_os_delete_project here because user either
+    # might want to investigate or the cleanup is done with the cleanup trap.
+    # Most functions depend on the set -e anyway at this point.
+  fi
   ct_os_wait_pod_ready "${service_name}" 120
 
   # shellcheck disable=SC2119
