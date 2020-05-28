@@ -607,6 +607,7 @@ function ct_os_test_s2i_app_func() {
   local image_name_no_namespace=${image_name##*/}
   local service_name="${image_name_no_namespace}-testing"
   local image_tagged="${image_name_no_namespace}:${VERSION}"
+  local namespace
 
   if [ $# -lt 4 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ] || [ -z "${4}" ]; then
     echo "ERROR: ct_os_test_s2i_app_func() requires at least 4 arguments that cannot be emtpy." >&2
@@ -615,13 +616,16 @@ function ct_os_test_s2i_app_func() {
 
   # shellcheck disable=SC2119
   ct_os_new_project
+
+  namespace=${CT_NAMESPACE:-"$(oc project -q)"}
+
   # Create a specific imagestream tag for the image so that oc cannot use anything else
   if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
     if [ -n "${import_image}" ] ; then
       echo "Importing image ${import_image} as ${image_name}:${VERSION}"
       # Use --reference-policy=local to pull remote image content to the cluster
       # Works around the issue of builder pods not having access to registry.redhat.io
-      oc tag --source=docker "${image_name}" "openshift/${image_tagged}" --insecure=true --reference-policy=local
+      oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
     else
       echo "Uploading and importing image skipped."
     fi
@@ -653,14 +657,22 @@ function ct_os_test_s2i_app_func() {
 
   local ip
   local check_command_exp
+  local image_id
+
+  # get image ID from the deployment config
+  image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
 
   ip=$(ct_os_get_service_ip "${service_name}")
   # shellcheck disable=SC2001
-  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
+  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g" -e "s|<SAME_IMAGE>|${image_id}|g")
 
   echo "  Checking APP using $check_command_exp ..."
   local result=0
   eval "$check_command_exp" || result=1
+
+  echo "  Information about the image we work with:"
+  oc get deploymentconfig.apps.openshift.io/"${service_name}" -o yaml | grep lastTriggeredImage
+  oc get isimage -n "${namespace}" "${image_id##*/}" -o yaml
 
   if [ $result -eq 0 ] ; then
     echo "  Check passed."
@@ -740,16 +752,19 @@ function ct_os_test_template_app_func() {
 
   local service_name="${name_in_template}-testing"
   local image_tagged="${name_in_template}:${VERSION}"
+  local namespace
 
   # shellcheck disable=SC2119
   ct_os_new_project
+
+  namespace=${CT_NAMESPACE:-"$(oc project -q)"}
 
   # Create a specific imagestream tag for the image so that oc cannot use anything else
   if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
     echo "Importing image ${image_name} as ${image_tagged}"
     # Use --reference-policy=local to pull remote image content to the cluster
     # Works around the issue of builder pods not having access to registry.redhat.io
-    oc tag --source=docker "${image_name}" "openshift/${image_tagged}" --insecure=true --reference-policy=local
+    oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
   else
     echo "Uploading image ${image_name} as ${image_tagged}"
     ct_os_upload_image "${image_name}" "${image_tagged}"
@@ -769,9 +784,6 @@ function ct_os_test_template_app_func() {
   # considered an internal template name, like 'mysql', so use the name
   # explicitly
   local local_template
-  local namespace
-  
-  namespace=${CT_NAMESPACE:-$(oc project -q)}
 
   local_template=$(ct_obtain_input "${template}" 2>/dev/null || echo "--template=${template}")
   # shellcheck disable=SC2086
@@ -784,6 +796,7 @@ function ct_os_test_template_app_func() {
 
   local ip
   local check_command_exp
+  local image_id
 
   # get image ID from the deployment config
   image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
@@ -1085,7 +1098,7 @@ function ct_os_test_image_stream() {
 
   oc create -f "${image_stream_file}"
   # shellcheck disable=SC2086
-  if ! ct_os_deploy_template_image "${template_file}" -p NAMESPACE="$(oc project -q)" ${template_params} ; then
+  if ! ct_os_deploy_template_image "${template_file}" -p NAMESPACE="${CT_NAMESPACE:-$(oc project -q)}" ${template_params} ; then
     echo "ERROR: ${template_file} could not be loaded"
     return 1
     # Deliberately not runnig ct_os_delete_project here because user either
