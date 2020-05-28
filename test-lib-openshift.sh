@@ -1190,7 +1190,7 @@ function ct_os_test_image_stream_s2i() {
   return $result
 }
 
-# ct_os_test_image_stream_quickstart IMAGE_STREAM_FILE TEMPLATE IMAGE_NAME NAME_IN_TEMPLATE EXPECTED_OUTPUT [PORT, PROTOCOL, RESPONSE_CODE, OC_ARGS, ... ]
+# ct_os_test_image_stream_quickstart IMAGE_STREAM_FILE TEMPLATE IMAGE_NAME NAME_IN_TEMPLATE EXPECTED_OUTPUT [PORT, PROTOCOL, RESPONSE_CODE, OC_ARGS, OTHER_IMAGES ]
 # --------------------
 # Check the imagestream with an s2i app check. First it imports the given image stream, then
 # it runs [image] and [app] in the openshift and optionally specifies env_params
@@ -1205,6 +1205,10 @@ function ct_os_test_image_stream_s2i() {
 # Argument: response_code - what http response code to expect (optional; default: 200)
 # Argument: oc_args - all other arguments are used as additional parameters for the `oc new-app`
 #            command, typically environment variables (optional)
+# Argument: other_images - some templates need other image to be pushed into the OpenShift registry,
+#            specify them in this parameter as "<image>|<tag>", where "<image>" is a full image name
+#            (including registry if needed) and "<tag>" is a tag under which the image should be available
+#            in the OpenShift registry.
 function ct_os_test_image_stream_quickstart() {
   local image_stream_file=${1}
   local template_file=${2}
@@ -1215,6 +1219,7 @@ function ct_os_test_image_stream_quickstart() {
   local protocol=${7:-http}
   local response_code=${8:-200}
   local oc_args=${9:-}
+  local other_images=${10:-}
   local result
   local local_image_stream_file
   local local_template_file
@@ -1235,7 +1240,7 @@ function ct_os_test_image_stream_quickstart() {
                           "${local_template_file}" \
                           "${name_in_template}" \
                           "${expected_output}" \
-                          "${port}" "${protocol}" "${response_code}" "${oc_args}"
+                          "${port}" "${protocol}" "${response_code}" "${oc_args}" "${other_images}"
 
   result=$?
 
