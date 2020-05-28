@@ -1081,9 +1081,9 @@ function ct_os_check_cmd_internal() {
 # Argument: service_name - how the pod will be named (prefix)
 # Argument: template_params (optional) - parameters for the template, like image stream version
 function ct_os_test_image_stream_template() {
-  local image_stream_file=$1
-  local template_file=$2
-  local service_name=$3
+  local image_stream_file=${1}
+  local template_file=${2}
+  local service_name=${3}
   local template_params=${4:-}
   local local_image_stream_file
   local local_template_file
@@ -1122,8 +1122,8 @@ function ct_os_test_image_stream_template() {
 # Arguments: namespace - namespace name
 # Arguments: timeout - how many seconds to wait
 function ct_os_wait_stream_ready() {
-  local image_stream=$1
-  local namespace=$2
+  local image_stream=${1}
+  local namespace=${2}
   local timeout=${3:-60}
   # It takes some time for the first time before the image is pulled in
   SECONDS=0
@@ -1157,7 +1157,7 @@ function ct_os_wait_stream_ready() {
 # Argument: oc_args - all other arguments are used as additional parameters for the `oc new-app`
 #            command, typically environment variables (optional)
 function ct_os_test_image_stream_s2i() {
-  local image_stream_file=$1
+  local image_stream_file=${1}
   local image_name=${2}
   local app=${3}
   local context_dir=${4}
@@ -1190,4 +1190,58 @@ function ct_os_test_image_stream_s2i() {
   return $result
 }
 
+# ct_os_test_image_stream_quickstart IMAGE_STREAM_FILE TEMPLATE IMAGE_NAME NAME_IN_TEMPLATE EXPECTED_OUTPUT [PORT, PROTOCOL, RESPONSE_CODE, OC_ARGS, ... ]
+# --------------------
+# Check the imagestream with an s2i app check. First it imports the given image stream, then
+# it runs [image] and [app] in the openshift and optionally specifies env_params
+# as environment variables to the image. Then check the http response.
+# Argument: image_stream_file - local or remote file with the image stream definition
+# Argument: template_file - local file name with a template
+# Argument: image_name - container image we test (or name of the existing image stream in <name>:<version> format)
+# Argument: name_in_template - image name used in the template
+# Argument: expected_output - PCRE regular expression that must match the response body (compulsory)
+# Argument: port - which port to use (optional; default: 8080)
+# Argument: protocol - which protocol to use (optional; default: http)
+# Argument: response_code - what http response code to expect (optional; default: 200)
+# Argument: oc_args - all other arguments are used as additional parameters for the `oc new-app`
+#            command, typically environment variables (optional)
+function ct_os_test_image_stream_quickstart() {
+  local image_stream_file=${1}
+  local template_file=${2}
+  local image_name=${3}
+  local name_in_template=${4}
+  local expected_output=${5}
+  local port=${6:-8080}
+  local protocol=${7:-http}
+  local response_code=${8:-200}
+  local oc_args=${9:-}
+  local result
+  local local_image_stream_file
+  local local_template_file
+
+  echo "Running image stream test for stream ${image_stream_file} and quickstart template ${template_file}"
+
+  # shellcheck disable=SC2119
+  ct_os_new_project
+
+  local_image_stream_file=$(ct_obtain_input "${image_stream_file}")
+  local_template_file=$(ct_obtain_input "${template_file}")
+  oc create -f "${local_image_stream_file}"
+
+  # ct_os_test_template_app creates a new project, but we already need
+  # it before for the image stream import, so tell it to skip this time
+  CT_SKIP_NEW_PROJECT=true \
+  ct_os_test_template_app "${image_name}" \
+                          "${local_template_file}" \
+                          "${name_in_template}" \
+                          "${expected_output}" \
+                          "${port}" "${protocol}" "${response_code}" "${oc_args}"
+
+  result=$?
+
+  # shellcheck disable=SC2119
+  ct_os_delete_project
+
+  return $result
+}
 # vim: set tabstop=2:shiftwidth=2:expandtab:
