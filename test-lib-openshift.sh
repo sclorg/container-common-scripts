@@ -1073,31 +1073,36 @@ function ct_os_check_cmd_internal() {
   return 1
 }
 
-# ct_os_test_image_stream
+# ct_os_test_image_stream_template IMAGE_STREAM_FILE TEMPLATE_FILE SERVICE NAME [TEMPLATE_PARAMS]
 # ------------------------
 # Creates an image stream and deploys a specified template. Then checks that a pod runs.
-# Argument: image_stream_file - local file name with an image stream
+# Argument: image_stream_file - local or remote file with the image stream definition
 # Argument: template_file - local file name with a template
 # Argument: service_name - how the pod will be named (prefix)
 # Argument: template_params (optional) - parameters for the template, like image stream version
-function ct_os_test_image_stream() {
+function ct_os_test_image_stream_template() {
   local image_stream_file=$1
   local template_file=$2
   local service_name=$3
   local template_params=${4:-}
+  local local_image_stream_file
+  local local_template_file
 
   if [ $# -lt 3 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ]; then
     echo "ERROR: ct_os_test_image_stream() requires at least 3 arguments that cannot be empty." >&2
     return 1
   fi
 
-  echo "Running image stream test for stream $image_stream_file and template $template_file"
+  echo "Running image stream test for stream ${image_stream_file} and template ${template_file}"
   # shellcheck disable=SC2119
   ct_os_new_project
 
-  oc create -f "${image_stream_file}"
+  local_image_stream_file=$(ct_obtain_input "${image_stream_file}")
+  local_template_file=$(ct_obtain_input "${template_file}")
+  oc create -f "${local_image_stream_file}"
+
   # shellcheck disable=SC2086
-  if ! ct_os_deploy_template_image "${template_file}" -p NAMESPACE="${CT_NAMESPACE:-$(oc project -q)}" ${template_params} ; then
+  if ! ct_os_deploy_template_image "${local_template_file}" -p NAMESPACE="${CT_NAMESPACE:-$(oc project -q)}" ${template_params} ; then
     echo "ERROR: ${template_file} could not be loaded"
     return 1
     # Deliberately not runnig ct_os_delete_project here because user either
@@ -1110,11 +1115,12 @@ function ct_os_test_image_stream() {
   ct_os_delete_project
 }
 
-# ct_os_wait_stream_ready
+# ct_os_wait_stream_ready IMAGE_STREAM_FILE NAMESPACE [ TIMEOUT ]
 # ------------------------
 # Waits max timeout seconds till a [stream] is available in the [namespace].
-# Argument: image_stream - stream name (usuallly <image>:<version>)
-# Argument: namespace - namespace name
+# Arguments: image_stream - stream name (usuallly <image>:<version>)
+# Arguments: namespace - namespace name
+# Arguments: timeout - how many seconds to wait
 function ct_os_wait_stream_ready() {
   local image_stream=$1
   local namespace=$2
@@ -1133,6 +1139,55 @@ function ct_os_wait_stream_ready() {
     echo -n .
   done
   echo " DONE"
+}
+
+# ct_os_test_image_stream_s2i IMAGE_STREAM_FILE IMAGE_NAME APP CONTEXT_DIR EXPECTED_OUTPUT [PORT, PROTOCOL, RESPONSE_CODE, OC_ARGS, ... ]
+# --------------------
+# Check the imagestream with an s2i app check. First it imports the given image stream, then
+# it runs [image] and [app] in the openshift and optionally specifies env_params
+# as environment variables to the image. Then check the http response.
+# Argument: image_stream_file - local or remote file with the image stream definition
+# Argument: image_name - container image we test (or name of the existing image stream in <name>:<version> format)
+# Argument: app - url or local path to git repo with the application sources (compulsory)
+# Argument: context_dir - sub-directory inside the repository with the application sources (compulsory)
+# Argument: expected_output - PCRE regular expression that must match the response body (compulsory)
+# Argument: port - which port to use (optional; default: 8080)
+# Argument: protocol - which protocol to use (optional; default: http)
+# Argument: response_code - what http response code to expect (optional; default: 200)
+# Argument: oc_args - all other arguments are used as additional parameters for the `oc new-app`
+#            command, typically environment variables (optional)
+function ct_os_test_image_stream_s2i() {
+  local image_stream_file=$1
+  local image_name=${2}
+  local app=${3}
+  local context_dir=${4}
+  local expected_output=${5}
+  local port=${6:-8080}
+  local protocol=${7:-http}
+  local response_code=${8:-200}
+  local oc_args=${9:-}
+  local result
+  local local_image_stream_file
+
+  echo "Running image stream test for stream ${image_stream_file} and application ${app} with context ${context_dir}"
+
+  # shellcheck disable=SC2119
+  ct_os_new_project
+
+  local_image_stream_file=$(ct_obtain_input "${image_stream_file}")
+  oc create -f "${local_image_stream_file}"
+
+  # ct_os_test_s2i_app creates a new project, but we already need
+  # it before for the image stream import, so tell it to skip this time
+  CT_SKIP_NEW_PROJECT=true \
+  ct_os_test_s2i_app "${IMAGE_NAME}" "${app}" "${context_dir}" "${expected_output}" \
+                     "${port}" "${protocol}" "${response_code}" "${oc_args}"
+  result=$?
+
+  # shellcheck disable=SC2119
+  ct_os_delete_project
+
+  return $result
 }
 
 # vim: set tabstop=2:shiftwidth=2:expandtab:
