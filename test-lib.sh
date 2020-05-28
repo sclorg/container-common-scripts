@@ -773,4 +773,10 @@ ct_check_image_availability() {
   fi
 }
 
+ct_check_latest_imagestreams() {
+    local latest_version=
+
+    latest_version=$(grep 'VERSIONS' Makefile | rev | cut -d ' ' -f 1 | rev )
+    python3 ./common/check_imagestreams.py "$latest_version"
+}
 # vim: set tabstop=2:shiftwidth=2:expandtab:
