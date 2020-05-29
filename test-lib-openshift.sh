@@ -254,7 +254,7 @@ function ct_os_deploy_s2i_image() {
   local image="${1}" ; shift
   local app="${1}" ; shift
   # ignore error exit code, because oc new-app returns error when image exists
-  oc new-app "${image}~${app}" "$@" || :
+  oc new-app "${image}~${app}" --strategy=source "$@" || :
 
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
