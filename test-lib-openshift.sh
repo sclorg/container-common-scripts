@@ -1074,7 +1074,7 @@ function ct_os_test_image_stream() {
   local template_params=${4:-}
 
   if [ $# -lt 3 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ]; then
-    echo "ERROR: ct_os_test_image_stream() requires at least 3 arguments that cannot be emtpy." >&2
+    echo "ERROR: ct_os_test_image_stream() requires at least 3 arguments that cannot be empty." >&2
     return 1
   fi
 
