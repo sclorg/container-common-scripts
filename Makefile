@@ -40,7 +40,7 @@ check-squash:
 	./tests/squash/squash.sh
 
 check-latest-imagestream:
-	cp check_imagestreams.py tests/ && cd tests && ./check_imagestreams.sh
+	cd tests && ./check_imagestreams.sh
 
 check: check-failures check-squash check-latest-imagestream
 	TESTED_IMAGES="$(TESTED_IMAGES)" tests/remote-containers.sh

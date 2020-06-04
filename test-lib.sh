@@ -780,9 +780,11 @@ ct_check_image_availability() {
 # Also the latest tag in the imagestreams has to contain the latest version
 ct_check_latest_imagestreams() {
     local latest_version=
+    local test_lib_dir=
 
     latest_version=$(grep 'VERSIONS' Makefile | rev | cut -d ' ' -f 1 | rev )
-    python3 ./common/check_imagestreams.py "$latest_version"
+    test_lib_dir=$(dirname "$(readlink -f "$0")")
+    python3 "${test_lib_dir}/check_imagestreams.py" "$latest_version"
 }
 
 # vim: set tabstop=2:shiftwidth=2:expandtab:
