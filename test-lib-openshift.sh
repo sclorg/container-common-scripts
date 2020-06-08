@@ -145,9 +145,9 @@ function ct_os_get_pod_status() {
 # Arguments: pod_prefix - prefix or whole ID of the pod
 function ct_os_get_build_pod_status() {
   local pod_prefix="${1}" ; shift
-  local query="custom-columns=Ready:status.containerStatuses[0].state.terminated.reason,NAME:.metadata.name"
-  oc get pods -o "$query" | grep -e "${pod_prefix}" | grep -E "\-build$" \
-                          | awk '{print $1}' | head -n 1
+  local query="custom-columns=NAME:.metadata.name,Ready:status.containerStatuses[0].state.terminated.reason"
+  oc get pods -o "$query" | grep -e "${pod_prefix}" | grep -E "\-build\s" \
+                          | sort -u | awk '{print $2}' | tail -n 1
 }
 
 # ct_os_get_pod_name POD_PREFIX
@@ -254,7 +254,7 @@ function ct_os_deploy_s2i_image() {
   local image="${1}" ; shift
   local app="${1}" ; shift
   # ignore error exit code, because oc new-app returns error when image exists
-  oc new-app "${image}~${app}" "$@" || :
+  oc new-app "${image}~${app}" --strategy=source "$@" || :
 
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
@@ -603,10 +603,10 @@ function ct_os_test_s2i_app_func() {
   local context_dir=${3}
   local check_command=${4}
   local oc_args=${5:-}
-  local import_image=${6:-}
   local image_name_no_namespace=${image_name##*/}
   local service_name="${image_name_no_namespace}-testing"
   local image_tagged="${image_name_no_namespace}:${VERSION}"
+  local namespace
 
   if [ $# -lt 4 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ] || [ -z "${4}" ]; then
     echo "ERROR: ct_os_test_s2i_app_func() requires at least 4 arguments that cannot be emtpy." >&2
@@ -615,18 +615,19 @@ function ct_os_test_s2i_app_func() {
 
   # shellcheck disable=SC2119
   ct_os_new_project
+
+  namespace=${CT_NAMESPACE:-"$(oc project -q)"}
+
   # Create a specific imagestream tag for the image so that oc cannot use anything else
   if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
-    if [ -n "${import_image}" ] ; then
-      echo "Importing image ${import_image} as ${image_name}:${VERSION}"
-      # Use --reference-policy=local to pull remote image content to the cluster
-      # Works around the issue of builder pods not having access to registry.redhat.io
-      oc import-image "${image_name}":"${VERSION}" --from "${import_image}" --confirm --reference-policy=local
-    else
-      echo "Uploading and importing image skipped."
-    fi
+    echo "Importing image ${image_name} as ${namespace}/${image_tagged}"
+    # Use --reference-policy=local to pull remote image content to the cluster
+    # Works around the issue of builder pods not having access to registry.redhat.io
+    oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
+    ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
   else
-    ct_os_upload_image "${import_image:-$image_name}" "${image_tagged}"
+    echo "Uploading image ${image_name} as ${image_tagged}"
+    ct_os_upload_image "${image_name}" "${image_tagged}"
   fi
 
   local app_param="${app}"
@@ -653,14 +654,20 @@ function ct_os_test_s2i_app_func() {
 
   local ip
   local check_command_exp
+  local image_id
+
+  # get image ID from the deployment config
+  image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
 
   ip=$(ct_os_get_service_ip "${service_name}")
   # shellcheck disable=SC2001
-  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
+  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g" -e "s|<SAME_IMAGE>|${image_id}|g")
 
   echo "  Checking APP using $check_command_exp ..."
   local result=0
   eval "$check_command_exp" || result=1
+
+  ct_os_service_image_info "${service_name}"
 
   if [ $result -eq 0 ] ; then
     echo "  Check passed."
@@ -695,7 +702,6 @@ function ct_os_test_s2i_app() {
   local protocol=${6:-http}
   local response_code=${7:-200}
   local oc_args=${8:-}
-  local import_image=${9:-}
 
   if [ $# -lt 4 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ] || [ -z "${4}" ]; then
     echo "ERROR: ct_os_test_s2i_app() requires at least 4 arguments that cannot be emtpy." >&2
@@ -706,7 +712,7 @@ function ct_os_test_s2i_app() {
                           "${app}" \
                           "${context_dir}" \
                           "ct_os_test_response_internal '${protocol}://<IP>:${port}' '${response_code}' '${expected_output}'" \
-                          "${oc_args}" "${import_image}"
+                          "${oc_args}"
 }
 
 # ct_os_test_template_app_func IMAGE APP IMAGE_IN_TEMPLATE CHECK_CMD [OC_ARGS]
@@ -732,7 +738,6 @@ function ct_os_test_template_app_func() {
   local check_command=${4}
   local oc_args=${5:-}
   local other_images=${6:-}
-  local import_image=${7:-}
 
   if [ $# -lt 4 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ] || [ -z "${4}" ]; then
     echo "ERROR: ct_os_test_template_app_func() requires at least 4 arguments that cannot be emtpy." >&2
@@ -741,22 +746,23 @@ function ct_os_test_template_app_func() {
 
   local service_name="${name_in_template}-testing"
   local image_tagged="${name_in_template}:${VERSION}"
+  local namespace
 
   # shellcheck disable=SC2119
   ct_os_new_project
 
+  namespace=${CT_NAMESPACE:-"$(oc project -q)"}
+
   # Create a specific imagestream tag for the image so that oc cannot use anything else
   if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
-    if [ -n "${import_image}" ] ; then
-      echo "Importing image ${import_image} as ${image_name}:${VERSION}"
-      # Use --reference-policy=local to pull remote image content to the cluster
-      # Works around the issue of builder pods not having access to registry.redhat.io
-      oc import-image "${image_name}":"${VERSION}" --from "${import_image}" --confirm --reference-policy=local
-    else
-      echo "Uploading and importing image skipped."
-    fi
+    echo "Importing image ${image_name} as ${image_tagged}"
+    # Use --reference-policy=local to pull remote image content to the cluster
+    # Works around the issue of builder pods not having access to registry.redhat.io
+    oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
+    ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
   else
-    ct_os_upload_image "${import_image:-$image_name}" "${image_tagged}"
+    echo "Uploading image ${image_name} as ${image_tagged}"
+    ct_os_upload_image "${image_name}" "${image_tagged}"
 
     # upload also other images, that template might need (list of pairs in the format <image>|<tag>
     local image_tag_a
@@ -773,9 +779,6 @@ function ct_os_test_template_app_func() {
   # considered an internal template name, like 'mysql', so use the name
   # explicitly
   local local_template
-  local namespace
-  
-  namespace=${CT_NAMESPACE:-$(oc project -q)}
 
   local_template=$(ct_obtain_input "${template}" 2>/dev/null || echo "--template=${template}")
   # shellcheck disable=SC2086
@@ -788,14 +791,20 @@ function ct_os_test_template_app_func() {
 
   local ip
   local check_command_exp
+  local image_id
+
+  # get image ID from the deployment config
+  image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
 
   ip=$(ct_os_get_service_ip "${service_name}")
   # shellcheck disable=SC2001
-  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
+  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g" -e "s|<SAME_IMAGE>|${image_id}|g")
 
   echo "  Checking APP using $check_command_exp ..."
   local result=0
   eval "$check_command_exp" || result=1
+
+  ct_os_service_image_info "${service_name}"
 
   if [ $result -eq 0 ] ; then
     echo "  Check passed."
@@ -836,7 +845,6 @@ function ct_os_test_template_app() {
   local response_code=${7:-200}
   local oc_args=${8:-}
   local other_images=${9:-}
-  local import_image=${10:-}
 
   if [ $# -lt 4 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ] || [ -z "${4}" ]; then
     echo "ERROR: ct_os_test_template_app() requires at least 4 arguments that cannot be emtpy." >&2
@@ -848,8 +856,7 @@ function ct_os_test_template_app() {
                                "${name_in_template}" \
                                "ct_os_test_response_internal '${protocol}://<IP>:${port}' '${response_code}' '${expected_output}'" \
                                "${oc_args}" \
-                               "${other_images}" \
-                               "${import_image}"
+                               "${other_images}"
 }
 
 # ct_os_test_image_update IMAGE_NAME OLD_IMAGE ISTAG CHECK_FUNCTION OC_ARGS
@@ -1040,7 +1047,7 @@ function ct_os_check_cmd_internal() {
   # shellcheck disable=SC2001
   check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
 
-  ct_os_deploy_cmd_image "$(ct_os_get_image_from_pod "${util_image_name##*/}" | head -n 1)"
+  ct_os_deploy_cmd_image "${util_image_name}"
   SECONDS=0
 
   echo -n "Waiting for ${service_name} service becoming ready ..."
@@ -1060,31 +1067,36 @@ function ct_os_check_cmd_internal() {
   return 1
 }
 
-# ct_os_test_image_stream
+# ct_os_test_image_stream_template IMAGE_STREAM_FILE TEMPLATE_FILE SERVICE NAME [TEMPLATE_PARAMS]
 # ------------------------
 # Creates an image stream and deploys a specified template. Then checks that a pod runs.
-# Argument: image_stream_file - local file name with an image stream
+# Argument: image_stream_file - local or remote file with the image stream definition
 # Argument: template_file - local file name with a template
 # Argument: service_name - how the pod will be named (prefix)
 # Argument: template_params (optional) - parameters for the template, like image stream version
-function ct_os_test_image_stream() {
-  local image_stream_file=$1
-  local template_file=$2
-  local service_name=$3
+function ct_os_test_image_stream_template() {
+  local image_stream_file=${1}
+  local template_file=${2}
+  local service_name=${3}
   local template_params=${4:-}
+  local local_image_stream_file
+  local local_template_file
 
   if [ $# -lt 3 ] || [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ]; then
     echo "ERROR: ct_os_test_image_stream() requires at least 3 arguments that cannot be empty." >&2
     return 1
   fi
 
-  echo "Running image stream test for stream $image_stream_file and template $template_file"
+  echo "Running image stream test for stream ${image_stream_file} and template ${template_file}"
   # shellcheck disable=SC2119
   ct_os_new_project
 
-  oc create -f "${image_stream_file}"
+  local_image_stream_file=$(ct_obtain_input "${image_stream_file}")
+  local_template_file=$(ct_obtain_input "${template_file}")
+  oc create -f "${local_image_stream_file}"
+
   # shellcheck disable=SC2086
-  if ! ct_os_deploy_template_image "${template_file}" -p NAMESPACE="$(oc project -q)" ${template_params} ; then
+  if ! ct_os_deploy_template_image "${local_template_file}" -p NAMESPACE="${CT_NAMESPACE:-$(oc project -q)}" ${template_params} ; then
     echo "ERROR: ${template_file} could not be loaded"
     return 1
     # Deliberately not runnig ct_os_delete_project here because user either
@@ -1097,4 +1109,158 @@ function ct_os_test_image_stream() {
   ct_os_delete_project
 }
 
+# ct_os_wait_stream_ready IMAGE_STREAM_FILE NAMESPACE [ TIMEOUT ]
+# ------------------------
+# Waits max timeout seconds till a [stream] is available in the [namespace].
+# Arguments: image_stream - stream name (usuallly <image>:<version>)
+# Arguments: namespace - namespace name
+# Arguments: timeout - how many seconds to wait
+function ct_os_wait_stream_ready() {
+  local image_stream=${1}
+  local namespace=${2}
+  local timeout=${3:-60}
+  # It takes some time for the first time before the image is pulled in
+  SECONDS=0
+  echo -n "Waiting for ${namespace}/${image_stream} to become available ..."
+  while ! oc get -n "${namespace}" istag "${image_stream}" &>/dev/null; do
+    if [ "$SECONDS" -gt "${timeout}" ] ; then
+      echo "FAIL: ${namespace}/${image_stream} not available after ${timeout}s:"
+      echo "oc get -n ${namespace} istag ${image_stream}"
+      oc get -n "${namespace}" istag "${image_stream}"
+      return 1
+    fi
+    sleep 3
+    echo -n .
+  done
+  echo " DONE"
+}
+
+# ct_os_test_image_stream_s2i IMAGE_STREAM_FILE IMAGE_NAME APP CONTEXT_DIR EXPECTED_OUTPUT [PORT, PROTOCOL, RESPONSE_CODE, OC_ARGS, ... ]
+# --------------------
+# Check the imagestream with an s2i app check. First it imports the given image stream, then
+# it runs [image] and [app] in the openshift and optionally specifies env_params
+# as environment variables to the image. Then check the http response.
+# Argument: image_stream_file - local or remote file with the image stream definition
+# Argument: image_name - container image we test (or name of the existing image stream in <name>:<version> format)
+# Argument: app - url or local path to git repo with the application sources (compulsory)
+# Argument: context_dir - sub-directory inside the repository with the application sources (compulsory)
+# Argument: expected_output - PCRE regular expression that must match the response body (compulsory)
+# Argument: port - which port to use (optional; default: 8080)
+# Argument: protocol - which protocol to use (optional; default: http)
+# Argument: response_code - what http response code to expect (optional; default: 200)
+# Argument: oc_args - all other arguments are used as additional parameters for the `oc new-app`
+#            command, typically environment variables (optional)
+function ct_os_test_image_stream_s2i() {
+  local image_stream_file=${1}
+  local image_name=${2}
+  local app=${3}
+  local context_dir=${4}
+  local expected_output=${5}
+  local port=${6:-8080}
+  local protocol=${7:-http}
+  local response_code=${8:-200}
+  local oc_args=${9:-}
+  local result
+  local local_image_stream_file
+
+  echo "Running image stream test for stream ${image_stream_file} and application ${app} with context ${context_dir}"
+
+  # shellcheck disable=SC2119
+  ct_os_new_project
+
+  local_image_stream_file=$(ct_obtain_input "${image_stream_file}")
+  oc create -f "${local_image_stream_file}"
+
+  # ct_os_test_s2i_app creates a new project, but we already need
+  # it before for the image stream import, so tell it to skip this time
+  CT_SKIP_NEW_PROJECT=true \
+  ct_os_test_s2i_app "${IMAGE_NAME}" "${app}" "${context_dir}" "${expected_output}" \
+                     "${port}" "${protocol}" "${response_code}" "${oc_args}"
+  result=$?
+
+  # shellcheck disable=SC2119
+  ct_os_delete_project
+
+  return $result
+}
+
+# ct_os_test_image_stream_quickstart IMAGE_STREAM_FILE TEMPLATE IMAGE_NAME NAME_IN_TEMPLATE EXPECTED_OUTPUT [PORT, PROTOCOL, RESPONSE_CODE, OC_ARGS, OTHER_IMAGES ]
+# --------------------
+# Check the imagestream with an s2i app check. First it imports the given image stream, then
+# it runs [image] and [app] in the openshift and optionally specifies env_params
+# as environment variables to the image. Then check the http response.
+# Argument: image_stream_file - local or remote file with the image stream definition
+# Argument: template_file - local file name with a template
+# Argument: image_name - container image we test (or name of the existing image stream in <name>:<version> format)
+# Argument: name_in_template - image name used in the template
+# Argument: expected_output - PCRE regular expression that must match the response body (compulsory)
+# Argument: port - which port to use (optional; default: 8080)
+# Argument: protocol - which protocol to use (optional; default: http)
+# Argument: response_code - what http response code to expect (optional; default: 200)
+# Argument: oc_args - all other arguments are used as additional parameters for the `oc new-app`
+#            command, typically environment variables (optional)
+# Argument: other_images - some templates need other image to be pushed into the OpenShift registry,
+#            specify them in this parameter as "<image>|<tag>", where "<image>" is a full image name
+#            (including registry if needed) and "<tag>" is a tag under which the image should be available
+#            in the OpenShift registry.
+function ct_os_test_image_stream_quickstart() {
+  local image_stream_file=${1}
+  local template_file=${2}
+  local image_name=${3}
+  local name_in_template=${4}
+  local expected_output=${5}
+  local port=${6:-8080}
+  local protocol=${7:-http}
+  local response_code=${8:-200}
+  local oc_args=${9:-}
+  local other_images=${10:-}
+  local result
+  local local_image_stream_file
+  local local_template_file
+
+  echo "Running image stream test for stream ${image_stream_file} and quickstart template ${template_file}"
+
+  # shellcheck disable=SC2119
+  ct_os_new_project
+
+  local_image_stream_file=$(ct_obtain_input "${image_stream_file}")
+  local_template_file=$(ct_obtain_input "${template_file}")
+  oc create -f "${local_image_stream_file}"
+
+  # ct_os_test_template_app creates a new project, but we already need
+  # it before for the image stream import, so tell it to skip this time
+  CT_SKIP_NEW_PROJECT=true \
+  ct_os_test_template_app "${image_name}" \
+                          "${local_template_file}" \
+                          "${name_in_template}" \
+                          "${expected_output}" \
+                          "${port}" "${protocol}" "${response_code}" "${oc_args}" "${other_images}"
+
+  result=$?
+
+  # shellcheck disable=SC2119
+  ct_os_delete_project
+
+  return $result
+}
+
+# ct_os_service_image_info SERVICE_NAME
+# --------------------
+# Shows information about the image used by a specified service.
+# Argument: service_name - Service name (uesd for deployment config)
+function ct_os_service_image_info() {
+  local service_name=$1
+  local image_id
+  local namespace
+
+  # get image ID from the deployment config
+  image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
+  namespace=${CT_NAMESPACE:-"$(oc project -q)"}
+
+  echo "  Information about the image we work with:"
+  oc get deploymentconfig.apps.openshift.io/"${service_name}" -o yaml | grep lastTriggeredImage
+  # for s2i builds, the resulting image is actually in the current namespace,
+  # so if the specified namespace does not succeed, try the current namespace
+  oc get isimage -n "${namespace}" "${image_id##*/}" -o yaml || oc get isimage "${image_id##*/}" -o yaml
+}
 # vim: set tabstop=2:shiftwidth=2:expandtab:
