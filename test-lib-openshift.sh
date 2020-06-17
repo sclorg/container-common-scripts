@@ -339,7 +339,7 @@ function ct_os_delete_project() {
 # Deletes all objects within the project.
 # Handy when we have one project and want to run more tests.
 function ct_delete_all_objects() {
-  for x in bc builds dc is isimage istag po pv pvc rc routes secrets svc ; do
+  for x in bc builds dc deployment replicaset is isimage istag po pv pvc rc routes secrets svc ; do
     oc delete "$x" --all
   done
   # for some objects it takes longer to be really deleted, so a dummy sleep
@@ -1254,11 +1254,14 @@ function ct_os_service_image_info() {
   local namespace
 
   # get image ID from the deployment config
-  image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
+	# In recent OCP 4.x versions, a Deployment that configures a ReplicaSet is
+	# now the recommended way to set up replication, instead of DeploymentConfig
+	# configuring ReplicationController. So, trying both one after another.
+  image_id=$( (oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image \
+					     || oc get "deployments/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image ) | tail -n 1)
   namespace=${CT_NAMESPACE:-"$(oc project -q)"}
 
-  echo "  Information about the image we work with:"
-  oc get deploymentconfig.apps.openshift.io/"${service_name}" -o yaml | grep lastTriggeredImage
+  echo "  Information about the image we work with: ${image_id}"
   # for s2i builds, the resulting image is actually in the current namespace,
   # so if the specified namespace does not succeed, try the current namespace
   oc get isimage -n "${namespace}" "${image_id##*/}" -o yaml || oc get isimage "${image_id##*/}" -o yaml
