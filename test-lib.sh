@@ -782,7 +782,8 @@ ct_check_latest_imagestreams() {
     local latest_version=
     local test_lib_dir=
 
-    latest_version=$(grep 'VERSIONS' Makefile | rev | cut -d ' ' -f 1 | rev )
+    # Check only lines which starts with VERSIONS
+    latest_version=$(grep '^VERSIONS' Makefile | rev | cut -d ' ' -f 1 | rev )
     test_lib_dir=$(dirname "$(readlink -f "$0")")
     python3 "${test_lib_dir}/check_imagestreams.py" "$latest_version"
 }
