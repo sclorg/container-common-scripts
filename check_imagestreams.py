@@ -41,6 +41,17 @@ class ImageStreamChecker(object):
             return 0
         for f in json_files:
             print(f"Checking file {str(f)}.")
+            # Get os_version from stream file name
+            try:
+                os_version = str(f.stem).split("-")[1]
+            except IndexError:
+                print(f"File {str(f)} does not contain version like centos7|rhel7|fedora.")
+                continue
+            exclude_file = p / self.version / f".exclude-{os_version}"
+            if exclude_file.exists():
+                print(f"The latest version is not supported for {os_version} yet.")
+                print(f"File {str(exclude_file)} is present.")
+                continue
             json_dict = self.load_json_file(f)
             if not (self.check_version(json_dict) and self.check_latest_tag(json_dict)):
                 print(f"The latest version is not present in {str(f)} or in latest tag.")
