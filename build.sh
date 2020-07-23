@@ -76,6 +76,37 @@ function clean_image {
   fi
 }
 
+# Pull image based on FROM, before we build our own.
+function pull_image {
+  local dockerfile="$1"
+
+  # Get image_name from Dockerfile before pulling.
+  while read -r line; do
+    if ! grep -q "^FROM" <<< "$line"; then
+      continue
+    fi
+
+    image_name=$(echo "$line" | cut -d ' ' -f2)
+    # In case FROM scratch is defined, skip it
+    if grep -q "scratch" <<< "$image_name"; then
+        continue
+    fi
+    # In case FROM ubi8 as ubi-base is mentioned
+    # pull ubi8 image
+    if grep -q " as " <<< "$line"; then
+        image_name=$(echo "$line" | cut -d ' ' -f2)
+    fi
+    echo "-> Pulling image $image_name before building image from $dockerfile."
+    # Try pulling the image to see if it is accessible
+    # Sometimes in Fedora case it fails with HTTP 50X
+    if ! docker pull "$image_name"; then
+      echo "Pulling image $image_name failed. Let's wait 2 seconds and try one more time."
+      sleep 2
+      docker pull "$image_name"
+    fi
+  done < "$dockerfile"
+}
+
 # Perform docker build but append the LABEL with GIT commit id at the end
 function docker_build_with_version {
   local dockerfile="$1"
@@ -106,6 +137,8 @@ function docker_build_with_version {
       echo "ERROR: file type not known: $CUSTOM_REPO" >&2
     fi
   fi
+
+  pull_image "$dockerfile"
 
   # shellcheck disable=SC2016
   parse_output 'docker build '"$BUILD_OPTIONS"' -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}"' \
