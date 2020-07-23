@@ -97,13 +97,18 @@ function pull_image {
         image_name=$(echo "$line" | cut -d ' ' -f2)
     fi
     echo "-> Pulling image $image_name before building image from $dockerfile."
-    # Try pulling the image to see if it is accessible
     # Sometimes in Fedora case it fails with HTTP 50X
+    # Check if the image is available locally and try to pull it if it is not
+    if docker images "$image_name" &>/dev/null; then
+        continue
+    fi
+    # Try pulling the image to see if it is accessible
     if ! docker pull "$image_name"; then
       echo "Pulling image $image_name failed. Let's wait 2 seconds and try one more time."
       sleep 2
       docker pull "$image_name"
     fi
+
   done < "$dockerfile"
 }
 
