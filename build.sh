@@ -86,21 +86,17 @@ function pull_image {
       continue
     fi
 
-    image_name=$(echo "$line" | cut -d ' ' -f2)
     # In case FROM scratch is defined, skip it
     if grep -q "scratch" <<< "$image_name"; then
-        continue
+      continue
     fi
-    # In case FROM ubi8 as ubi-base is mentioned
-    # pull ubi8 image
-    if grep -q " as " <<< "$line"; then
-        image_name=$(echo "$line" | cut -d ' ' -f2)
-    fi
+    image_name=$(echo "$line" | cut -d ' ' -f2)
     echo "-> Pulling image $image_name before building image from $dockerfile."
     # Sometimes in Fedora case it fails with HTTP 50X
     # Check if the image is available locally and try to pull it if it is not
-    if docker images "$image_name" &>/dev/null; then
-        continue
+    if [[ "$(docker images -q "$image_name" 2>/dev/null)" != "" ]]; then
+      echo "The image $image_name is already pulled."
+      continue
     fi
     # Try pulling the image to see if it is accessible
     if ! docker pull "$image_name"; then
