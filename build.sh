@@ -86,11 +86,12 @@ function pull_image {
       continue
     fi
 
+    image_name=$(echo "$line" | cut -d ' ' -f2)
+
     # In case FROM scratch is defined, skip it
-    if grep -q "scratch" <<< "$image_name"; then
+    if [[ x"$image_name" == "xscratch" ]]; then
       continue
     fi
-    image_name=$(echo "$line" | cut -d ' ' -f2)
     echo "-> Pulling image $image_name before building image from $dockerfile."
     # Sometimes in Fedora case it fails with HTTP 50X
     # Check if the image is available locally and try to pull it if it is not
