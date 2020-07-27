@@ -828,12 +828,12 @@ ct_test_app_dockerfile() {
   local port=${4:-8080}
   local app_dir=app-src # this is a directory that must match with the name in the Dockerfile
   local app_image_name=myapp
-  local app_cont_name=myapp1
   local ret
   local cname=app_dockerfile
 
   CID_FILE_DIR=${CID_FILE_DIR:-$(mktemp -d)}
-  local dockerfile_abs=$(readlink -f "${dockerfile}")
+  local dockerfile_abs
+  dockerfile_abs=$(readlink -f "${dockerfile}")
   tmpdir=$(mktemp -d)
   pushd "$tmpdir" >/dev/null
   cp "${dockerfile_abs}" Dockerfile
