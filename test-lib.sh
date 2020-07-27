@@ -814,4 +814,47 @@ ct_show_resources()
   lscpu
 }
 
+# ct_test_app_dockerfile
+# -----------------------------
+# Argument: dockerfile - path to a Dockerfile that will be used for building an image
+#                        (must work with an application directory called 'app-src')
+# Argument: app_url - git URI with a testing application
+# Argument: body_regexp - PCRE regular expression that must match the response body
+# Argument: port - Optional port number (default: 8080)
+ct_test_app_dockerfile() {
+  local dockerfile=$1
+  local app_url=$2
+  local expected_text=$3
+  local port=${4:-8080}
+  local app_dir=app-src # this is a directory that must match with the name in the Dockerfile
+  local app_image_name=myapp
+  local app_cont_name=myapp1
+  local ret
+  local cname=app_dockerfile
+
+  CID_FILE_DIR=${CID_FILE_DIR:-$(mktemp -d)}
+  local dockerfile_abs=$(readlink -f "${dockerfile}")
+  tmpdir=$(mktemp -d)
+  pushd "$tmpdir" >/dev/null
+  cp "${dockerfile_abs}" Dockerfile
+
+  git clone "${app_url}" "${app_dir}"
+  docker build --no-cache=true -t "${app_image_name}" .
+  docker run -d --cidfile="${CID_FILE_DIR}/app_dockerfile" --rm "${app_image_name}"
+  ct_wait_for_cid "${CID_FILE_DIR}/app_dockerfile"
+
+  ip="$(ct_get_cip "${cname}")"
+  ct_test_response "http://$ip:${port}" 200 "${expected_text}"
+  ret=$?
+
+  # cleanup
+  docker kill "$(ct_get_cid "${cname}")"
+  sleep 2
+  docker rmi "${app_image_name}"
+  popd >/dev/null
+  rm -rf "${tmpdir}"
+  rm -f "${CID_FILE_DIR}/${cname}"
+  return $ret
+}
+
 # vim: set tabstop=2:shiftwidth=2:expandtab:
