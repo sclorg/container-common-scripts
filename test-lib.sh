@@ -839,7 +839,7 @@ ct_test_app_dockerfile() {
   cp "${dockerfile_abs}" Dockerfile
 
   # Rewrite the source image to what we test
-  sed -i -e "s/^FROM.*$/FROM $IMAGE_NAME/" Dockerfile
+  sed -i -e "s|^FROM.*$|FROM $IMAGE_NAME|" Dockerfile
   # a bit more verbose, but should help debugging failures
   echo "Using this Dockerfile:"
   cat Dockerfile
