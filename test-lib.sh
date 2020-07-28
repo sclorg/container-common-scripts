@@ -838,6 +838,12 @@ ct_test_app_dockerfile() {
   pushd "$tmpdir" >/dev/null
   cp "${dockerfile_abs}" Dockerfile
 
+  # Rewrite the source image to what we test
+  sed -i -e "s/^FROM.*$/FROM $IMAGE_NAME/" Dockerfile
+  # a bit more verbose, but should help debugging failures
+  echo "Using this Dockerfile:"
+  cat Dockerfile
+
   git clone "${app_url}" "${app_dir}"
   docker build --no-cache=true -t "${app_image_name}" .
   docker run -d --cidfile="${CID_FILE_DIR}/app_dockerfile" --rm "${app_image_name}"
