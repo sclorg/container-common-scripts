@@ -107,7 +107,7 @@ function pull_image {
     while ! docker pull "$image_name"; do
       ((loop++))
       echo "Pulling image $image_name failed."
-      [ "$loop" -gt "$loops" ] && echo "It happened $loops times. Giving up." && return 1
+      [ "$loop" -gt "$loops" ] && { echo "It happened $loops times. Giving up." ; return 1; }
       echo "Let's wait $((loop*5)) seconds and try again."
       sleep "$((loop*5))"
     done
