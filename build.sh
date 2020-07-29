@@ -79,6 +79,8 @@ function clean_image {
 # Pull image based on FROM, before we build our own.
 function pull_image {
   local dockerfile="$1"
+  local loops=10
+  local loop=0
 
   # Get image_name from Dockerfile before pulling.
   while read -r line; do
@@ -99,12 +101,16 @@ function pull_image {
       echo "The image $image_name is already pulled."
       continue
     fi
+
     # Try pulling the image to see if it is accessible
-    if ! docker pull "$image_name"; then
-      echo "Pulling image $image_name failed. Let's wait 2 seconds and try one more time."
-      sleep 2
-      docker pull "$image_name"
-    fi
+    # WORKAROUND: Since Fedora registry sometimes fails randomly, let's try it more times
+    while ! docker pull "$image_name"; do
+      ((loop++))
+      echo "Pulling image $image_name failed."
+      [ "$loop" -gt "$loops" ] && echo "It happened $loops times. Giving up." && return 1
+      echo "Let's wait $((loop*5)) seconds and try again."
+      sleep "$((loop*5))"
+    done
 
   done < "$dockerfile"
 }
