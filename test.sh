@@ -13,8 +13,9 @@ for dir in ${VERSIONS}; do
   pushd "${dir}" > /dev/null
   IMAGE_ID=$(cat .image-id)
   export IMAGE_ID
+  IMAGE_VERSION=$(docker inspect -f "{{.Config.Labels.version}}" "$IMAGE_ID")
   # Kept also IMAGE_NAME as some tests might still use that.
-  IMAGE_NAME=$(docker inspect -f "{{.Config.Labels.name}}" "$IMAGE_ID")
+  IMAGE_NAME="$(docker inspect -f "{{.Config.Labels.name}}" "$IMAGE_ID"):$IMAGE_VERSION"
   export IMAGE_NAME
 
   if [ -n "${TEST_MODE}" ]; then
