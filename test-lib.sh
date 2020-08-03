@@ -832,6 +832,11 @@ ct_test_app_dockerfile() {
   local ret
   local cname=app_dockerfile
 
+  if [ -z "$app_dir" ] ; then
+    echo "ERROR: Option app_dir not set. Terminating the Dockerfile build."
+    return 1
+  fi
+
   if ! [ -r "${dockerfile}" -a -s "${dockerfile}" ] ; then
     echo "ERROR: Dockerfile ${dockerfile} does not exist or is empty."
     echo "Terminating the Dockerfile build."
@@ -858,6 +863,7 @@ ct_test_app_dockerfile() {
     return 1
   fi
 
+  echo "Building "${app_image_name}" image using docker build"
   docker build --no-cache=true -t "${app_image_name}" .
   if [ $? -ne 0 ] ; then
     echo "ERROR: The image cannot be built from ${dockerfile} and application ${app_url}."
@@ -871,6 +877,7 @@ ct_test_app_dockerfile() {
     echo "Terminating the Dockerfile build."
     return 1
   fi
+  echo "Waiting for "${app_image_name}" to start"
   ct_wait_for_cid "${CID_FILE_DIR}/app_dockerfile"
 
   ip="$(ct_get_cip "${cname}")"
