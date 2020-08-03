@@ -837,7 +837,7 @@ ct_test_app_dockerfile() {
     return 1
   fi
 
-  if ! [ -r "${dockerfile}" -a -s "${dockerfile}" ] ; then
+  if ! [ -r "${dockerfile}" ] || ! [ -s "${dockerfile}" ] ; then
     echo "ERROR: Dockerfile ${dockerfile} does not exist or is empty."
     echo "Terminating the Dockerfile build."
     return 1
@@ -856,28 +856,25 @@ ct_test_app_dockerfile() {
   echo "Using this Dockerfile:"
   cat Dockerfile
 
-  git clone "${app_url}" "${app_dir}"
-  if [ $? -ne 0 ] ; then
+  if ! git clone "${app_url}" "${app_dir}" ; then
     echo "ERROR: Git repository ${app_url} cannot be cloned into ${app_dir}."
     echo "Terminating the Dockerfile build."
     return 1
   fi
 
-  echo "Building "${app_image_name}" image using docker build"
-  docker build --no-cache=true -t "${app_image_name}" .
-  if [ $? -ne 0 ] ; then
+  echo "Building '${app_image_name}' image using docker build"
+  if ! docker build --no-cache=true -t "${app_image_name}" . ; then
     echo "ERROR: The image cannot be built from ${dockerfile} and application ${app_url}."
     echo "Terminating the Dockerfile build."
     return 1
   fi
 
-  docker run -d --cidfile="${CID_FILE_DIR}/app_dockerfile" --rm "${app_image_name}"
-  if [ $? -ne 0 ] ; then
+  if ! docker run -d --cidfile="${CID_FILE_DIR}/app_dockerfile" --rm "${app_image_name}"  ; then
     echo "ERROR: The image ${app_image_name} cannot be run for ${dockerfile} and application ${app_url}."
     echo "Terminating the Dockerfile build."
     return 1
   fi
-  echo "Waiting for "${app_image_name}" to start"
+  echo "Waiting for ${app_image_name} to start"
   ct_wait_for_cid "${CID_FILE_DIR}/app_dockerfile"
 
   ip="$(ct_get_cip "${cname}")"
