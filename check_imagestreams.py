@@ -29,7 +29,8 @@ class ImageStreamChecker(object):
         for tags in json_dict["spec"]["tags"]:
             if tags["name"] != "latest":
                 continue
-            if tags["from"]["name"] == self.version:
+            # The latest can link to either "<stream>" or "<stream>-elX" or "<stream>-ubiX"
+            if tags["from"]["name"] == self.version or tags["from"]["name"].startswith(self.version + '-')::
                 latest_tag_correct = True
         return latest_tag_correct
 
