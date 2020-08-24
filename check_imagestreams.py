@@ -46,7 +46,7 @@ class ImageStreamChecker(object):
             try:
                 os_version = str(f.stem).split("-")[1]
             except IndexError:
-                print(f"File {str(f)} does not contain version like centos7|rhel7|fedora.")
+                print(f"File {str(f)} does not contain version like centos7|centos8|rhel7|rhel8|fedora.")
                 continue
             exclude_file = p / self.version / f".exclude-{os_version}"
             if exclude_file.exists():
