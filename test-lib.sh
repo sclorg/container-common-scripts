@@ -787,8 +787,17 @@ ct_check_latest_imagestreams() {
 
     # Check only lines which starts with VERSIONS
     latest_version=$(grep '^VERSIONS' Makefile | rev | cut -d ' ' -f 1 | rev )
-    test_lib_dir=$(dirname "$(readlink -f "$0")")
-    python3 "${test_lib_dir}/check_imagestreams.py" "$latest_version"
+    # Fall back to previous version if the latest is excluded for this OS
+    [ -f "$latest_version/.exclude-$OS" ] && latest_version=$(grep '^VERSIONS' Makefile | rev | cut -d ' ' -f 2 | rev )
+    # Only test the imagestream once, when the version matches
+    # ignore the SC warning, $VERSION is always available
+    # shellcheck disable=SC2153
+    if [ "$latest_version" == "$VERSION" ]; then
+      test_lib_dir=$(dirname "$(readlink -f "$0")")
+      python3 "${test_lib_dir}/check_imagestreams.py" "$latest_version"
+    else
+      echo "Image version $VERSION is not latest, skipping ct_check_latest_imagestreams"
+    fi
 }
 
 # ct_show_resources
