@@ -10,8 +10,6 @@ source "$(dirname "${BASH_SOURCE[0]}")"/test-lib.sh
 #   OS_TESTSUITE_RESULT=0
 # And the following trap must be set, in the beginning of the test script:
 #   trap ct_os_cleanup EXIT SIGINT
-OS_TESTSUITE_RESULT=1
-OS_CLUSTER_STARTED_BY_TEST=0
 
 # ct_os_set_path_oc_4 OC_VERSION
 # --------------------
@@ -49,13 +47,15 @@ function ct_os_set_path_oc_4() {
 #
 #
 function ct_os_set_ocp4() {
-  ct_os_set_path_oc_4 "4.4"
+  local login
+  OS_OC_CLIENT_VERSION=${OS_OC_CLIENT_VERSION:-4.4}
+  ct_os_set_path_oc_4 "${OS_OC_CLIENT_VERSION}"
 
   oc version
 
-  local login=$(cat "$KUBEPASSWORD")
+  login=$(cat "$KUBEPASSWORD")
   oc login -u kubeadmin -p "$login"
-  OS_CLUSTER_STARTED_BY_TEST=1
+  echo "Login to OpenShift ${OS_OC_CLIENT_VERSION} is DONE"
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
 }
@@ -70,20 +70,23 @@ function ct_os_upload_image_external_registry() {
 
   output_name="${INTERNAL_DOCKER_REGISTRY}/rhscl-ci-testing/$imagestream"
 
-  echo "${image_name} ${output_name}"
-  docker tag "rhscl/${image_name}" "${output_name}"
+  docker images
+  docker tag "${input_name}" "${output_name}"
   docker push "${output_name}"
 }
 
 
 function ct_os_login_external_registry() {
+  local docker_token
   # docker login fails with "404 page not found" error sometimes, just try it more times
   # shellcheck disable=SC2034
   echo "loging"
   [ -z "${INTERNAL_DOCKER_REGISTRY:-}" ] && "INTERNAL_DOCKER_REGISTRY has to be set for working with Internal registry" && return 1
+  # shellcheck disable=SC2034
   for i in $(seq 12) ; do
     # shellcheck disable=SC2015
-    local docker_token=$(cat "$DOCKER_UPSHIFT_TOKEN")
+    docker_token=$(cat "$DOCKER_UPSHIFT_TOKEN")
+    # shellcheck disable=SC2015
     docker login -u rhscl-ci-testing -p "$docker_token" "${INTERNAL_DOCKER_REGISTRY}" && return 0 || :
     sleep 5
   done
@@ -92,7 +95,6 @@ function ct_os_login_external_registry() {
 
 function ct_os_import_image_ocp4() {
   local image_name="${1}"; shift
-  local image_name_no_namespace=${image_name##*/}
   local imagestream=${1:-$image_name:latest}
   local namespace
 
