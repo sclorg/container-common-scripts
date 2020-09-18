@@ -814,4 +814,81 @@ ct_show_resources()
   lscpu
 }
 
+# ct_test_app_dockerfile
+# -----------------------------
+# Argument: dockerfile - path to a Dockerfile that will be used for building an image
+#                        (must work with an application directory called 'app-src')
+# Argument: app_url - git URI with a testing application
+# Argument: body_regexp - PCRE regular expression that must match the response body
+# Argument: app_dir - name of the application directory that is used in the Dockerfile
+# Argument: port - Optional port number (default: 8080)
+ct_test_app_dockerfile() {
+  local dockerfile=$1
+  local app_url=$2
+  local expected_text=$3
+  local app_dir=$4 # this is a directory that must match with the name in the Dockerfile
+  local port=${5:-8080}
+  local app_image_name=myapp
+  local ret
+  local cname=app_dockerfile
+
+  if [ -z "$app_dir" ] ; then
+    echo "ERROR: Option app_dir not set. Terminating the Dockerfile build."
+    return 1
+  fi
+
+  if ! [ -r "${dockerfile}" ] || ! [ -s "${dockerfile}" ] ; then
+    echo "ERROR: Dockerfile ${dockerfile} does not exist or is empty."
+    echo "Terminating the Dockerfile build."
+    return 1
+  fi
+
+  CID_FILE_DIR=${CID_FILE_DIR:-$(mktemp -d)}
+  local dockerfile_abs
+  dockerfile_abs=$(readlink -f "${dockerfile}")
+  tmpdir=$(mktemp -d)
+  pushd "$tmpdir" >/dev/null
+  cp "${dockerfile_abs}" Dockerfile
+
+  # Rewrite the source image to what we test
+  sed -i -e "s|^FROM.*$|FROM $IMAGE_NAME|" Dockerfile
+  # a bit more verbose, but should help debugging failures
+  echo "Using this Dockerfile:"
+  cat Dockerfile
+
+  if ! git clone "${app_url}" "${app_dir}" ; then
+    echo "ERROR: Git repository ${app_url} cannot be cloned into ${app_dir}."
+    echo "Terminating the Dockerfile build."
+    return 1
+  fi
+
+  echo "Building '${app_image_name}' image using docker build"
+  if ! docker build --no-cache=true -t "${app_image_name}" . ; then
+    echo "ERROR: The image cannot be built from ${dockerfile} and application ${app_url}."
+    echo "Terminating the Dockerfile build."
+    return 1
+  fi
+
+  if ! docker run -d --cidfile="${CID_FILE_DIR}/app_dockerfile" --rm "${app_image_name}"  ; then
+    echo "ERROR: The image ${app_image_name} cannot be run for ${dockerfile} and application ${app_url}."
+    echo "Terminating the Dockerfile build."
+    return 1
+  fi
+  echo "Waiting for ${app_image_name} to start"
+  ct_wait_for_cid "${CID_FILE_DIR}/app_dockerfile"
+
+  ip="$(ct_get_cip "${cname}")"
+  ct_test_response "http://$ip:${port}" 200 "${expected_text}"
+  ret=$?
+
+  # cleanup
+  docker kill "$(ct_get_cid "${cname}")"
+  sleep 2
+  docker rmi "${app_image_name}"
+  popd >/dev/null
+  rm -rf "${tmpdir}"
+  rm -f "${CID_FILE_DIR}/${cname}"
+  return $ret
+}
+
 # vim: set tabstop=2:shiftwidth=2:expandtab:
