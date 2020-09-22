@@ -785,6 +785,12 @@ ct_check_latest_imagestreams() {
     local latest_version=
     local test_lib_dir=
 
+    # We only maintain imagestreams for RHEL and CentOS (Community)
+    if [[ "$OS" =~ ^fedora.* ]] ; then
+      echo "Imagestreams for Fedora are not maintained, skipping ct_check_latest_imagestreams"
+      exit 0
+    fi
+
     # Check only lines which starts with VERSIONS
     latest_version=$(grep '^VERSIONS' Makefile | rev | cut -d ' ' -f 1 | rev )
     # Fall back to previous version if the latest is excluded for this OS
