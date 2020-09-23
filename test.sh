@@ -59,7 +59,7 @@ for dir in ${VERSIONS}; do
     if [[ -x test/run-openshift ]]; then
       VERSION=$dir test/run-openshift
     else
-      echo "-> OpenShift tests are not present, skipping"
+      echo "-> OpenShift 3 tests are not present, skipping"
     fi
   fi
 

@@ -101,7 +101,7 @@ test-with-conu: tag
 .PHONY: test-openshift-4
 test-openshift-4: script_env += TEST_OPENSHIFT_4=true
 test-openshift-4: tag
-	VERSIONS="$(VERSIONS)" BASE_IMAGE_NAME="$(BASE_IMAGE_NAME)" $(script_env) $(testr)
+	VERSIONS="$(VERSIONS)" BASE_IMAGE_NAME="$(BASE_IMAGE_NAME)" $(script_env) $(test)
 
 .PHONY: test-openshift
 test-openshift: script_env += TEST_OPENSHIFT_MODE=true
