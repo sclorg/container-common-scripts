@@ -35,8 +35,12 @@ It expects the test to be available at `$gitroot/$version/test/run`
 Depends on `tag` as some tests might need to have the images tagged (s2i).
 
 `make test-openshift`  
-Similar to `make test` but runs testsuite for Openshift, expected to be found at
+Similar to `make test` but runs testsuite for Openshift 3, expected to be found at
 `$gitroot/$version/test/run-openshift`
+
+`make test-openshift-4`
+Similar to `make test` but runs testsuite for Openshift 4, expected to be found at
+`$gitroot/$version/test/run-openshift-remote-cluster`
 
 `make test-with-conu`  
 The rule is similar to `make test`. It runs a test suite written using [conu
