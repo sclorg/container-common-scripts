@@ -788,7 +788,7 @@ ct_check_latest_imagestreams() {
     # We only maintain imagestreams for RHEL and CentOS (Community)
     if [[ "$OS" =~ ^fedora.* ]] ; then
       echo "Imagestreams for Fedora are not maintained, skipping ct_check_latest_imagestreams"
-      exit 0
+      return 0
     fi
 
     # Check only lines which starts with VERSIONS
