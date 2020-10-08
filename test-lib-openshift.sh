@@ -769,7 +769,9 @@ function ct_os_test_template_app_func() {
     else
       echo "Uploading image ${image_name} as ${image_tagged}"
       ct_os_upload_image "${image_name}" "${image_tagged}"
-
+    fi
+  fi
+  if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'false' ] ; then
       # upload also other images, that template might need (list of pairs in the format <image>|<tag>
       local image_tag_a
       local i_t
@@ -777,9 +779,12 @@ function ct_os_test_template_app_func() {
         echo "${i_t}"
         IFS='|' read -ra image_tag_a <<< "${i_t}"
         docker pull "${image_tag_a[0]}"
-        ct_os_upload_image "${image_tag_a[0]}" "${image_tag_a[1]}"
+        if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
+          ct_os_import_image_ocp4 "${image_tag_a[0]}" "${image_tag_a[1]}"
+        else
+          ct_os_upload_image "${image_tag_a[0]}" "${image_tag_a[1]}"
+        fi
       done
-    fi
   fi
 
   # get the template file from remote or local location; if not found, it is
