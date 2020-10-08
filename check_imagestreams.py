@@ -3,6 +3,7 @@
 import sys
 import json
 import logging
+import os
 
 from pathlib import Path
 from typing import Dict
@@ -47,6 +48,9 @@ class ImageStreamChecker(object):
             print(f"No json files present in {IMAGESTREAMS_DIR}.")
             return 0
         for f in json_files:
+            if os.environ.get("TARGET") in ("rhel7", "centos7") and "aarch64" in str(f):
+                print("Imagestream aarch64 is not supported on rhel7")
+                continue
             print(f"Checking file {str(f)}.")
             json_dict = self.load_json_file(f)
             if not (self.check_version(json_dict) and self.check_latest_tag(json_dict)):
