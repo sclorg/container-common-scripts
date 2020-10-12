@@ -1242,7 +1242,7 @@ function ct_os_test_image_stream_quickstart() {
 
   # ct_os_test_template_app creates a new project, but we already need
   # it before for the image stream import, so tell it to skip this time
-  CT_SKIP_NEW_PROJECT=true \
+  CT_SKIP_NEW_PROJECT=true CT_MIRROR_IMAGE=true \
   ct_os_test_template_app "${image_name}" \
                           "${local_template_file}" \
                           "${name_in_template}" \
