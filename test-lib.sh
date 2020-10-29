@@ -69,10 +69,10 @@ function ct_check_envs_set {
   loop_envs=$1; shift
   env_format=${1:-"*VALUE*"}
   while read -r variable; do
+    [ -z "$variable" ] && continue
     var_name=$(echo "$variable" | awk -F= '{ print $1 }')
     stripped=$(echo "$variable" | awk -F= '{ print $2 }')
     filtered_envs=$(echo "$check_envs" | grep "^$var_name=")
-    [ -z "$variable" ] && continue
     [ -z "$filtered_envs" ] && { echo "$var_name not found during \` docker exec\`"; return 1; }
     old_IFS=$IFS
     # For each such variable compare its content with the `docker exec` result, use `:` as delimiter
