@@ -341,7 +341,7 @@ function ct_binary_found_from_df() {
   # Create Dockerfile that looks for the binary
   cat <<EOF >"$tmpdir/Dockerfile"
 FROM $IMAGE_NAME
-RUN which $binary | grep "$binary_path"
+RUN command -v $binary | grep "$binary_path"
 EOF
   # Build an image, looking for expected path in the output
   if ! docker build -f "$tmpdir/Dockerfile" --no-cache "$tmpdir"; then
