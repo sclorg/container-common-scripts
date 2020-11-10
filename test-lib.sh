@@ -27,7 +27,7 @@ EXPECTED_EXIT_CODE=0
 function ct_cleanup() {
   ct_show_resources
   for cid_file in "$CID_FILE_DIR"/* ; do
-    [ -f "$cid_file" ] || break
+    [ -f "$cid_file" ] || continue
     local container
     container=$(cat "$cid_file")
 
