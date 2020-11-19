@@ -103,9 +103,9 @@ function ct_os_import_image_ocp4() {
   echo "Uploading image ${image_name} as ${deploy_image_name} , ${imagestream} into external registry."
   ct_os_upload_image_external_registry "${image_name}" "${imagestream}"
   if [ "${CT_MIRROR_IMAGE:-false}" == 'true' ]; then
-    # remove tag from image_name
     mirror_image="registry.redhat.io/${image_name%:*}:latest"
     echo "Mirror ${mirror_image} with ${deploy_image_name}"
+    echo "oc image mirror ${mirror_image} ${deploy_image_name}"
     oc image mirror "${mirror_image}" "${deploy_image_name}"
   else
     echo "Import image into OpenShift 4 environment "

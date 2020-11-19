@@ -794,6 +794,8 @@ function ct_os_test_template_app_func() {
   local local_template
 
   local_template=$(ct_obtain_input "${template}" 2>/dev/null || echo "--template=${template}")
+
+  echo "Creating a new-app with name ${name_in_template} in namespace ${namespace} with args ${oc_args}."
   # shellcheck disable=SC2086
   oc new-app "${local_template}" \
              --name "${name_in_template}" \
@@ -929,7 +931,7 @@ ct_os_test_image_update() {
 function ct_os_deploy_cmd_image() {
   local image_name=${1}
   oc get pod command-app &>/dev/null && echo "command POD already running" && return 0
-  echo "command POD not running yet, will start one called command-app"
+  echo "command POD not running yet, will start one called command-app ${image_name}"
   oc create -f - <<EOF
 apiVersion: v1
 kind: Pod
@@ -947,6 +949,8 @@ EOF
   SECONDS=0
   echo -n "Waiting for command POD ."
   while [ $SECONDS -lt 180 ] ; do
+    # Let's show status of all pods. Not only command-container for tracking issues
+    oc get pods
     # shellcheck disable=SC2016
     sout="$(ct_os_cmd_image_run 'echo $((11*11))' 2>/dev/null)"
     # shellcheck disable=SC2015
@@ -993,7 +997,7 @@ ct_os_test_response_internal() {
   local status
   local response_code
   local response_file
-  local util_image_name='python:3.6'
+  local util_image_name='ubi7/ubi'
 
   response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
   ct_os_deploy_cmd_image "${util_image_name}"
@@ -1232,17 +1236,31 @@ function ct_os_test_image_stream_quickstart() {
   local local_template_file
 
   echo "Running image stream test for stream ${image_stream_file} and quickstart template ${template_file}"
-
+  echo "Image name is ${IMAGE_NAME}"
   # shellcheck disable=SC2119
   ct_os_new_project
 
   local_image_stream_file=$(ct_obtain_input "${image_stream_file}")
   local_template_file=$(ct_obtain_input "${template_file}")
-  oc create -f "${local_image_stream_file}"
-
   # ct_os_test_template_app creates a new project, but we already need
   # it before for the image stream import, so tell it to skip this time
-  CT_SKIP_NEW_PROJECT=true CT_MIRROR_IMAGE=true \
+  namespace=${CT_NAMESPACE:-"$(oc project -q)"}
+
+  # Add namespace into openshift arguments
+  if [[ $oc_args != *"NAMESPACE"* ]]; then
+    oc_args="${oc_args} -p NAMESPACE=${namespace}"
+  fi
+  oc create -f "${local_image_stream_file}"
+
+  # In case we are testing on OpenShift 4 export variable for mirror image
+  # which means, that image is going to be mirrored from an internal registry into OpenShift 4
+  if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ]; then
+    export CT_MIRROR_IMAGE=true
+  fi
+  # ct_os_test_template_app creates a new project, but we already need
+  # it before for the image stream import, so tell it to skip this time
+
+  CT_SKIP_NEW_PROJECT=true \
   ct_os_test_template_app "${image_name}" \
                           "${local_template_file}" \
                           "${name_in_template}" \
