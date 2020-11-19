@@ -51,11 +51,13 @@ else ifeq ($(TARGET),centos8)
 else
 	OS := centos7
 	DOCKERFILE ?= Dockerfile
+	REGISTRY := "quay.io/"
 endif
 
 SKIP_SQUASH ?= 1
 DOCKER_BUILD_CONTEXT ?= .
 SHELLCHECK_FILES ?= .
+REGISTRY ?= ""
 
 script_env = \
 	SKIP_SQUASH=$(SKIP_SQUASH)                      \
@@ -64,7 +66,8 @@ script_env = \
 	CLEAN_AFTER=$(CLEAN_AFTER)                      \
 	DOCKER_BUILD_CONTEXT=$(DOCKER_BUILD_CONTEXT)    \
 	OPENSHIFT_NAMESPACES="$(OPENSHIFT_NAMESPACES)"  \
-	CUSTOM_REPO="$(CUSTOM_REPO)"
+	CUSTOM_REPO="$(CUSTOM_REPO)" \
+	REGISTRY="$(REGISTRY)"
 
 # TODO: switch to 'build: build-all' once parallel builds are relatively safe
 .PHONY: build build-serial build-all
