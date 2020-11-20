@@ -560,7 +560,7 @@ ct_registry_from_os() {
         registry=registry.redhat.io
         ;;
     *)
-        registry=docker.io
+        registry=quay.io
         ;;
     esac
   echo "$registry"
@@ -586,9 +586,9 @@ ct_get_public_image_name() {
   elif [ "x$os" == "xrhel8" ]; then
     public_image_name=$registry/rhel8/$base_image_name-${version//./}
   elif [ "x$os" == "xcentos7" ]; then
-    public_image_name=$registry/centos/$base_image_name-${version//./}-centos7
+    public_image_name=$registry/centos7/$base_image_name-${version//./}-centos7
   elif [ "x$os" == "xcentos8" ]; then
-    public_image_name=$registry/centos/$base_image_name-${version//./}-centos8
+    public_image_name=$registry/centos8/$base_image_name-${version//./}-centos8
   fi
 
   echo "$public_image_name"

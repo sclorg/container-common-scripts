@@ -5,7 +5,7 @@ set -e
 . test-lib.sh
 
 combinations="rhel7:registry.redhat.io/rhscl/postgresql-10-rhel7
-centos7:docker.io/centos/postgresql-10-centos7
+centos7:quay.io/centos7/postgresql-10-centos7
 rhel8:registry.redhat.io/rhel8/postgresql-10
 "
 
