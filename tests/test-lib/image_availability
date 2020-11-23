@@ -5,13 +5,13 @@ set -e
 . test-lib.sh
 
 # This should succeed
-if ! ct_check_image_availability docker.io/centos/postgresql-10-centos7; then
+if ! ct_check_image_availability quay.io/centos7/ruby-27-centos7; then
   echo "image_availability test failed"
   false
 fi
 
 # This should fail
-if ct_check_image_availability docker.io/centos/postgresql-98-centos7; then
+if ct_check_image_availability quay.io/centos7/ruby-24-centos7; then
   echo "image_availability test failed"
   false
 fi

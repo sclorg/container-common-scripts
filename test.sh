@@ -16,7 +16,11 @@ for dir in ${VERSIONS}; do
   IMAGE_VERSION=$(docker inspect -f "{{.Config.Labels.version}}" "$IMAGE_ID")
   # Kept also IMAGE_NAME as some tests might still use that.
   IMAGE_NAME="$(docker inspect -f "{{.Config.Labels.name}}" "$IMAGE_ID"):$IMAGE_VERSION"
-  export IMAGE_NAME
+  if [ x"${OS}" == "xcentos7" ]; then
+    export IMAGE_NAME="$REGISTRY$IMAGE_NAME"
+  else
+    export IMAGE_NAME
+  fi
 
   if [ -n "${TEST_MODE}" ]; then
     VERSION=$dir test/run

@@ -18,10 +18,11 @@ for dir in ${VERSIONS}; do
   commit_date=$(git show -s HEAD --format=%cd --date=short | sed 's/-//g')
   date_and_hash="${commit_date}-$(git rev-parse --short HEAD)"
 
-  echo "-> Tagging image '$IMAGE_ID' as '$name:$version' and '$name:latest' and '$name:$date_and_hash'"
-  docker tag "$IMAGE_ID" "$name:$version"
-  docker tag "$IMAGE_ID" "$name:latest"
-  docker tag "$IMAGE_ID" "$name:$date_and_hash"
+  full_reg_name="$REGISTRY$name"
+  echo "-> Tagging image '$IMAGE_ID' as '$full_reg_name:$version' and '$full_reg_name:latest' and '$full_reg_name:$date_and_hash'"
+  docker tag "$IMAGE_ID" "$full_reg_name:$version"
+  docker tag "$IMAGE_ID" "$full_reg_name:latest"
+  docker tag "$IMAGE_ID" "$full_reg_name:$date_and_hash"
 
   for suffix in squashed raw; do
     id_file=.image-id.$suffix
