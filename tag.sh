@@ -27,7 +27,7 @@ for dir in ${VERSIONS}; do
   for suffix in squashed raw; do
     id_file=.image-id.$suffix
     if test -f "$id_file"; then
-        docker tag "$(cat "$id_file")" "$name:$suffix" || rm .image-id."$suffix"
+        docker tag "$(cat "$id_file")" "$full_reg_name:$suffix" || rm .image-id."$suffix"
     fi
   done
 
