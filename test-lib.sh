@@ -84,11 +84,12 @@ function ct_check_envs_set {
         if [ -n "${filtered_envs##${env_format//VALUE/$value}}" ]; then
             echo " Value $value is missing from variable $var_name"
             echo "$filtered_envs"
+            IFS=$old_IFS
             return 1
         fi
     done
+    IFS=$old_IFS
   done <<< "$(echo "$loop_envs" | grep "$env_filter" | grep -v "^PWD=")"
-  IFS=$old_IFS
 }
 
 # ct_get_cid [name]
