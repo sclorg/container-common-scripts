@@ -119,6 +119,8 @@ function pull_image {
 function docker_build_with_version {
   local dockerfile="$1"
   local exclude=.exclude-${OS}
+  local devel_repo_file=.devel-repo-${OS}
+  local devel_repo_var="DEVEL_REPO_$OS"
   if [ -e "$exclude" ]; then
     echo "-> $exclude file exists for version $dir, skipping build."
     clean_image
@@ -136,6 +138,13 @@ function docker_build_with_version {
   if [[ "${UPDATE_BASE}" == "1" ]]; then
     BUILD_OPTIONS+=" --pull=true"
   fi
+
+  if [ -f "$devel_repo_file" ] && [[ -v "$devel_repo_var" ]] ; then
+    CUSTOM_REPO=$(mktemp)
+    curl -Lk "${!devel_repo_var}" >"${CUSTOM_REPO}"
+    echo "-> $devel_repo_file file exists for version $dir, so using ${!devel_repo_var}."
+  fi
+
   if [ -n "$CUSTOM_REPO" ]; then
     if [ -f "$CUSTOM_REPO" ]; then
       BUILD_OPTIONS+=" -v $CUSTOM_REPO:/etc/yum.repos.d/sclorg_custom.repo:Z"
