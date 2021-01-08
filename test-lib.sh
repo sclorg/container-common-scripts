@@ -818,7 +818,7 @@ ct_show_resources()
   echo "Memory:"
   free -h
   echo "Storage:"
-  df -h
+  df -h || :
   echo "CPU"
   lscpu
 }

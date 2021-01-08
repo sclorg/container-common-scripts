@@ -53,6 +53,7 @@ _parse_output_inner ()
 parse_output ()
 {
   local command=$1 filter=$2 var=$3 stream=$4
+  echo "-> building using $command"
   local raw_output='' rc=0
   {
       # shellcheck disable=SC2034
