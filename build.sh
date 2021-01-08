@@ -139,6 +139,21 @@ function docker_build_with_version {
     BUILD_OPTIONS+=" --pull=true"
   fi
 
+  # Add possibility to use a development repo
+  #
+  # This is useful if we want to work with RPMs that are not available publically yet.
+  #
+  # How to use it:
+  # First, we create a file that only tells the scripts to use the development repository,
+  # e.g. .devel-repo-rhel8, similarly as we use .exclude-rhel8 for excluding particular
+  # variant of the Dockerfile.
+  #
+  # If such a file exists in the repository, then the building scripts will take a look
+  # at a correspondent variable, e.g.  DEVEL_REPO_rhel8, and will use the repository file
+  # defined by that variable.
+  #
+  # That means that definition of the DEVEL_REPO_rhel8 variable is a responsibility of
+  # the test/CI environment.
   if [ -f "$devel_repo_file" ] && [[ -v "$devel_repo_var" ]] ; then
     CUSTOM_REPO=$(mktemp)
     curl -Lk "${!devel_repo_var}" >"${CUSTOM_REPO}"
