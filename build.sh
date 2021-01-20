@@ -147,7 +147,7 @@ function docker_build_with_version {
   # How to use it:
   # First, we create a file that only tells the scripts to use the development repository,
   # e.g. .devel-repo-rhel8, similarly as we use .exclude-rhel8 for excluding particular
-  # variant of the Dockerfile.
+  # variant of the Dockerfile. Content of the file is not important at this point.
   #
   # If such a file exists in the repository, then the building scripts will take a look
   # at a correspondent variable, e.g.  DEVEL_REPO_rhel8, and will use the repository file
