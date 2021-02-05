@@ -617,20 +617,21 @@ function ct_os_test_s2i_app_func() {
   ct_os_new_project
 
   namespace=${CT_NAMESPACE:-"$(oc project -q)"}
+  local image_tagged="${image_name_no_namespace%:*}:${VERSION}"
 
   if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
-    ct_os_import_image_ocp4 "${image_name}" "${image_name_no_namespace}"
+    ct_os_import_image_ocp4 "${image_name}" "${image_tagged}"
   else
     # Create a specific imagestream tag for the image so that oc cannot use anything else
     if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
-      echo "Importing image ${image_name} as ${namespace}/${image_name_no_namespace}"
+      echo "Importing image ${image_name} as ${namespace}/${image_tagged}"
       # Use --reference-policy=local to pull remote image content to the cluster
       # Works around the issue of builder pods not having access to registry.redhat.io
-      oc tag --source=docker "${image_name}" "${namespace}/${image_name_no_namespace}" --insecure=true --reference-policy=local
-      ct_os_wait_stream_ready "${image_name_no_namespace}" "${namespace}"
+      oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
+      ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
     else
-      echo "Uploading image ${image_name} as ${image_name_no_namespace}"
-      ct_os_upload_image "${image_name}" "${image_name_no_namespace}"
+      echo "Uploading image ${image_name} as ${image_tagged}"
+      ct_os_upload_image "${image_name}" "${image_tagged}"
     fi
   fi
 
@@ -642,7 +643,7 @@ function ct_os_test_s2i_app_func() {
   fi
 
   # shellcheck disable=SC2086
-  ct_os_deploy_s2i_image "${image_name_no_namespace}" "${app_param}" \
+  ct_os_deploy_s2i_image "${image_tagged}" "${app_param}" \
                           --context-dir="${context_dir}" \
                           --name "${service_name}" \
                           ${oc_args}
