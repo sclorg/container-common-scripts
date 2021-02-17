@@ -827,7 +827,7 @@ ct_show_resources()
 # -----------------------------
 # Argument: dockerfile - path to a Dockerfile that will be used for building an image
 #                        (must work with an application directory called 'app-src')
-# Argument: app_url - git URI with a testing application
+# Argument: app_url - git URI with a testing application, supports "@" to indicate a different branch
 # Argument: body_regexp - PCRE regular expression that must match the response body
 # Argument: app_dir - name of the application directory that is used in the Dockerfile
 # Argument: port - Optional port number (default: 8080)
@@ -865,7 +865,17 @@ ct_test_app_dockerfile() {
   echo "Using this Dockerfile:"
   cat Dockerfile
 
-  if ! git clone "${app_url}" "${app_dir}" ; then
+  # If app_url contains @, the string after @ is considered
+  # as a name of a branch to clone instead of the main/master branch
+  readarray -d "@" -t git_url_parts<<<"${app_url}"
+
+  if [ -n "${git_url_parts[1]}" ]; then
+    git_clone_cmd="git clone --branch ${git_url_parts[1]} ${git_url_parts[0]} ${app_dir}"
+  else
+    git_clone_cmd="git clone ${app_url} ${app_dir}"
+  fi
+
+  if ! $git_clone_cmd ; then
     echo "ERROR: Git repository ${app_url} cannot be cloned into ${app_dir}."
     echo "Terminating the Dockerfile build."
     return 1
