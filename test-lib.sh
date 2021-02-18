@@ -867,7 +867,7 @@ ct_test_app_dockerfile() {
 
   # If app_url contains @, the string after @ is considered
   # as a name of a branch to clone instead of the main/master branch
-  readarray -d "@" -t git_url_parts<<<"${app_url}"
+  IFS='@' read -ra git_url_parts <<< "${app_url}"
 
   if [ -n "${git_url_parts[1]}" ]; then
     git_clone_cmd="git clone --branch ${git_url_parts[1]} ${git_url_parts[0]} ${app_dir}"
