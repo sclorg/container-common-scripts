@@ -7,7 +7,7 @@ for version
 do
     remove_images=
     for idfile in .image-id.raw .image-id.squashed; do
-        # shellcheck disable=SC2039
+        # shellcheck disable=SC2039,SC3024
         test ! -f "$version/$idfile" || remove_images+=" $(cat "$version/$idfile")"
     done
 
