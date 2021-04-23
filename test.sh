@@ -27,18 +27,31 @@ for dir in ${VERSIONS}; do
   fi
 
   if [ -n "${TEST_OPENSHIFT_4}" ]; then
-    if [[ -x test/run-openshift-remote-cluster ]]; then
-        VERSION=$dir test/run-openshift-remote-cluster
+    # In case only imagestream is deprecated
+    # and the other tests should be working
+    if [ -e ".exclude-openshift" ]; then
+      echo "-> .exclude-openshift file exists for version $dir, skipping OpenShift-4 tests."
     else
-      echo "-> Tests for OpenShift 4 are not present. Add run-openshift-remote-cluster script, skipping"
+      if [[ -x test/run-openshift-remote-cluster ]]; then
+        VERSION=$dir test/run-openshift-remote-cluster
+      else
+        echo "-> Tests for OpenShift 4 are not present. Add run-openshift-remote-cluster script, skipping"
+      fi
     fi
+
   fi
 
   if [ -n "${TEST_OPENSHIFT_MODE}" ]; then
-    if [[ -x test/run-openshift ]]; then
-      VERSION=$dir test/run-openshift
+    # In case only imagestream is deprecated
+    # and the other tests should be working
+    if [ -e ".exclude-openshift" ]; then
+      echo "-> .exclude-openshift file exists for version $dir, skipping OpenShift tests."
     else
-      echo "-> OpenShift 3 tests are not present, skipping"
+      if [[ -x test/run-openshift ]]; then
+        VERSION=$dir test/run-openshift
+      else
+        echo "-> OpenShift 3 tests are not present, skipping"
+      fi
     fi
   fi
 
