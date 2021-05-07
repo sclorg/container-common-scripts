@@ -169,6 +169,21 @@ function ct_os_get_pod_ip() {
   oc get pod "$pod_name" --no-headers -o custom-columns=IP:status.podIP
 }
 
+# ct_os_get_sti_build_logs
+# -----------------
+# Return logs from sti_build
+# Arguments: pod_name
+function ct_os_get_sti_build_logs() {
+  local pod_name="${1}"
+  # Print logs but do not failed. Just for traces
+  if oc get "bc/$pod_name"; then
+    oc logs "bc/$pod_name" || return 0
+  else
+    echo "Build config bc/$pod_name does not exist for some reason."
+    echo "Import probably failed."
+  fi
+}
+
 # ct_os_check_pod_readiness POD_PREFIX STATUS
 # --------------------
 # Checks whether the pod is ready.
@@ -195,7 +210,12 @@ function ct_os_wait_pod_ready() {
     echo -n "Waiting for ${pod_prefix} build pod to finish ..."
     while ! [ "$(ct_os_get_build_pod_status "${pod_prefix}")" == "Succeeded" ] ; do
       echo -n "."
-      [ "${SECONDS}" -gt "${timeout}0" ] && echo " FAIL" && return 1
+      [ "${SECONDS}" -gt "${timeout}0" ] && {
+        echo " FAIL";
+        ct_os_print_logs || :
+        ct_os_get_sti_build_logs "${pod_prefix}"
+        return 1
+      }
       sleep 3
     done
     echo " DONE"
@@ -204,7 +224,12 @@ function ct_os_wait_pod_ready() {
   echo -n "Waiting for ${pod_prefix} pod becoming ready ..."
   while ! ct_os_check_pod_readiness "${pod_prefix}" "true" ; do
     echo -n "."
-    [ "${SECONDS}" -gt "${timeout}" ] && echo " FAIL" && return 1
+    [ "${SECONDS}" -gt "${timeout}" ] && {
+      echo " FAIL";
+      ct_os_print_logs || :
+      ct_os_get_sti_build_logs "${pod_prefix}"
+      return 1
+    }
     sleep 3
   done
   echo " DONE"
@@ -223,7 +248,12 @@ function ct_os_wait_rc_ready() {
   while ! test "$( (oc get --no-headers statefulsets; oc get --no-headers rc) 2>/dev/null \
                  | grep "^${pod_prefix}" | awk '$2==$3 {print "ready"}')" == "ready" ; do
     echo -n "."
-    [ "${SECONDS}" -gt "${timeout}" ] && echo " FAIL" && return 1
+    [ "${SECONDS}" -gt "${timeout}" ] && {
+      echo " FAIL";
+      ct_os_print_logs || :
+      ct_os_get_sti_build_logs "${pod_prefix}"
+      return 1
+    }
     sleep 3
   done
   echo " DONE"
