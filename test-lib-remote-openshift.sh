@@ -102,13 +102,11 @@ function ct_os_import_image_ocp4() {
   deploy_image_name="${INTERNAL_DOCKER_REGISTRY}/rhscl-ci-testing/${imagestream}"
   echo "Uploading image ${image_name} as ${deploy_image_name} , ${imagestream} into external registry."
   ct_os_upload_image_external_registry "${image_name}" "${imagestream}"
-  if [ "${CT_MIRROR_IMAGE:-false}" == 'true' ]; then
-    mirror_image="registry.redhat.io/${image_name%:*}:latest"
-    echo "Mirror ${mirror_image} with ${deploy_image_name}"
-    echo "oc image mirror ${mirror_image} ${deploy_image_name}"
-    oc image mirror "${mirror_image}" "${deploy_image_name}"
+  if [ "${CT_TAG_IMAGE:-false}" == 'true' ]; then
+    echo "Tag ${deploy_image_name} to ${namespace}/${imagestream}"
+    oc tag --source=docker "${deploy_image_name}" "${namespace}/${imagestream}" --insecure=true --reference-policy=local
   else
-    echo "Import image into OpenShift 4 environment "
+    echo "Import image into OpenShift 4 environment ${namespace}/${imagestream} from ${deploy_image_name}"
     oc import-image "${namespace}/${imagestream}" --from="${deploy_image_name}" --confirm --reference-policy=local
   fi
 }

@@ -1255,7 +1255,7 @@ function ct_os_test_image_stream_quickstart() {
   # In case we are testing on OpenShift 4 export variable for mirror image
   # which means, that image is going to be mirrored from an internal registry into OpenShift 4
   if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ]; then
-    export CT_MIRROR_IMAGE=true
+    export CT_TAG_IMAGE=true
   fi
   # ct_os_test_template_app creates a new project, but we already need
   # it before for the image stream import, so tell it to skip this time
