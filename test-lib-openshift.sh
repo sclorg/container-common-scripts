@@ -839,7 +839,13 @@ function ct_os_test_template_app_func() {
       for i_t in ${other_images} ; do
         echo "${i_t}"
         IFS='|' read -ra image_tag_a <<< "${i_t}"
-        docker pull "${image_tag_a[0]}"
+        if [[ "$(docker images -q "$image_name" 2>/dev/null)" != "" ]]; then
+          echo "ERROR: Image $image_name is not pulled yet."
+          echo "Add to the beginning of scripts run-openshift-remote-cluster and run-openshift row"
+          echo "'ct_pull_image $image_name'."
+          exit 1
+        fi
+
         if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
           ct_os_import_image_ocp4 "${image_tag_a[0]}" "${image_tag_a[1]}"
         else

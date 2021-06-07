@@ -226,7 +226,7 @@ function ct_assert_container_creation_fails() {
 function ct_create_container() {
   local cid_file="$CID_FILE_DIR/$1" ; shift
   # create container with a cidfile in a directory for cleanup
-  # shellcheck disable=SC2086
+  # shellcheck disable=SC2086,SC2153
   docker run --cidfile="$cid_file" -d ${CONTAINER_ARGS:-} "$IMAGE_NAME" "$@"
   ct_wait_for_cid "$cid_file" || return 1
   : "Created container $(cat "$cid_file")"
@@ -891,7 +891,7 @@ ct_check_image_availability() {
   local public_image_name=$1;
 
   # Try pulling the image to see if it is accessible
-  if ! docker pull "$public_image_name" &>/dev/null; then
+  if ! ct_pull_image "$public_image_name" &>/dev/null; then
     echo "$public_image_name could not be downloaded via 'docker'"
     return 1
   fi
