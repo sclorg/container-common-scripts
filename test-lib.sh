@@ -52,6 +52,47 @@ function ct_enable_cleanup() {
   trap ct_cleanup EXIT SIGINT
 }
 
+# ct_pull_image
+# -------------
+# Function pull an image before tests execution
+# Argument: image_name - string containing the public name of the image to pull
+# Function returns either 0 in case of pull was successful
+# Or the test suite exit with 1 in case of pull error
+function ct_pull_image() {
+  local image_name="$1"; shift
+  local loops=${1:-10}; shift
+  local exit=${1:-"false"}
+  local loop=0
+
+  # Let's try to pull image.
+  echo "-> Pulling image $image_name ..."
+  # Sometimes in Fedora case it fails with HTTP 50X
+  # Check if the image is available locally and try to pull it if it is not
+  if [[ "$(docker images -q "$image_name" 2>/dev/null)" != "" ]]; then
+    echo "The image $image_name is already pulled."
+    if [[ x"$exit" == "xfalse" ]]; then
+      return 0
+    else
+      exit 0
+    fi
+  fi
+
+  # Try pulling the image to see if it is accessible
+  # WORKAROUND: Since Fedora registry sometimes fails randomly, let's try it more times
+  while ! docker pull "$image_name"; do
+    ((loop++)) || :
+    echo "Pulling image $image_name failed."
+    if [ "$loop" -gt "$loops" ]; then
+      echo "It happened $loops times. Giving up."
+      echo "!!! ERROR with pulling image $image_name !!!!"
+      return 1
+    fi
+    echo "Let's wait $((loop*5)) seconds and try again."
+    sleep "$((loop*5))"
+  done
+}
+
+
 # ct_check_envs_set env_filter check_envs loop_envs [env_format]
 # --------------------
 # Compares values from one list of environment variable definitions against such list,
