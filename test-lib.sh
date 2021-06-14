@@ -124,7 +124,7 @@ function ct_wait_for_cid() {
   local result=1
   while [ $attempt -le $max_attempts ]; do
     [ -f "$cid_file" ] && [ -s "$cid_file" ] && return 0
-    : "Waiting for container start..."
+    echo "Waiting for container start... $attempt"
     attempt=$(( attempt + 1 ))
     sleep $sleep_time
   done
@@ -520,7 +520,7 @@ ct_test_response() {
   local max_attempts=${4:-20}
   local ignore_error_attempts=${5:-10}
 
-  : "  Testing the HTTP(S) response for <${url}>"
+  echo "  Testing the HTTP(S) response for <${url}>"
   local sleep_time=3
   local attempt=1
   local result=1
@@ -529,6 +529,7 @@ ct_test_response() {
   local response_file
   response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
   while [ "${attempt}" -le "${max_attempts}" ]; do
+    echo "Trying to connect ... ${attempt}"
     curl --connect-timeout 10 -s -w '%{http_code}' "${url}" >"${response_file}" && status=0 || status=1
     if [ "${status}" -eq 0 ]; then
       response_code=$(tail -c 3 "${response_file}")
@@ -897,6 +898,10 @@ ct_test_app_dockerfile() {
   ct_wait_for_cid "${CID_FILE_DIR}/app_dockerfile"
 
   ip="$(ct_get_cip "${cname}")"
+  if [ -z "$ip" ]; then
+    echo "ERROR: Cannot get container's IP address."
+    return 1
+  fi
   ct_test_response "http://$ip:${port}" 200 "${expected_text}"
   ret=$?
 
