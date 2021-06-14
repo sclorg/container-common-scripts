@@ -8,7 +8,7 @@ if grep -q "Red Hat Enterprise Linux release 8" /etc/system-release; then
   exit 0
 fi
 
-origin=busybox
+origin=quay.io/quay/busybox
 squash=$(dirname "$(readlink -f "$0")")/../../squash.py
 cd "$(dirname "$0")"
 

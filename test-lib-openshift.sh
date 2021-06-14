@@ -150,6 +150,16 @@ function ct_os_get_build_pod_status() {
                           | sort -u | awk '{print $2}' | tail -n 1
 }
 
+# ct_os_get_buildconfig_pod_name POD_PREFIX
+# ----------------------------
+# Returns status of the buildconfig pod specified by prefix [pod_prefix].
+# Argument: pod_prefix - prefix
+function ct_os_get_buildconfig_pod_name() {
+  local pod_prefix="${1}" ; shift
+  local query="custom-columns=NAME:.metadata.name"
+  oc get bc -o "$query" | grep -e "${pod_prefix}" | sort -u | tail -n 1
+}
+
 # ct_os_get_pod_name POD_PREFIX
 # --------------------
 # Returns the full name of pods specified by prefix [pod_prefix].
@@ -167,6 +177,22 @@ function ct_os_get_pod_name() {
 function ct_os_get_pod_ip() {
   local pod_name="${1}"
   oc get pod "$pod_name" --no-headers -o custom-columns=IP:status.podIP
+}
+
+# ct_os_get_sti_build_logs
+# -----------------
+# Return logs from sti_build
+# Arguments: pod_name
+function ct_os_get_sti_build_logs() {
+  local pod_prefix="${1}"
+  pod_name=$(ct_os_get_buildconfig_pod_name "${pod_prefix}")
+  # Print logs but do not failed. Just for traces
+  if [ x"${pod_name}" != "x" ]; then
+    oc logs "bc/$pod_name" || return 0
+  else
+    echo "Build config bc/$pod_name does not exist for some reason."
+    echo "Import probably failed."
+  fi
 }
 
 # ct_os_check_pod_readiness POD_PREFIX STATUS
@@ -195,7 +221,12 @@ function ct_os_wait_pod_ready() {
     echo -n "Waiting for ${pod_prefix} build pod to finish ..."
     while ! [ "$(ct_os_get_build_pod_status "${pod_prefix}")" == "Succeeded" ] ; do
       echo -n "."
-      [ "${SECONDS}" -gt "${timeout}0" ] && echo " FAIL" && return 1
+      if [ "${SECONDS}" -gt "${timeout}0" ]; then
+        echo " FAIL"
+        ct_os_print_logs || :
+        ct_os_get_sti_build_logs "${pod_prefix}" || :
+        return 1
+      fi
       sleep 3
     done
     echo " DONE"
@@ -204,7 +235,12 @@ function ct_os_wait_pod_ready() {
   echo -n "Waiting for ${pod_prefix} pod becoming ready ..."
   while ! ct_os_check_pod_readiness "${pod_prefix}" "true" ; do
     echo -n "."
-    [ "${SECONDS}" -gt "${timeout}" ] && echo " FAIL" && return 1
+    if [ "${SECONDS}" -gt "${timeout}" ]; then
+      echo " FAIL";
+      ct_os_print_logs || :
+      ct_os_get_sti_build_logs "${pod_prefix}" || :
+      return 1
+    fi
     sleep 3
   done
   echo " DONE"
@@ -223,7 +259,12 @@ function ct_os_wait_rc_ready() {
   while ! test "$( (oc get --no-headers statefulsets; oc get --no-headers rc) 2>/dev/null \
                  | grep "^${pod_prefix}" | awk '$2==$3 {print "ready"}')" == "ready" ; do
     echo -n "."
-    [ "${SECONDS}" -gt "${timeout}" ] && echo " FAIL" && return 1
+    if [ "${SECONDS}" -gt "${timeout}" ]; then
+      echo " FAIL";
+      ct_os_print_logs || :
+      ct_os_get_sti_build_logs "${pod_prefix}" || :
+      return 1
+    fi
     sleep 3
   done
   echo " DONE"
@@ -331,7 +372,12 @@ function ct_os_delete_project() {
     return
   fi
   local project_name="${1:-$(oc project -q)}" ; shift || :
-  oc delete project "${project_name}"
+  if oc delete project "${project_name}" ; then
+    echo "Project ${project_name} was deleted properly"
+  else
+    echo "Project ${project_name} was not delete properly. But it does not block CI."
+  fi
+
 }
 
 # ct_delete_all_objects
