@@ -205,7 +205,7 @@ class BetkaGenerator(object):
 
     def convert_sources(self):
         generated_sources = []
-        if not self.versions_env or self.versions_env == "":
+        if not self.versions_env:
             return 1
         for ver in self.versions_env.split(' '):
             with cwd(str(self.cur_dir / ver)):
