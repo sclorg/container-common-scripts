@@ -194,7 +194,7 @@ class BetkaGenerator(object):
             shutil.copytree(self.cur_dir, f"{p}", symlinks=True)
 
     def generate_sources(self, downstream_name: str):
-        cmd = f"docker run -it --rm -v {pathlib.Path.home()}/.gitconfig:/root/.gitconfig:ro,Z " \
+        cmd = f"docker run -it --rm -v {Path.home()}/.gitconfig:/root/.gitconfig:ro,Z " \
               f"-v {self.betka_tmp_dir.name}:{self.betka_tmp_dir.name}:rw,Z -e WORKDIR={self.betka_tmp_dir.name} " \
               f"-e DOWNSTREAM_IMAGE_NAME={downstream_name} " \
               f"-e UPSTREAM_IMAGE_NAME={self.upstream_image_name} {self.cwt_docker_image}"
