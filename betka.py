@@ -206,7 +206,7 @@ class BetkaGenerator(object):
         generated_sources = []
         if not self.versions_env:
             return 1
-        for ver in self.versions_env.split(' '):
+        for ver in self.versions_env.split():
             with cwd(str(self.cur_dir / ver)):
                 self.delete_generated_dirs(ver)
                 valid_images = self.get_valid_images(ver)
