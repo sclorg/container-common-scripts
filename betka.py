@@ -122,7 +122,7 @@ class BetkaGenerator(object):
                 # https://github.com/sclorg/container-workflow-tool/tree/master/container_workflow_tool/config
                 self.cwt_config = f"{self.downstream_branch}.yaml"
         else:
-            if not self.downstream_branch or self.downstream_branch == "":
+            if not self.downstream_branch:
                 msg = f"DOWNSTREAM_BRANCH is not specified.\n" \
                       f"Examples:\n" \
                       f"rhel-8.3.0 for RHEL8\n" \
