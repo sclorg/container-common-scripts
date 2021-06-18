@@ -26,12 +26,12 @@ import os
 import subprocess
 import sys
 import shutil
-
 from typing import List
 from pathlib import Path
 from contextlib import contextmanager
 from os import getenv
 from tempfile import TemporaryDirectory
+from collections import namedtuple
 
 
 def run_cmd(cmd, return_output=False, ignore_error=False, shell=False, **kwargs):
@@ -102,18 +102,32 @@ class BetkaGenerator(object):
 
     def check_requirements(self) -> bool:
         if self.os_env == "centos7":
-            msg = f"Target has to be specified.\n"\
-                  "CentOS7 is not supported.\n"\
-                  "e.g. make betka TARGET=fedora VERSIONS=XY\n"
+            msg = """
+'centos7' target is not supported.
+Target has to be e.g. rhel7, fedora or rhel8.
+e.g. make betka TARGET=fedora VERSIONS=XY
+            """
             print(msg)
             return False
         if self.cwt_docker_image == "":
-            msg = f"Docker image for generating dist-git sources for RHEL has to be specified.\n"\
-                  "Ask pkubat@redhat.com, hhorak@redhat.com or phracek@redhat.com for the name."
+            msg = """
+Docker image for generating dist-git sources for RHEL has to be specified.
+Ask pkubat@redhat.com, hhorak@redhat.com or phracek@redhat.com for the name.
+            """
             print(msg)
             return False
         if self.os_env == "fedora":
+            msg = f"""
+For generating dist-git sources to Fedora {self.cwt_docker_image} is used.
+'make betka' will try to sync main branch in Fedora land.
+            """
+            print(msg)
             if not self.downstream_branch:
+                msg = """
+If you want to change it then specify it by parameter DOWNSTREAM_BRANCH,
+like 'make betka TARGET=fedora DOWNSTREAM_BRANCH=f32'
+                """
+                print(msg)
                 self.cwt_config = "default.yaml"
             else:
                 # Examples config for F34 is f34.yaml
@@ -122,20 +136,24 @@ class BetkaGenerator(object):
                 self.cwt_config = f"{self.downstream_branch}.yaml"
         else:
             if not self.downstream_branch:
-                msg = f"DOWNSTREAM_BRANCH is not specified.\n" \
-                      f"Examples:\n" \
-                      f"rhel-8.3.0 for RHEL8\n" \
-                      f"rhscl-3.6-rhel7 for RHEL7\n" \
-                      f"For more details ask pkubat@redhat.com or phracek@redhat.com\n"
+                msg = """
+DOWNSTREAM_BRANCH is not specified.
+Examples:
+rhel-8.3.0 for RHEL8
+rhscl-3.6-rhel7 for RHEL7
+For more details ask pkubat@redhat.com or phracek@redhat.com
+                """
                 print(msg)
                 return False
             self.cwt_command = "rhcwt"
-        git_config = Path(pathlib.Path.home()) / ".gitconfig"
+        git_config = Path.home() / ".gitconfig"
         if not git_config.exists():
-            msg = f"File {git_config} is mandatory for using CWT tool." \
-                  f"Create it by commands:" \
-                  f"git config --global user.mail <your mail>" \
-                  f"git config --global user.name <your name>"
+            msg = f"""
+File {git_config} is mandatory for using CWT tool.
+Create it by commands:
+git config --global user.mail <your mail>
+git config --global user.name <your name>
+            """
             print(msg)
             return False
         return True
@@ -143,7 +161,7 @@ class BetkaGenerator(object):
     def delete_generated_dirs(self, ver: str):
         results_dir: Path = self.cur_dir / f"results-{ver}"
         if results_dir.exists():
-            print(f"Results dir {results_dir} already exists. Delete it.")
+            print(f"results-{ver} dir was previously generated. Delete it to generate new sources.")
             shutil.rmtree(results_dir)
 
     def get_valid_images(self, ver) -> List[str]:
@@ -153,44 +171,32 @@ class BetkaGenerator(object):
               f" --config={self.cwt_config} utils listupstream'"
         docker_output = run_cmd(cmd, return_output=True, shell=True)
         valid_images = []
-        for x in docker_output.split('\n'):
+        for line in docker_output.split('\n'):
             # Fields are:
             # python-27 python-27 s2i-python-container https://github.com/sclorg/s2i-python-container.git 2.7 rhel-8.4.0
-            if self.upstream_image_name in x and ver == x.split(' ')[4]:
-                valid_images.append(x)
+            if self.upstream_image_name in line and ver == line.split(" ")[4]:
+                valid_images.append(line)
         print(f"Valid images {valid_images}")
         return valid_images
 
     def convert_branch_to_cwt_tool(self):
         fields = self.downstream_branch.split('-')
         if self.os_env == "rhel7":
-            self.cwt_config = f"rhel7.yaml:{fields[0]}{fields[1].replace('.','')}"
+            self.cwt_config = f"rhel7.yaml:{fields[0]}{fields[1].replace('.','')}0"
         else:
             release_fields = fields[1].split('.')
             self.cwt_config = f"rhel8.yaml:{fields[0]}{release_fields[0]}.{release_fields[1]}"
 
-    def check_parameters(self):
-        if self.os_env == "fedora":
-            msg = f"For generating dist-git sources to Fedora {self.cwt_docker_image} is used." \
-                  f"'make betka' will try to sync main branch in Fedora land." \
-                  f"If you want to change it then specify it by parameter DOWNSTREAM_BRANCH," \
-                  f"like 'make betka TARGET=fedora DOWNSTREAM_BRANCH=f32'"
-            print(msg)
-        if self.os_env == "centos7":
-            return 1
-
     def clone_and_switch_to_branch(self, downstream_name: str, branch_name: str):
-        cmd = f"git clone {self.clone_url}/{downstream_name} {self.betka_tmp_dir.name}/results"
+        cmd = f"git clone --branch {branch_name} {self.clone_url}/{downstream_name} {self.betka_tmp_dir.name}/results"
         run_cmd(cmd, shell=True)
-        with cwd(f"{self.betka_tmp_dir.name}/results"):
-            cmd = f"git checkout {branch_name}"
-            run_cmd(cmd, shell=True)
 
     def copy_upstream_sources(self):
         p = Path(f"{self.betka_tmp_dir.name}/{self.upstream_image_name}")
-        if not p.exists():
-            print(f"Upstream sources are copied to {p}")
-            shutil.copytree(self.cur_dir, f"{p}", symlinks=True)
+        if p.exists():
+            shutil.rmtree(p)
+        print(f"Upstream sources are copied to {p}")
+        shutil.copytree(self.cur_dir, f"{p}", symlinks=True)
 
     def generate_sources(self, downstream_name: str):
         cmd = f"docker run -it --rm -v {Path.home()}/.gitconfig:/root/.gitconfig:ro,Z " \
@@ -210,14 +216,20 @@ class BetkaGenerator(object):
             with cwd(str(self.cur_dir / ver)):
                 self.delete_generated_dirs(ver)
                 valid_images = self.get_valid_images(ver)
+                # ['rh-nodejs14 nodejs-14 s2i-nodejs-container https://github.com/sclorg/s2i-nodejs-container.git 14 rhscl-3.6-rhel-7']
+                ImageInfo = namedtuple(
+                    'ImageInfo', ["downstream_name", "image_name", "upstream_name", "git_url", "ver", "branch"]
+                )
                 for img in valid_images:
                     self.betka_tmp_dir = TemporaryDirectory()
-                    img_fields = img.split()
+                    img_info = ImageInfo._make(img.split())
                     self.ups_sources = f"{self.betka_tmp_dir.name}/{self.upstream_image_name}"
                     self.copy_upstream_sources()
-                    self.clone_and_switch_to_branch(downstream_name=img_fields[0], branch_name=img_fields[5])
-                    self.generate_sources(downstream_name=img_fields[0])
-                    self.copy_generated_source(ver=img_fields[4])
+                    self.clone_and_switch_to_branch(
+                        downstream_name=img_info.downstream_name, branch_name=img_info.branch
+                    )
+                    self.generate_sources(downstream_name=img_info.downstream_name)
+                    self.copy_generated_source(ver=img_info.ver)
                     generated_sources.append(f"results-{ver}")
                     self.betka_tmp_dir.cleanup()
         if generated_sources:
