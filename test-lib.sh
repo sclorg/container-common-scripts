@@ -765,6 +765,83 @@ EOF
     )
 }
 
+# ct_s2i_multistage_build APP_PATH SRC_IMAGE DST_IMAGE SEC_IMAGE [S2I_ARGS]
+# ----------------------------
+# Create a new s2i app image from local sources in a similar way as source-to-image would have used.
+# Argument: APP_PATH - local path to the app sources to be used in the test
+# Argument: SRC_IMAGE - image to be used as a base for the s2i build process
+# Argument: SEC_IMAGE - image to be used as the base for the result of the build process
+# Argument: DST_IMAGE - image name to be used during the tagging of the s2i build result
+# Argument: S2I_ARGS - Additional list of source-to-image arguments.
+#                      Only used to check for environment variable definitions.
+ct_s2i_multistage_build() {
+
+  local app_path=$1; shift
+  local src_image=$1; shift
+  local sec_image=$1; shift
+  local dst_image=$1; shift
+  local s2i_args=$*;
+  local local_app="app-src"
+  local user_id=
+  local mount_options=
+
+
+  # Run the entire thing inside a subshell so that we do not leak shell options outside of the function
+  (
+  # Error out if any part of the build fails
+  set -e
+
+  user=$(docker inspect -f "{{.Config.User}}" "$src_image")
+  # Default to root if no user is set by the image
+  user=${user:-0}
+  # run the user through the image in case it is non-numeric or does not exist
+  # NOTE: The '-eq' test is used to check if $user is numeric as it will fail if $user is not an integer
+  if ! [ "$user" -eq "$user" ] 2>/dev/null && ! user_id=$(docker run --rm "$src_image" bash -c "id -u $user 2>/dev/null"); then
+      echo "ERROR: id of user $user not found inside image $src_image."
+      echo "Terminating s2i build."
+      return 1
+  else
+      user_id=${user_id:-$user}
+  fi
+
+  # Use /tmp to not pollute cwd
+  tmpdir=$(mktemp -d)
+  df_name=$(mktemp -p "$tmpdir" Dockerfile.XXXX)
+  cd "$tmpdir"
+
+  # Strip file:// from APP_PATH and copy its contents into current context
+  mkdir -p "$local_app"
+  cp -r "${app_path/file:\/\//}/." "$local_app"
+
+  cat <<EOF >"$df_name"
+# First stage builds the application
+FROM $src_image as builder
+# Add application sources to a directory that the assemble script expects them
+# and set permissions so that the container runs without root access
+USER 0
+ADD app-src /tmp/src
+RUN chown -R 1001:0 /tmp/src
+$(echo "$s2i_args" | grep -o -e '\(-e\|--env\)[[:space:]=]\S*=\S*' | sed -e 's/-e /ENV /' -e 's/--env[ =]/ENV /')
+# Check if CA autority is present on host and add it into Dockerfile
+$([ -f "$(full_ca_file_path)" ] && echo "RUN cd /etc/pki/ca-trust/source/anchors && update-ca-trust extract")
+USER $user_id
+# Install the dependencies
+RUN /usr/libexec/s2i/assemble
+# Second stage copies the application to the minimal image
+FROM $sec_image
+# Copy the application source and build artifacts from the builder image to this one
+COPY --from=builder \$HOME \$HOME
+# Set the default command for the resulting image
+CMD /usr/libexec/s2i/run
+EOF
+
+  # Check if -v parameter is present in s2i_args and add it into docker build command
+  mount_options=$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)
+
+  docker build "$mount_options" -f "$df_name" --no-cache=true -t "$dst_image" .
+  )
+}
+
 # ct_check_image_availability PUBLIC_IMAGE_NAME
 # ----------------------------
 # Pull an image from the public repositories to see if the image is already available.
