@@ -42,6 +42,21 @@ Similar to `make test` but runs testsuite for Openshift 3, expected to be found 
 Similar to `make test` but runs testsuite for Openshift 4, expected to be found at
 `$gitroot/$version/test/run-openshift-remote-cluster`
 
+`make betka`
+Runs script betka.sh that generates sources for the dist-git repo. Only Fedora,
+RHEL7 and RHEL8 are supported.
+For source generation into Fedora or RHEL dist-git repositories,
+some parameters are mandatory.
+DOCKER_IMAGE parameter for Fedora case is `quay.io/rhscl/cwt-generator`,
+for RHEL world please ask pkubat@redhat.com, phracek@redhat.com, or hhorak@redhat.com.
+
+E.g. command for the source generation into Fedora dist-repo
+`https://src.fedoraproject.org/container/nodejs` into main branch is:
+`make betka TARGET=fedora VERSIONS=12`
+
+The sources are not generated directly into dist-git repository,
+but into created `results` directory.
+
 `make clean`  
 Runs scripts that clean-up the working dir. Depends on the `clean-images` rule by default
 and additional clean rules can be provided through the `clean-hook` variable.

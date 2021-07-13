@@ -15,6 +15,7 @@ testr = $(SHELL) $(common_dir)/test-remote-cluster.sh
 shellcheck =  $(SHELL) $(common_dir)/run-shellcheck.sh
 tag =   $(SHELL) $(common_dir)/tag.sh
 clean = $(SHELL) $(common_dir)/clean.sh
+betka = $(SHELL) $(common_dir)/betka.sh
 
 DG ?= /bin/dg
 
@@ -113,6 +114,13 @@ shellcheck:
 .PHONY: tag
 tag: build
 	VERSIONS="$(VERSIONS)" $(script_env) $(tag)
+
+.PHOHY: betka
+betka:
+	VERSIONS="$(VERSIONS)" \
+    DOWNSTREAM_NAME="$(DOWNSTREAM_NAME)" \
+    DOCKER_IMAGE="$(DOCKER_IMAGE)" \
+    $(script_env) $(betka)
 
 .PHONY: clean clean-hook clean-images clean-versions
 clean: clean-images
