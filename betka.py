@@ -26,7 +26,8 @@ import os
 import subprocess
 import sys
 import shutil
-from typing import List
+import logging
+from typing import List, Any, Optional
 from pathlib import Path
 from contextlib import contextmanager
 from os import getenv
@@ -34,7 +35,13 @@ from tempfile import TemporaryDirectory
 from collections import namedtuple
 
 
-def run_cmd(cmd, return_output=False, ignore_error=False, shell=False, **kwargs):
+if getenv("DEBUG_MODE") == "true":
+    logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
+else:
+    logging.basicConfig(format="%(message)s", level=logging.INFO)
+
+
+def run_cmd(cmd: str, return_output: bool = False, ignore_error: bool = False, shell: bool = False) -> Any:
     """
     Run provided command on host system using the same user as invoked this code.
     Raises subprocess.CalledProcessError if it fails.
@@ -46,7 +53,7 @@ def run_cmd(cmd, return_output=False, ignore_error=False, shell=False, **kwargs)
             please check `help(subprocess.Popen)`
     :return: None or str
     """
-    print(f"command: {cmd}")
+    logging.debug(f"command: {cmd}")
     try:
         if return_output:
             return subprocess.check_output(
@@ -54,10 +61,9 @@ def run_cmd(cmd, return_output=False, ignore_error=False, shell=False, **kwargs)
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
                 shell=shell,
-                **kwargs,
             )
         else:
-            return subprocess.check_call(cmd, shell=shell, **kwargs)
+            return subprocess.check_call(cmd, shell=shell)
     except subprocess.CalledProcessError as cpe:
         if ignore_error:
             if return_output:
@@ -65,12 +71,12 @@ def run_cmd(cmd, return_output=False, ignore_error=False, shell=False, **kwargs)
             else:
                 return cpe.returncode
         else:
-            print(f"ERROR: failed with code {cpe.returncode} and output:\n{cpe.output}")
+            logging.error(f"ERROR: failed with code {cpe.returncode} and output:\n{cpe.output}")
             raise cpe
 
 
 @contextmanager
-def cwd(target):
+def cwd(target: str) -> Any:
     """
     Manage cwd in a pushd/popd fashion.
     Usage:
@@ -85,15 +91,20 @@ def cwd(target):
         os.chdir(curdir)
 
 
+# ['rh-nodejs14 nodejs-14 s2i-nodejs-container https://github.com/sclorg/s2i-nodejs-container.git 14 rhscl-3.6-rhel-7']
+ImageInfo = namedtuple(
+    'ImageInfo', ["downstream_name", "image_name", "upstream_name", "git_url", "ver", "branch"]
+)
+
+
 class BetkaGenerator(object):
 
-    def __init__(self):
-        self.betka_tmp_dir = None
-        self.os_env: str = getenv("OS")
-        self.versions_env: str = getenv("VERSIONS")
-        self.cwt_docker_image: str = getenv("CWT_DOCKER_IMAGE")
-        self.downstream_branch: str = getenv("DOWNSTREAM_BRANCH")
-        self.clone_url: str = getenv("CLONE_URL")
+    def __init__(self) -> None:
+        self.os_env: Optional[str] = getenv("OS")
+        self.versions_env: Optional[str] = getenv("VERSIONS")
+        self.cwt_docker_image: Optional[str] = getenv("CWT_DOCKER_IMAGE")
+        self.downstream_branch: Optional[str] = getenv("DOWNSTREAM_BRANCH")
+        self.clone_url: Optional[str] = getenv("CLONE_URL")
         self.cur_dir: Path = Path.cwd()
         self.cwt_command = "cwt"
         self.cwt_config = "default.yaml"
@@ -107,27 +118,22 @@ class BetkaGenerator(object):
 Target has to be e.g. rhel7, fedora or rhel8.
 e.g. make betka TARGET=fedora VERSIONS=XY
             """
-            print(msg)
+            logging.info(msg)
             return False
         if self.cwt_docker_image == "":
             msg = """
 Docker image for generating dist-git sources for RHEL has to be specified.
 Ask pkubat@redhat.com, hhorak@redhat.com or phracek@redhat.com for the name.
             """
-            print(msg)
+            logging.info(msg)
             return False
         if self.os_env == "fedora":
-            msg = f"""
-For generating dist-git sources to Fedora {self.cwt_docker_image} is used.
-'make betka' will try to sync main branch in Fedora land.
-            """
-            print(msg)
             if not self.downstream_branch:
-                msg = """
-If you want to change it then specify it by parameter DOWNSTREAM_BRANCH,
+                msg = """The DOWNSTREAM_BRANCH parameter is not specified.
+Sources are synced to main branch. If you want to change it, specify DOWNSTREAM_BRANCH parameter
 like 'make betka TARGET=fedora DOWNSTREAM_BRANCH=f32'
                 """
-                print(msg)
+                logging.info(msg)
                 self.cwt_config = "default.yaml"
             else:
                 # Examples config for F34 is f34.yaml
@@ -143,7 +149,7 @@ rhel-8.3.0 for RHEL8
 rhscl-3.6-rhel7 for RHEL7
 For more details ask pkubat@redhat.com or phracek@redhat.com
                 """
-                print(msg)
+                logging.info(msg)
                 return False
             self.cwt_command = "rhcwt"
         git_config = Path.home() / ".gitconfig"
@@ -154,17 +160,17 @@ Create it by commands:
 git config --global user.mail <your mail>
 git config --global user.name <your name>
             """
-            print(msg)
+            logging.info(msg)
             return False
         return True
 
-    def delete_generated_dirs(self, ver: str):
+    def delete_generated_dirs(self, ver: str) -> Any:
         results_dir: Path = self.cur_dir / f"results-{ver}"
         if results_dir.exists():
-            print(f"results-{ver} dir was previously generated. Delete it to generate new sources.")
+            logging.debug(f"results-{ver} dir was previously generated. Delete it to generate new sources.")
             shutil.rmtree(results_dir)
 
-    def get_valid_images(self, ver) -> List[str]:
+    def get_valid_images(self, ver: str) -> List[str]:
         if self.os_env != "fedora":
             self.convert_branch_to_cwt_tool()
         cmd = f"docker run -it --rm {self.cwt_docker_image} bash -c '{self.cwt_command}" \
@@ -176,10 +182,11 @@ git config --global user.name <your name>
             # python-27 python-27 s2i-python-container https://github.com/sclorg/s2i-python-container.git 2.7 rhel-8.4.0
             if self.upstream_image_name in line and ver == line.split(" ")[4]:
                 valid_images.append(line)
-        print(f"Valid images {valid_images}")
+        logging.debug(f"Valid images {valid_images}")
         return valid_images
 
-    def convert_branch_to_cwt_tool(self):
+    def convert_branch_to_cwt_tool(self) -> Any:
+        assert isinstance(self.downstream_branch, str)
         fields = self.downstream_branch.split('-')
         if self.os_env == "rhel7":
             self.cwt_config = f"rhel7.yaml:{fields[0]}{fields[1].replace('.','')}0"
@@ -187,28 +194,29 @@ git config --global user.name <your name>
             release_fields = fields[1].split('.')
             self.cwt_config = f"rhel8.yaml:{fields[0]}{release_fields[0]}.{release_fields[1]}"
 
-    def clone_and_switch_to_branch(self, downstream_name: str, branch_name: str):
+    def clone_and_switch_to_branch(self, downstream_name: str, branch_name: str) -> Any:
         cmd = f"git clone --branch {branch_name} {self.clone_url}/{downstream_name} {self.betka_tmp_dir.name}/results"
         run_cmd(cmd, shell=True)
 
-    def copy_upstream_sources(self):
+    def copy_upstream_sources(self) -> Any:
         p = Path(f"{self.betka_tmp_dir.name}/{self.upstream_image_name}")
         if p.exists():
             shutil.rmtree(p)
-        print(f"Upstream sources are copied to {p}")
+        logging.debug(f"Upstream sources are copied to {p}")
         shutil.copytree(self.cur_dir, f"{p}", symlinks=True)
 
-    def generate_sources(self, downstream_name: str):
-        cmd = f"docker run -it --rm -v {Path.home()}/.gitconfig:/root/.gitconfig:ro,Z " \
-              f"-v {self.betka_tmp_dir.name}:{self.betka_tmp_dir.name}:rw,Z -e WORKDIR={self.betka_tmp_dir.name} " \
-              f"-e DOWNSTREAM_IMAGE_NAME={downstream_name} " \
-              f"-e UPSTREAM_IMAGE_NAME={self.upstream_image_name} {self.cwt_docker_image}"
+    def generate_sources(self, downstream_name: str) -> Any:
+        cmd = f"""docker run -it --rm -v {Path.home()}/.gitconfig:/root/.gitconfig:ro,Z \
+-v {self.betka_tmp_dir.name}:{self.betka_tmp_dir.name}:rw,Z -e WORKDIR={self.betka_tmp_dir.name} \
+-e DOWNSTREAM_IMAGE_NAME={downstream_name} \
+-e UPSTREAM_IMAGE_NAME={self.upstream_image_name} {self.cwt_docker_image}
+"""
         run_cmd(cmd, shell=True)
 
-    def copy_generated_source(self, ver: str):
-        shutil.copytree(self.ups_sources, self.cur_dir / f"results-{ver}", symlinks=True)
+    def copy_generated_source(self, ver: str) -> Any:
+        shutil.copytree(Path(f"{self.betka_tmp_dir.name}/results"), self.cur_dir / f"results-{ver}", symlinks=True)
 
-    def convert_sources(self):
+    def convert_sources(self) -> int:
         generated_sources = []
         if not self.versions_env:
             return 1
@@ -216,10 +224,9 @@ git config --global user.name <your name>
             with cwd(str(self.cur_dir / ver)):
                 self.delete_generated_dirs(ver)
                 valid_images = self.get_valid_images(ver)
-                # ['rh-nodejs14 nodejs-14 s2i-nodejs-container https://github.com/sclorg/s2i-nodejs-container.git 14 rhscl-3.6-rhel-7']
-                ImageInfo = namedtuple(
-                    'ImageInfo', ["downstream_name", "image_name", "upstream_name", "git_url", "ver", "branch"]
-                )
+                if not valid_images:
+                    logging.info(f"'{self.cwt_command}' did not detect any valid images by command 'utils listupstream'.")
+                    return 0
                 for img in valid_images:
                     self.betka_tmp_dir = TemporaryDirectory()
                     img_info = ImageInfo._make(img.split())
@@ -233,8 +240,9 @@ git config --global user.name <your name>
                     generated_sources.append(f"results-{ver}")
                     self.betka_tmp_dir.cleanup()
         if generated_sources:
-            print("Dist-git sources generated by 'make betka' are stored in this/these directories:")
-            print('\n'.join(generated_sources))
+            logging.info("Dist-git sources generated by 'make betka' are stored in this/these directories:")
+            logging.info("\n".join(generated_sources))
+        return 0
 
 
 if __name__ == "__main__":
