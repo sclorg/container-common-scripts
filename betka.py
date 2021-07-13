@@ -120,7 +120,7 @@ e.g. make betka TARGET=fedora VERSIONS=XY
             """
             logging.info(msg)
             return False
-        if self.cwt_docker_image == "":
+        if not self.cwt_docker_image:
             msg = """
 Docker image for generating dist-git sources for RHEL has to be specified.
 Ask pkubat@redhat.com, hhorak@redhat.com or phracek@redhat.com for the name.
@@ -173,8 +173,9 @@ git config --global user.name <your name>
     def get_valid_images(self, ver: str) -> List[str]:
         if self.os_env != "fedora":
             self.convert_branch_to_cwt_tool()
-        cmd = f"docker run -it --rm {self.cwt_docker_image} bash -c '{self.cwt_command}" \
-              f" --config={self.cwt_config} utils listupstream'"
+        cmd = f"""docker run -it --rm {self.cwt_docker_image} bash -c '{self.cwt_command} \
+--config={self.cwt_config} utils listupstream'
+"""
         docker_output = run_cmd(cmd, return_output=True, shell=True)
         valid_images = []
         for line in docker_output.split('\n'):
