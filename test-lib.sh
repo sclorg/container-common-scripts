@@ -2,11 +2,11 @@
 #
 # Test a container image.
 #
-# Always use sourced from a specific container testfile 
+# Always use sourced from a specific container testfile
 #
 # reguires definition of CID_FILE_DIR
 # CID_FILE_DIR=$(mktemp --suffix=<container>_test_cidfiles -d)
-# reguires definition of TEST_LIST 
+# reguires definition of TEST_LIST
 # TEST_LIST="\
 # ctest_container_creation
 # ctest_doc_content"
