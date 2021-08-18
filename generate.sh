@@ -120,6 +120,9 @@ EOF
 }
 
 for version in ${VERSIONS}; do
+    # SKIP_GENERATOR_FOR is an array of versions we don't generate
+    # via distgen and therefore missing configuration is not a problem.
+    [[ ${SKIP_GENERATOR_FOR[*]} =~ (^|[[:space:]])"${version}"($|[[:space:]]) ]] && continue
     # Get a working combination of distgen options for this version
     while read -r combination; do
         # line looks like: --distro rhel-7-x86_64.yaml --multispec-selector version=9.4

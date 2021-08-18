@@ -144,6 +144,7 @@ MANIFEST_FILE ?= manifest.sh
 auto_targets.mk: $(MANIFEST_FILE)
 	MANIFEST_FILE="$(MANIFEST_FILE)" \
 	VERSIONS="$(VERSIONS)" \
+	SKIP_GENERATOR_FOR="${SKIP_GENERATOR_FOR}" \
 	$(generator)
 
 # triggers build of auto_targets.mk automatically
