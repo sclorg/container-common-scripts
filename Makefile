@@ -32,6 +32,11 @@ test: check
 shellcheck:
 	./run-shellcheck.sh `git ls-files *.sh`
 
+pre-commit-check:
+	pip3 install pre-commit
+	pre-commit install
+	pre-commit run --all
+
 check-failures: check-test-lib
 	cd tests/failures/check && make tag && ! make check && make clean
 	grep -q "Red Hat Enterprise Linux release 8" /etc/system-release || cd tests/failures/check && make tag SKIP_SQUASH=0
