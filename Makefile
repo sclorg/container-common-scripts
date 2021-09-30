@@ -33,7 +33,6 @@ shellcheck:
 	./run-shellcheck.sh `git ls-files *.sh`
 
 pre-commit-check:
-	pip3 install pre-commit
 	pre-commit install
 	pre-commit run --all
 

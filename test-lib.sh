@@ -867,7 +867,7 @@ ct_test_app_dockerfile() {
 
   if [ -d "$app_url" ] ; then
     echo "Copying local folder: $app_url -> $app_dir."
-    cp -Lr $app_url $app_dir
+    cp -Lr "$app_url" "$app_dir"
   else
     # If app_url contains @, the string after @ is considered
     # as a name of a branch to clone instead of the main/master branch
