@@ -70,7 +70,10 @@ jobs:
 
       - name: Switch to final state
         run: |
-          if [ {{ steps.shellcheck_tests.outputs.exit_status }} == 0 ] && [ {{ steps.pre_commit_tests.outputs.exit_status }} == 0 ]; then
+          echo "Result from shellcheck_tests is ${{ steps.shellcheck_tests.outputs.exit_status }}"
+          echo "Result from pre_commit_tests is ${{ steps.pre_commit_tests.outputs.exit_status }}"
+
+          if [[ ${{ steps.shellcheck_tests.outputs.exit_status }} == 0 ]] && [[ ${{ steps.pre_commit_tests.outputs.exit_status }} == 0 ]]; then
             FINAL_STATE="success"
           else
             FINAL_STATE="failure"
@@ -80,7 +83,7 @@ jobs:
             "sha": "${{ steps.sha.outputs.SHA }}",
             "state": "${FINAL_STATE}",
             "context": "Sanity tests",
-            "description": "Build finished",
+            "description": "Build finished"
           }
           EOF
           cat final.json
