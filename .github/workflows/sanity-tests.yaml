@@ -33,7 +33,7 @@ jobs:
       - name: Install needed dependences for sanity checks
         id: sched_test
         run: |
-          apt-get update && apt-get -y install curl jq make git shellcheck
+          sudo apt-get update && sudo apt-get -y install curl jq make git shellcheck
 
       - name: Create status check to pending
         id: pending
