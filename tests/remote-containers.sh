@@ -8,7 +8,7 @@ for image in ${TESTED_IMAGES}; do
     IMAGES[$image]=master
 done
 
-OS=centos7
+test -n "${OS-}" || false 'make sure $OS is defined'
 
 MERGE_INTO=origin/master
 
