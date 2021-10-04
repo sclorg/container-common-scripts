@@ -56,12 +56,14 @@ function ct_enable_cleanup() {
 # -------------
 # Function pull an image before tests execution
 # Argument: image_name - string containing the public name of the image to pull
+# Argument: exit - in case "true" is defined and pull failed, then script has to exit with 1 and no tests are executed
+# Argument: loops - how many times to pull image in case of failure
 # Function returns either 0 in case of pull was successful
 # Or the test suite exit with 1 in case of pull error
 function ct_pull_image() {
   local image_name="$1"; shift
+  local exit=${1:-"false"}; shift
   local loops=${1:-10}; shift
-  local exit=${1:-"false"}
   local loop=0
 
   # Let's try to pull image.
@@ -70,11 +72,7 @@ function ct_pull_image() {
   # Check if the image is available locally and try to pull it if it is not
   if [[ "$(docker images -q "$image_name" 2>/dev/null)" != "" ]]; then
     echo "The image $image_name is already pulled."
-    if [[ x"$exit" == "xfalse" ]]; then
-      return 0
-    else
-      exit 0
-    fi
+    return 0
   fi
 
   # Try pulling the image to see if it is accessible
@@ -85,7 +83,11 @@ function ct_pull_image() {
     if [ "$loop" -gt "$loops" ]; then
       echo "Pulling of image $image_name failed $loops times in a row. Giving up."
       echo "!!! ERROR with pulling image $image_name !!!!"
-      return 1
+      if [[ x"$exit" == "xfalse" ]]; then
+        return 1
+      else
+        exit 1
+      fi
     fi
     echo "Let's wait $((loop*5)) seconds and try again."
     sleep "$((loop*5))"
