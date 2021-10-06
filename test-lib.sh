@@ -83,7 +83,7 @@ function ct_pull_image() {
     ((loop++)) || :
     echo "Pulling image $image_name failed."
     if [ "$loop" -gt "$loops" ]; then
-      echo "It happened $loops times. Giving up."
+      echo "Pulling of image $image_name failed $loops times in a row. Giving up."
       echo "!!! ERROR with pulling image $image_name !!!!"
       return 1
     fi
