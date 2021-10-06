@@ -83,7 +83,8 @@ function ct_pull_image() {
     if [ "$loop" -gt "$loops" ]; then
       echo "Pulling of image $image_name failed $loops times in a row. Giving up."
       echo "!!! ERROR with pulling image $image_name !!!!"
-      if [[ x"$exit" == "xfalse" ]]; then
+      # shellcheck disable=SC2268
+      if [[ x"$exit" == x"false" ]]; then
         return 1
       else
         exit 1

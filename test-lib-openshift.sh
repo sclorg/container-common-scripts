@@ -839,10 +839,11 @@ function ct_os_test_template_app_func() {
       for i_t in ${other_images} ; do
         echo "${i_t}"
         IFS='|' read -ra image_tag_a <<< "${i_t}"
-        if [[ "$(docker images -q "$image_name" 2>/dev/null)" != "" ]]; then
+        if [[ "$(docker images -q "$image_name" 2>/dev/null)" == "" ]]; then
           echo "ERROR: Image $image_name is not pulled yet."
+          docker images
           echo "Add to the beginning of scripts run-openshift-remote-cluster and run-openshift row"
-          echo "'ct_pull_image $image_name'."
+          echo "'ct_pull_image $image_name true'."
           exit 1
         fi
 
