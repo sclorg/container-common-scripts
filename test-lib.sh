@@ -809,9 +809,15 @@ ct_s2i_multistage_build() {
   df_name=$(mktemp -p "$tmpdir" Dockerfile.XXXX)
   cd "$tmpdir"
 
-  # Strip file:// from APP_PATH and copy its contents into current context
-  mkdir -p "$local_app"
-  cp -r "${app_path/file:\/\//}/." "$local_app"
+  # If the app_path looks like an URL, clone it
+  # Otherwise let's try to handle it as a local path
+  if [[ "$app_path" == "https"* ]] ; then
+    ct_clone_git_repository "$app_path" "$local_app"
+  else
+    mkdir -p "$local_app"
+    # Strip file:// from APP_PATH and copy its contents into current context
+    cp -r "${app_path/file:\/\//}/." "$local_app"
+  fi
 
   cat <<EOF >"$df_name"
 # First stage builds the application
