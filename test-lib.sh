@@ -900,6 +900,31 @@ ct_show_resources()
   lscpu
 }
 
+# ct_clone_git_repository
+# -----------------------------
+# Argument: app_url - git URI pointing to a repository, supports "@" to indicate a different branch
+# Argument: app_dir - name of the directory to clone the repository into
+ct_clone_git_repository()
+{
+  local app_url=$1; shift
+  local app_dir=$1
+
+  # If app_url contains @, the string after @ is considered
+  # as a name of a branch to clone instead of the main/master branch
+  IFS='@' read -ra git_url_parts <<< "${app_url}"
+
+  if [ -n "${git_url_parts[1]}" ]; then
+    git_clone_cmd="git clone --branch ${git_url_parts[1]} ${git_url_parts[0]} ${app_dir}"
+  else
+    git_clone_cmd="git clone ${app_url} ${app_dir}"
+  fi
+
+  if ! $git_clone_cmd ; then
+    echo "ERROR: Git repository ${app_url} cannot be cloned into ${app_dir}."
+    return 1
+  fi
+}
+
 # ct_test_app_dockerfile
 # -----------------------------
 # Argument: dockerfile - path to a Dockerfile that will be used for building an image
@@ -946,18 +971,7 @@ ct_test_app_dockerfile() {
     echo "Copying local folder: $app_url -> $app_dir."
     cp -Lr "$app_url" "$app_dir"
   else
-    # If app_url contains @, the string after @ is considered
-    # as a name of a branch to clone instead of the main/master branch
-    IFS='@' read -ra git_url_parts <<< "${app_url}"
-
-    if [ -n "${git_url_parts[1]}" ]; then
-      git_clone_cmd="git clone --branch ${git_url_parts[1]} ${git_url_parts[0]} ${app_dir}"
-    else
-      git_clone_cmd="git clone ${app_url} ${app_dir}"
-    fi
-
-    if ! $git_clone_cmd ; then
-      echo "ERROR: Git repository ${app_url} cannot be cloned into ${app_dir}."
+    if ! ct_clone_git_repository "$app_url" "$app_dir" ; then
       echo "Terminating the Dockerfile build."
       return 1
     fi
