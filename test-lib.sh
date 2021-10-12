@@ -670,7 +670,7 @@ ct_s2i_build_as_df()
     local df_name=
     local tmpdir=
     local incremental=false
-    local mount_options=""
+    local mount_options=()
 
     # Run the entire thing inside a subshell so that we do not leak shell options outside of the function
     (
@@ -757,11 +757,10 @@ EOF
     fi
 
     # Check if -v parameter is present in s2i_args and add it into docker build command
-    mount_options=$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)
+    read -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
     # Run the build and tag the result
-    # shellcheck disable=SC2086
-    docker build $mount_options -f "$df_name" --no-cache=true -t "$dst_image" .
+    docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" --no-cache=true -t "$dst_image" .
     )
 }
 
@@ -783,7 +782,7 @@ ct_s2i_multistage_build() {
   local s2i_args=$*;
   local local_app="app-src"
   local user_id=
-  local mount_options=
+  local mount_options=()
 
 
   # Run the entire thing inside a subshell so that we do not leak shell options outside of the function
@@ -842,9 +841,9 @@ CMD /usr/libexec/s2i/run
 EOF
 
   # Check if -v parameter is present in s2i_args and add it into docker build command
-  mount_options=$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)
+  read -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
-  docker build "$mount_options" -f "$df_name" --no-cache=true -t "$dst_image" .
+  docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" --no-cache=true -t "$dst_image" .
   )
 }
 
