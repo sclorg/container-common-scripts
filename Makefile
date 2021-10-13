@@ -33,8 +33,9 @@ shellcheck:
 	./run-shellcheck.sh `git ls-files *.sh`
 
 pre-commit-check:
-	pre-commit install
 	pre-commit run --all
+	[[ -d "./.git/hooks" && -n `find ./.git/hooks/ -name "pre-commit"` ]] || \
+	  echo "Note: Install pre-commit hooks by 'pre-commit install' and you'll never have to run this check manually again."
 
 check-failures: check-test-lib
 	cd tests/failures/check && make tag && ! make check && make clean
