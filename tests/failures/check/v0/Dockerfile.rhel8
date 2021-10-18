@@ -1,0 +1,2 @@
+FROM ubi8/s2i-core
+LABEL name=test-image
