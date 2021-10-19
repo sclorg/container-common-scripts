@@ -687,14 +687,11 @@ ct_s2i_build_as_df()
     # Default to root if no user is set by the image
     user=${user:-0}
     # run the user through the image in case it is non-numeric or does not exist
-    # NOTE: The '-eq' test is used to check if $user is numeric as it will fail if $user is not an integer
-    if ! [ "$user" -eq "$user" ] 2>/dev/null && ! user_id=$(docker run --rm "$src_image" bash -c "id -u $user 2>/dev/null"); then
-        echo "ERROR: id of user $user not found inside image $src_image."
+    if ! user_id=$(ct_get_uid_from_image "$user" "$src_image"); then
         echo "Terminating s2i build."
         return 1
-    else
-        user_id=${user_id:-$user}
     fi
+
     echo "$s2i_args" | grep -q "\-\-incremental" && incremental=true
     if $incremental; then
         inc_tmp=$(mktemp -d --tmpdir incremental.XXXX)
@@ -794,13 +791,9 @@ ct_s2i_multistage_build() {
   # Default to root if no user is set by the image
   user=${user:-0}
   # run the user through the image in case it is non-numeric or does not exist
-  # NOTE: The '-eq' test is used to check if $user is numeric as it will fail if $user is not an integer
-  if ! [ "$user" -eq "$user" ] 2>/dev/null && ! user_id=$(docker run --rm "$src_image" bash -c "id -u $user 2>/dev/null"); then
-      echo "ERROR: id of user $user not found inside image $src_image."
+  if ! user_id=$(ct_get_uid_from_image "$user" "$src_image"); then
       echo "Terminating s2i build."
       return 1
-  else
-      user_id=${user_id:-$user}
   fi
 
   # Use /tmp to not pollute cwd
@@ -909,7 +902,7 @@ ct_show_resources()
 # ct_clone_git_repository
 # -----------------------------
 # Argument: app_url - git URI pointing to a repository, supports "@" to indicate a different branch
-# Argument: app_dir - name of the directory to clone the repository into
+# Argument: app_dir (optional) - name of the directory to clone the repository into
 ct_clone_git_repository()
 {
   local app_url=$1; shift
@@ -928,6 +921,25 @@ ct_clone_git_repository()
   if ! $git_clone_cmd ; then
     echo "ERROR: Git repository ${app_url} cannot be cloned into ${app_dir}."
     return 1
+  fi
+}
+
+# ct_get_uid_from_image
+# -----------------------------
+# Argument: user - user to get uid for inside the image
+# Argument: src_image - image to use for user information
+ct_get_uid_from_image()
+{
+  local user=$1; shift
+  local src_image=$1
+  local user_id=
+
+  # NOTE: The '-eq' test is used to check if $user is numeric as it will fail if $user is not an integer
+  if ! [ "$user" -eq "$user" ] 2>/dev/null && ! user_id=$(docker run --rm "$src_image" bash -c "id -u $user 2>/dev/null"); then
+      echo "ERROR: id of user $user not found inside image $src_image."
+      return 1
+  else
+      echo "${user_id:-$user}"
   fi
 }
 
