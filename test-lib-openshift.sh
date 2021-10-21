@@ -342,7 +342,7 @@ function _ct_os_get_uniq_project_name() {
 # to authenticate to image registries.
 # shellcheck disable=SC2120
 function ct_os_new_project() {
-  if [ "${CVP:-0}" -eq 1 ]; then
+  if [ "${CVP:-0}" -eq "1" ]; then
     echo "Testing in CVP environment. No need to create OpenShift project. This is done by CVP pipeline"
     return
   fi
@@ -368,7 +368,7 @@ function ct_os_new_project() {
 # Arguments: project - project name, uses the current project if omitted
 # shellcheck disable=SC2120
 function ct_os_delete_project() {
-  if [ "${CT_SKIP_NEW_PROJECT:-false}" == 'true' ] || [ "${CVP:-0}" -eq 1 ]; then
+  if [ "${CT_SKIP_NEW_PROJECT:-false}" == 'true' ] || [ "${CVP:-0}" -eq "1" ]; then
     echo "Deleting project skipped, cleaning objects only."
     # when not having enough privileges (remote cluster), it might fail and
     # it is not a big problem, so ignore failure in this case
@@ -669,7 +669,7 @@ function ct_os_test_s2i_app_func() {
   namespace=${CT_NAMESPACE:-"$(oc project -q)"}
   local image_tagged="${image_name_no_namespace%:*}:${VERSION}"
 
-  if [ "${CVP:-0}" -eq 0 ]; then
+  if [ "${CVP:-0}" -eq "0" ]; then
     if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
       ct_os_import_image_ocp4 "${image_name}" "${image_tagged}"
     else
@@ -812,8 +812,7 @@ function ct_os_test_template_app_func() {
 
   namespace=${CT_NAMESPACE:-"$(oc project -q)"}
   # Upload main image is already done by CVP pipeline. No need to do it twice.
-  # shellcheck disable=SC2086
-  if [ ${CVP:-0} -eq 0 ]; then
+  if [ "${CVP:-0}" -eq "0" ]; then
     # Create a specific imagestream tag for the image so that oc cannot use anything else
     if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
       ct_os_import_image_ocp4 "${image_name}" "${image_tagged}"
@@ -1058,7 +1057,7 @@ ct_os_test_response_internal() {
   local status
   local response_code
   local response_file
-  local util_image_name='ubi7/ubi'
+  local util_image_name='registry.access.redhat.com/ubi7/ubi'
 
   response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
   ct_os_deploy_cmd_image "${util_image_name}"

@@ -92,7 +92,7 @@ function pull_image {
     image_name=$(echo "$line" | cut -d ' ' -f2)
 
     # In case FROM scratch is defined, skip it
-    if [[ x"$image_name" == "xscratch" ]]; then
+    if [[ "$image_name" == "scratch" ]]; then
       continue
     fi
     echo "-> Pulling image $image_name before building image from $dockerfile."

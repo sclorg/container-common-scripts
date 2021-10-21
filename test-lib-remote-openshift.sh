@@ -47,7 +47,7 @@ function ct_os_set_path_oc_4() {
 #
 #
 function ct_os_set_ocp4() {
-  if [ "${CVP:-0}" -eq 1 ]; then
+  if [ "${CVP:-0}" -eq "1" ]; then
     echo "Testing in CVP environment. No need to login to OpenShift cluster. This is already done by CVP pipeline."
     return
   fi

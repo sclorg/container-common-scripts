@@ -583,13 +583,13 @@ ct_get_public_image_name() {
   local registry
 
   registry=$(ct_registry_from_os "$os")
-  if [ "x$os" == "xrhel7" ]; then
+  if [ "$os" == "rhel7" ]; then
     public_image_name=$registry/rhscl/$base_image_name-${version//./}-rhel7
-  elif [ "x$os" == "xrhel8" ]; then
+  elif [ "$os" == "rhel8" ]; then
     public_image_name=$registry/rhel8/$base_image_name-${version//./}
-  elif [ "x$os" == "xcentos7" ]; then
+  elif [ "$os" == "centos7" ]; then
     public_image_name=$registry/centos7/$base_image_name-${version//./}-centos7
-  elif [ "x$os" == "xcentos8" ]; then
+  elif [ "$os" == "centos8" ]; then
     public_image_name=$registry/centos8/$base_image_name-${version//./}-centos8
   fi
 
