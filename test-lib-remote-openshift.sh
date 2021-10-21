@@ -47,6 +47,10 @@ function ct_os_set_path_oc_4() {
 #
 #
 function ct_os_set_ocp4() {
+  if [ "${CVP:-0}" -eq 1 ]; then
+    echo "Testing in CVP environment. No need to login to OpenShift cluster. This is already done by CVP pipeline."
+    return
+  fi
   local login
   OS_OC_CLIENT_VERSION=${OS_OC_CLIENT_VERSION:-4.4}
   ct_os_set_path_oc_4 "${OS_OC_CLIENT_VERSION}"

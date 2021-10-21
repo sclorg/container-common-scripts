@@ -342,6 +342,10 @@ function _ct_os_get_uniq_project_name() {
 # to authenticate to image registries.
 # shellcheck disable=SC2120
 function ct_os_new_project() {
+  if [ "${CVP:-0}" -eq 1 ]; then
+    echo "Testing in CVP environment. No need to create OpenShift project. This is done by CVP pipeline"
+    return
+  fi
   if [ "${CT_SKIP_NEW_PROJECT:-false}" == 'true' ] ; then
     echo "Creating project skipped."
     return
@@ -364,7 +368,7 @@ function ct_os_new_project() {
 # Arguments: project - project name, uses the current project if omitted
 # shellcheck disable=SC2120
 function ct_os_delete_project() {
-  if [ "${CT_SKIP_NEW_PROJECT:-false}" == 'true' ] ; then
+  if [ "${CT_SKIP_NEW_PROJECT:-false}" == 'true' ] || [ "${CVP:-0}" -eq 1 ]; then
     echo "Deleting project skipped, cleaning objects only."
     # when not having enough privileges (remote cluster), it might fail and
     # it is not a big problem, so ignore failure in this case
@@ -665,20 +669,24 @@ function ct_os_test_s2i_app_func() {
   namespace=${CT_NAMESPACE:-"$(oc project -q)"}
   local image_tagged="${image_name_no_namespace%:*}:${VERSION}"
 
-  if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
-    ct_os_import_image_ocp4 "${image_name}" "${image_tagged}"
-  else
-    # Create a specific imagestream tag for the image so that oc cannot use anything else
-    if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
-      echo "Importing image ${image_name} as ${namespace}/${image_tagged}"
-      # Use --reference-policy=local to pull remote image content to the cluster
-      # Works around the issue of builder pods not having access to registry.redhat.io
-      oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
-      ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
+  if [ "${CVP:-0}" -eq 0 ]; then
+    if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
+      ct_os_import_image_ocp4 "${image_name}" "${image_tagged}"
     else
-      echo "Uploading image ${image_name} as ${image_tagged}"
-      ct_os_upload_image "${image_name}" "${image_tagged}"
+      # Create a specific imagestream tag for the image so that oc cannot use anything else
+      if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
+        echo "Importing image ${image_name} as ${namespace}/${image_tagged}"
+        # Use --reference-policy=local to pull remote image content to the cluster
+        # Works around the issue of builder pods not having access to registry.redhat.io
+        oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
+        ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
+      else
+        echo "Uploading image ${image_name} as ${image_tagged}"
+        ct_os_upload_image "${image_name}" "${image_tagged}"
+      fi
     fi
+  else
+    echo "Testing image ${image_name} in CVP pipeline."
   fi
 
   local app_param="${app}"
@@ -803,21 +811,28 @@ function ct_os_test_template_app_func() {
   ct_os_new_project
 
   namespace=${CT_NAMESPACE:-"$(oc project -q)"}
-  # Create a specific imagestream tag for the image so that oc cannot use anything else
-  if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
-    ct_os_import_image_ocp4 "${image_name}" "${image_tagged}"
-  else
-    if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
-      echo "Importing image ${image_name} as ${image_tagged}"
-      # Use --reference-policy=local to pull remote image content to the cluster
-      # Works around the issue of builder pods not having access to registry.redhat.io
-      oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
-      ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
+  # Upload main image is already done by CVP pipeline. No need to do it twice.
+  # shellcheck disable=SC2086
+  if [ ${CVP:-0} -eq 0 ]; then
+    # Create a specific imagestream tag for the image so that oc cannot use anything else
+    if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
+      ct_os_import_image_ocp4 "${image_name}" "${image_tagged}"
     else
-      echo "Uploading image ${image_name} as ${image_tagged}"
-      ct_os_upload_image "${image_name}" "${image_tagged}"
+      if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
+        echo "Importing image ${image_name} as ${image_tagged}"
+        # Use --reference-policy=local to pull remote image content to the cluster
+        # Works around the issue of builder pods not having access to registry.redhat.io
+        oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
+        ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
+      else
+        echo "Uploading image ${image_name} as ${image_tagged}"
+        ct_os_upload_image "${image_name}" "${image_tagged}"
+      fi
     fi
+  else
+    echo "Import is already done by CVP pipeline."
   fi
+  # Other images are not uploaded by CVP pipeline. We need to do it.
   if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'false' ] ; then
       # upload also other images, that template might need (list of pairs in the format <image>|<tag>
       local image_tag_a
