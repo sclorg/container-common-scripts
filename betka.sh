@@ -8,7 +8,8 @@
 set -ex
 
 function load_configuration() {
-  if [[ x"${OS}" == "xfedora" ]]; then
+  # shellcheck disable=SC2268
+  if [[ x"$OS" == "xfedora" ]]; then
     HTTP_CODE=$(curl --output cwt_config --silent --write-out "%{http_code}" -L https://raw.githubusercontent.com/sclorg/container-workflow-tool/master/cwt_generator.config)
     if [[ ${HTTP_CODE} == 404 ]]; then
       exit 1
