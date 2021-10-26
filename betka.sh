@@ -15,7 +15,7 @@ function load_configuration() {
       exit 1
     fi
   else
-    HTTP_CODE=$(curl --output cwt_config --silent --write-out "%{http_code}" -L https://url.corp.redhat.com/rhcwt_config)
+    HTTP_CODE=$(curl --output cwt_config --silent --write-out "%{http_code}" -L https://url.corp.redhat.com/rhcwt-config)
     if [[ ${HTTP_CODE} == 404 ]]; then
       exit 1
     fi
