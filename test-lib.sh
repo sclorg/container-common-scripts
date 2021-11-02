@@ -52,6 +52,50 @@ function ct_enable_cleanup() {
   trap ct_cleanup EXIT SIGINT
 }
 
+# ct_pull_image
+# -------------
+# Function pull an image before tests execution
+# Argument: image_name - string containing the public name of the image to pull
+# Argument: exit - in case "true" is defined and pull failed, then script has to exit with 1 and no tests are executed
+# Argument: loops - how many times to pull image in case of failure
+# Function returns either 0 in case of pull was successful
+# Or the test suite exit with 1 in case of pull error
+function ct_pull_image() {
+  local image_name="$1"; shift
+  local exit=${1:-"false"}; shift
+  local loops=${1:-10}; shift
+  local loop=0
+
+  # Let's try to pull image.
+  echo "-> Pulling image $image_name ..."
+  # Sometimes in Fedora case it fails with HTTP 50X
+  # Check if the image is available locally and try to pull it if it is not
+  if [[ "$(docker images -q "$image_name" 2>/dev/null)" != "" ]]; then
+    echo "The image $image_name is already pulled."
+    return 0
+  fi
+
+  # Try pulling the image to see if it is accessible
+  # WORKAROUND: Since Fedora registry sometimes fails randomly, let's try it more times
+  while ! docker pull "$image_name"; do
+    ((loop++)) || :
+    echo "Pulling image $image_name failed."
+    if [ "$loop" -gt "$loops" ]; then
+      echo "Pulling of image $image_name failed $loops times in a row. Giving up."
+      echo "!!! ERROR with pulling image $image_name !!!!"
+      # shellcheck disable=SC2268
+      if [[ x"$exit" == x"false" ]]; then
+        return 1
+      else
+        exit 1
+      fi
+    fi
+    echo "Let's wait $((loop*5)) seconds and try again."
+    sleep "$((loop*5))"
+  done
+}
+
+
 # ct_check_envs_set env_filter check_envs loop_envs [env_format]
 # --------------------
 # Compares values from one list of environment variable definitions against such list,
@@ -185,7 +229,7 @@ function ct_assert_container_creation_fails() {
 function ct_create_container() {
   local cid_file="$CID_FILE_DIR/$1" ; shift
   # create container with a cidfile in a directory for cleanup
-  # shellcheck disable=SC2086
+  # shellcheck disable=SC2086,SC2153
   docker run --cidfile="$cid_file" -d ${CONTAINER_ARGS:-} "$IMAGE_NAME" "$@"
   ct_wait_for_cid "$cid_file" || return 1
   : "Created container $(cat "$cid_file")"
@@ -850,7 +894,7 @@ ct_check_image_availability() {
   local public_image_name=$1;
 
   # Try pulling the image to see if it is accessible
-  if ! docker pull "$public_image_name" &>/dev/null; then
+  if ! ct_pull_image "$public_image_name" &>/dev/null; then
     echo "$public_image_name could not be downloaded via 'docker'"
     return 1
   fi
