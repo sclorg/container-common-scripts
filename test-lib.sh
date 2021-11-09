@@ -228,7 +228,7 @@ function ct_assert_container_creation_fails() {
 function ct_create_container() {
   local cid_file="$CID_FILE_DIR/$1" ; shift
   # create container with a cidfile in a directory for cleanup
-  local container_args=($CONTAINER_ARGS)
+  local container_args=("$CONTAINER_ARGS")
   # shellcheck disable=SC2153
   docker run --cidfile="$cid_file" -d ${container_args[@]+"${container_args[@]}"} "$IMAGE_NAME" "$@"
   ct_wait_for_cid "$cid_file" || return 1
@@ -799,7 +799,7 @@ EOF
     fi
 
     # Check if -v parameter is present in s2i_args and add it into docker build command
-    read -d'\n' -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
+    read -d '' -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
     # Run the build and tag the result
     docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" --no-cache=true -t "$dst_image" .
@@ -880,7 +880,7 @@ CMD /usr/libexec/s2i/run
 EOF
 
   # Check if -v parameter is present in s2i_args and add it into docker build command
-  read -d'\n' -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
+  read -d '' -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
   docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" --no-cache=true -t "$dst_image" .
   )
