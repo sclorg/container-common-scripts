@@ -83,8 +83,7 @@ function ct_pull_image() {
     if [ "$loop" -gt "$loops" ]; then
       echo "Pulling of image $image_name failed $loops times in a row. Giving up."
       echo "!!! ERROR with pulling image $image_name !!!!"
-      # shellcheck disable=SC2268
-      if [[ x"$exit" == x"false" ]]; then
+      if [[ "$exit" == "false" ]]; then
         return 1
       else
         exit 1
@@ -229,8 +228,9 @@ function ct_assert_container_creation_fails() {
 function ct_create_container() {
   local cid_file="$CID_FILE_DIR/$1" ; shift
   # create container with a cidfile in a directory for cleanup
-  # shellcheck disable=SC2086,SC2153
-  docker run --cidfile="$cid_file" -d ${CONTAINER_ARGS:-} "$IMAGE_NAME" "$@"
+  local container_args=($CONTAINER_ARGS)
+  # shellcheck disable=SC2153
+  docker run --cidfile="$cid_file" -d ${container_args[@]+"${container_args[@]}"} "$IMAGE_NAME" "$@"
   ct_wait_for_cid "$cid_file" || return 1
   : "Created container $(cat "$cid_file")"
 }
