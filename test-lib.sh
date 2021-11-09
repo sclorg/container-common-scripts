@@ -799,7 +799,7 @@ EOF
     fi
 
     # Check if -v parameter is present in s2i_args and add it into docker build command
-    read -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
+    read -d'\n' -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
     # Run the build and tag the result
     docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" --no-cache=true -t "$dst_image" .
@@ -880,7 +880,7 @@ CMD /usr/libexec/s2i/run
 EOF
 
   # Check if -v parameter is present in s2i_args and add it into docker build command
-  read -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
+  read -d'\n' -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
   docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" --no-cache=true -t "$dst_image" .
   )
