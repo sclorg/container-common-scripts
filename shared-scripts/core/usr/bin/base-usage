@@ -1,7 +1,7 @@
 #!/bin/sh -e
 
 cat <<EOF
-This image serves as the base image for all OpenShift v3 S2I builder images.
+This image serves as the base image for all OpenShift S2I builder images.
 It provides all essential libraries and development tools needed to
 successfully build and run an application.
 
