@@ -531,6 +531,7 @@ function ct_os_cluster_up() {
 function ct_os_cluster_down() {
   if [ ${OS_CLUSTER_STARTED_BY_TEST:-0} -eq 1 ] ; then
     echo "Cluster started by the test, shutting down."
+    oc login -u system:admin
     oc cluster down
   else
     echo "Cluster not started by the test, shutting down skipped."
