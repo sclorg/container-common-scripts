@@ -50,5 +50,7 @@ check-latest-imagestream:
 check-betka:
 	cd tests && ./check_betka.sh
 
-check: check-failures check-squash check-latest-imagestream
+check-remote-containers:
 	TESTED_IMAGES="$(TESTED_IMAGES)" tests/remote-containers.sh
+
+check: check-failures check-squash check-latest-imagestream check-remote-containers
