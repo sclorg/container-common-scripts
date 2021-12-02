@@ -1,7 +1,5 @@
 #! /bin/bash
 
-set -e
-
 declare -A IMAGES
 
 for image in ${TESTED_IMAGES}; do
@@ -49,7 +47,7 @@ analyse_commits ()
 
 analyse_commits
 
-test_short_summary=''
+test_short_summary=""
 TESTSUITE_RESULT=0
 
 for image in "${!IMAGES[@]}"; do
@@ -94,23 +92,31 @@ for image in "${!IMAGES[@]}"; do
         # TODO: Do we have to test all $(VERSION)s?
         # TODO: The PS4 hack doesn't work if we run the testsuite as UID=0.
         PS4="+ [$image] " make TARGET="$OS" test
-        if test $? -eq 0 ; then
-          printf -v test_short_summary "${test_short_summary}[PASSED] $image\n"
-          info "Tests for $image succeeded."
-        else
-          printf -v test_short_summary "${test_short_summary}[FAILED] $image\n"
-          info "Tests for $image failed."
-          TESTSUITE_RESULT=1
-        fi
+        test_ret_value=$?
         # Cleanup.
         make clean
+
+        if test $test_ret_value -eq 0 ; then
+          info "Tests for $image succeeded."
+          exit 0
+        else
+          info "Tests for $image failed."
+          exit 1
+        fi
     )
+    if test $? -eq 0 ; then
+      printf -v test_short_summary "${test_short_summary}[PASSED] $image\n"
+    else
+      printf -v test_short_summary "${test_short_summary}[FAILED] $image\n"
+      TESTSUITE_RESULT=1
+    fi
 done
 
 echo "$test_short_summary"
-
 if [ $TESTSUITE_RESULT -eq 0 ] ; then
   echo "Tests for 'container-common-scripts' succeeded."
 else
   echo "Tests for 'container-common-scripts' failed."
 fi
+
+exit $TESTSUITE_RESULT
