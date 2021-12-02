@@ -1,5 +1,7 @@
 #! /bin/bash
 
+set -e
+
 declare -A IMAGES
 
 for image in ${TESTED_IMAGES}; do
@@ -54,8 +56,7 @@ for image in "${!IMAGES[@]}"; do
     # We don't want to remove user's WIP stuff.
     test -e "$image" && die "directory '$image' exists"
 
-    (   set -e
-        testdir=$PWD
+    (   testdir=$PWD
         cleanup () {
             set -x
             # Ensure the cleanup finishes!
