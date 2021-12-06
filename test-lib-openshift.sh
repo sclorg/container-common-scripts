@@ -530,8 +530,9 @@ function ct_os_cluster_up() {
 # Shuts down the local OpenShift cluster using 'oc cluster down'
 function ct_os_cluster_down() {
   if [ ${OS_CLUSTER_STARTED_BY_TEST:-0} -eq 1 ] ; then
-    echo "Cluster started by the test, shutting down."
+    echo "Switching user to system:admin before cluster is going down."
     oc login -u system:admin
+    echo "Cluster started by the test, shutting down."
     oc cluster down
   else
     echo "Cluster not started by the test, shutting down skipped."
