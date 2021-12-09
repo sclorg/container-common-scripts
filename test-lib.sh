@@ -61,9 +61,9 @@ function ct_enable_cleanup() {
 # Function returns either 0 in case of pull was successful
 # Or the test suite exit with 1 in case of pull error
 function ct_pull_image() {
-  local image_name="$1"; shift
-  local exit=${1:-"false"}; shift
-  local loops=${1:-10}; shift
+  local image_name="$1"; [[ $# -gt 0 ]] && shift
+  local exit_variable=${1:-"false"}; [[ $# -gt 0 ]] && shift
+  local loops=${1:-10}
   local loop=0
 
   # Let's try to pull image.
@@ -84,7 +84,7 @@ function ct_pull_image() {
       echo "Pulling of image $image_name failed $loops times in a row. Giving up."
       echo "!!! ERROR with pulling image $image_name !!!!"
       # shellcheck disable=SC2268
-      if [[ x"$exit" == x"false" ]]; then
+      if [[ x"$exit_variable" == x"false" ]]; then
         return 1
       else
         exit 1
