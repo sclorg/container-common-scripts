@@ -11,7 +11,6 @@ endif
 
 build = $(SHELL) $(common_dir)/build.sh
 test =  $(SHELL) $(common_dir)/test.sh
-testr = $(SHELL) $(common_dir)/test-remote-cluster.sh
 shellcheck =  $(SHELL) $(common_dir)/run-shellcheck.sh
 tag =   $(SHELL) $(common_dir)/tag.sh
 clean = $(SHELL) $(common_dir)/clean.sh
