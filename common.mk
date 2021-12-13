@@ -49,6 +49,10 @@ else ifeq ($(TARGET),centos6)
 else ifeq ($(TARGET),centos8)
 	OS := centos8
 	DOCKERFILE ?= Dockerfile.centos8
+else ifeq ($(TARGET),stream9)
+	OS := stream9
+	DOCKERFILE ?= Dockerfile.stream9
+	REGISTRY := quay.io
 else
 	OS := centos7
 	DOCKERFILE ?= Dockerfile

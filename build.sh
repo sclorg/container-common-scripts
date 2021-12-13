@@ -243,6 +243,8 @@ for dir in ${dirs}; do
     docker_build_with_version Dockerfile.centos6
   elif [ "$OS" == "centos8" ] || [ "$OS" == "centos8-candidate" ]; then
     docker_build_with_version Dockerfile.centos8
+  elif [ "$OS" == "stream9" ] || [ "$OS" == "c9s-candidate" ]; then
+    docker_build_with_version Dockerfile.stream9
   else
     docker_build_with_version Dockerfile
   fi
