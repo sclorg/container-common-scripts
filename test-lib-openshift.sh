@@ -957,8 +957,9 @@ ct_os_test_image_update() {
   local old_image=$1; shift
   local istag=$1; shift
   local check_function=$1; shift
-  local service_name=${image_name##*/}
   local ip="" check_command_exp=""
+  local image_name_no_namespace=${image_name##*/}
+  local service_name="${image_name_no_namespace%%:*}-testing"
 
   echo "Running image update test for: $image_name"
   # shellcheck disable=SC2119
