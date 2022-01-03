@@ -14,6 +14,7 @@ OS_TESTSUITE_RESULT=1
 OS_CLUSTER_STARTED_BY_TEST=0
 
 function ct_os_cleanup() {
+  echo "${test_short_summary:-}"
   if [ $OS_TESTSUITE_RESULT -eq 0 ] ; then
     # shellcheck disable=SC2153
     echo "OpenShift tests for ${IMAGE_NAME} succeeded."
