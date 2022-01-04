@@ -8,7 +8,13 @@
 
 set -e
 
-script_name=$(readlink -f "$0")
+UNAME=$(uname)
+
+if [[ $UNAME == "Darwin" ]]; then
+  script_name=$(greadlink -f "$0")
+else
+  script_name=$(readlink -f "$0")
+fi
 script_dir=$(dirname "$script_name")
 
 OS=${1-$OS}
@@ -173,10 +179,27 @@ function docker_build_with_version {
 
   pull_image "$dockerfile"
 
-  # shellcheck disable=SC2016
-  parse_output 'docker build '"$BUILD_OPTIONS"' -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}"' \
-               "tail -n 1 | awk '/Successfully built|(^--> )?(Using cache )?[a-fA-F0-9]+$/{print \$NF}'" \
-               IMAGE_ID
+  if [[ $UNAME == "Darwin" ]]; then
+    # docker output looks like
+    #9 sha256:6d65c6e054efd48cb168a83bb2c94578a3f998270512c42d5a40bf0d55af1461
+    #9 CACHED
+
+    #10 exporting to image
+    #10 sha256:e8c613e07b0b7ff33893b694f7759a10d42e180f2b4dc349fb57dc6b71dcab00
+    #10 exporting layers done
+    #10 writing image sha256:60575b179c79de97797d3790b0238507354c443aca4f52d40a59fc89c78f2222 done
+    #10 DONE 0.0s
+    # shellcheck disable=SC2086
+    docker_output=$(docker build $BUILD_OPTIONS --progress plain -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}" 2>&1)
+    # Print docker build output for the another analysis in case of failure
+    echo "${docker_output}"
+    IMAGE_ID=$(echo "$docker_output" | tail -n 4 | awk '/^#[0-9]+ writing image sha256:[a-fA-F0-9]+ done$/{print $(NF-1)}')
+  else
+    # shellcheck disable=SC2016
+    parse_output 'docker build '"$BUILD_OPTIONS"' -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}"' \
+                 "tail -n 1 | awk '/Successfully built|(^--> )?(Using cache )?[a-fA-F0-9]+$/{print \$NF}'" \
+                 IMAGE_ID
+  fi
   clean_image
   echo "$IMAGE_ID" > .image-id.raw
 
