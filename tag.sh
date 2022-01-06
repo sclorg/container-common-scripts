@@ -20,6 +20,10 @@ for dir in ${VERSIONS}; do
 
   full_reg_name="$REGISTRY$name"
   echo "-> Tagging image '$IMAGE_ID' as '$full_reg_name:$version' and '$full_reg_name:latest' and '$full_reg_name:$date_and_hash'"
+  if [[ $OS == "c9s" ]]; then
+    echo "-> Tagging image '$IMAGE_ID' as '$full_reg_name:$OS' for CentOS Stream 9."
+    docker tag "$IMAGE_ID" "$full_reg_name:$OS"
+  fi
   docker tag "$IMAGE_ID" "$full_reg_name:$version"
   docker tag "$IMAGE_ID" "$full_reg_name:latest"
   docker tag "$IMAGE_ID" "$full_reg_name:$date_and_hash"
