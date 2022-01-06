@@ -17,7 +17,7 @@ for dir in ${VERSIONS}; do
   # Kept also IMAGE_NAME as some tests might still use that.
   IMAGE_NAME="$(docker inspect -f "{{.Config.Labels.name}}" "$IMAGE_ID"):$IMAGE_VERSION"
     # shellcheck disable=SC2268
-  if [ x"${OS}" == "xcentos7" ]; then
+  if [ "${OS}" == "centos7" ] || [ "${OS}" == "c9s" ]; then
     export IMAGE_NAME="$REGISTRY$IMAGE_NAME"
   else
     export IMAGE_NAME
