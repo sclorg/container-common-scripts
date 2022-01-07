@@ -5,17 +5,16 @@ source "$(dirname "${BASH_SOURCE[0]}")"/test-lib.sh
 
 # Set of functions for testing docker images in OpenShift using 'oc' command
 
-# A variable containing the overall test result; must be changed to 0 in the end
-# of the testing script:
-#   OS_TESTSUITE_RESULT=0
+# A variable containing the overall test result
+#   TESTSUITE_RESULT=0
 # And the following trap must be set, in the beginning of the test script:
 #   trap ct_os_cleanup EXIT SIGINT
-OS_TESTSUITE_RESULT=1
+TESTSUITE_RESULT=0
 OS_CLUSTER_STARTED_BY_TEST=0
 
 function ct_os_cleanup() {
-  echo "${test_short_summary:-}"
-  if [ $OS_TESTSUITE_RESULT -eq 0 ] ; then
+  echo "${TEST_SUMMARY:-}"
+  if [ $TESTSUITE_RESULT -eq 0 ] ; then
     # shellcheck disable=SC2153
     echo "OpenShift tests for ${IMAGE_NAME} succeeded."
   else
