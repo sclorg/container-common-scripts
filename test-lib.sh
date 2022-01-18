@@ -1054,6 +1054,20 @@ ct_test_app_dockerfile() {
   return $ret
 }
 
+# ct_check_testcase_result
+# -----------------------------
+# Check if testcase ended in success or error
+# Argument: result - testcase result value
+# Uses: $TESTCASE_RESULT - result of the testcase
+# Uses: $IMAGE_NAME - name of the image being tested
+ct_check_testcase_result() {
+  local result="$1"
+  if [[ "$result" != "0" ]]; then
+    echo "Test for image '${IMAGE_NAME}' FAILED (exit code: ${result})"
+    TESTCASE_RESULT=1
+  fi
+  return $result
+}
 
 # ct_run_tests_from_testset
 # -----------------------------
@@ -1066,16 +1080,16 @@ ct_test_app_dockerfile() {
 ct_run_tests_from_testset() {
   local app_name="$1"
   for test_case in $TEST_SET; do
+    TESTCASE_RESULT=0
     info "Running test $test_case ... "
     $test_case
-    local test_result=$?
+    ct_check_testcase_result $?
     local test_msg
-    if [ $test_result -eq 0 ]; then
+    if [ $TESTCASE_RESULT -eq 0 ]; then
       test_msg="[PASSED]"
     else
       test_msg="[FAILED]"
       TESTSUITE_RESULT=1
-      echo "Test '${test_case}' for image '${IMAGE_NAME}' FAILED (exit code: ${test_result})"
     fi
     printf -v TEST_SUMMARY "%s %s for '%s' %s\n" "${TEST_SUMMARY}" "${test_msg}" "${app_name}" "$test_case"
   done;
