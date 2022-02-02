@@ -5,9 +5,8 @@ source "$(dirname "${BASH_SOURCE[0]}")"/test-lib.sh
 
 # Set of functions for testing docker images in OpenShift using 'oc' command
 
-# A variable containing the overall test result; must be changed to 0 in the end
-# of the testing script:
-#   OS_TESTSUITE_RESULT=0
+# A variable containing the overall test result
+#   TESTSUITE_RESULT=0
 # And the following trap must be set, in the beginning of the test script:
 #   trap ct_os_cleanup EXIT SIGINT
 

@@ -489,21 +489,6 @@ ct_path_foreach ()
 }
 
 
-# ct_run_test_list
-# --------------------
-# Execute the tests specified by TEST_LIST
-# Uses: $TEST_LIST - list of test names
-function ct_run_test_list() {
-  for test_case in $TEST_LIST; do
-    : "Running test $test_case"
-    # shellcheck source=/dev/null
-    [ -f "test/$test_case" ] && source "test/$test_case"
-    # shellcheck source=/dev/null
-    [ -f "../test/$test_case" ] && source "../test/$test_case"
-    $test_case
-  done;
-}
-
 # ct_gen_self_signed_cert_pem
 # ---------------------------
 # Generates a self-signed PEM certificate pair into specified directory.
@@ -1067,6 +1052,47 @@ ct_test_app_dockerfile() {
   rm -rf "${tmpdir}"
   rm -f "${CID_FILE_DIR}/${cname}"
   return $ret
+}
+
+# ct_check_testcase_result
+# -----------------------------
+# Check if testcase ended in success or error
+# Argument: result - testcase result value
+# Uses: $TESTCASE_RESULT - result of the testcase
+# Uses: $IMAGE_NAME - name of the image being tested
+ct_check_testcase_result() {
+  local result="$1"
+  if [[ "$result" != "0" ]]; then
+    echo "Test for image '${IMAGE_NAME}' FAILED (exit code: ${result})"
+    TESTCASE_RESULT=1
+  fi
+  return $result
+}
+
+# ct_run_tests_from_testset
+# -----------------------------
+# Runs all tests in $TEST_SET, prints result to
+# the $TEST_SUMMARY variable
+# Argument: app_name - application name to log
+# Uses: $TEST_SET - set of test cases to run
+# Uses: $TEST_SUMMARY - variable for storing test results
+# Uses: $IMAGE_NAME - name of the image being tested
+ct_run_tests_from_testset() {
+  local app_name="$1"
+  for test_case in $TEST_SET; do
+    TESTCASE_RESULT=0
+    info "Running test $test_case ... "
+    $test_case
+    ct_check_testcase_result $?
+    local test_msg
+    if [ $TESTCASE_RESULT -eq 0 ]; then
+      test_msg="[PASSED]"
+    else
+      test_msg="[FAILED]"
+      TESTSUITE_RESULT=1
+    fi
+    printf -v TEST_SUMMARY "%s %s for '%s' %s\n" "${TEST_SUMMARY}" "${test_msg}" "${app_name}" "$test_case"
+  done;
 }
 
 # vim: set tabstop=2:shiftwidth=2:expandtab:
