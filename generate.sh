@@ -84,6 +84,10 @@ parse_rules() {
                     if ! [[ "$DG_CONF" =~ fedora-[0-9]{,2}-x86_64.yaml ]]; then
                         continue
                     fi
+                elif [[ "$dest" == *"Dockerfile.c9s" ]]; then
+                    if ! [[ "$DG_CONF" =~ centos-stream-9-x86_64.yaml ]]; then
+                        continue
+                    fi
                 elif [[ "$dest" == *"Dockerfile" ]]; then
                     if ! [[ "$DG_CONF" =~ centos-[0-9]{,2}-x86_64.yaml ]]; then
                         continue
