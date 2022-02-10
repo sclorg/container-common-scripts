@@ -16,6 +16,7 @@
 
 # may be redefined in the specific container testfile
 EXPECTED_EXIT_CODE=0
+export TESTSUITE_RESULT=0
 
 # ct_cleanup
 # --------------------
