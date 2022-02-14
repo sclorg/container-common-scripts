@@ -49,6 +49,9 @@ class ImageStreamChecker(object):
     def check_version(self, json_dict: Dict[Any, Any]) -> List[str]:
         res = []
         for tags in json_dict["spec"]["tags"]:
+            print(
+                f"check_version: Compare tags['name']:'{tags['name']}' against version:'{self.version}'"
+            )
             # The name can be"<stream>" or "<stream>-elX" or "<stream>-ubiX"
             if tags["name"] == self.version or tags["name"].startswith(
                 self.version + "-"
@@ -61,11 +64,15 @@ class ImageStreamChecker(object):
         for tags in json_dict["spec"]["tags"]:
             if tags["name"] != "latest":
                 continue
+            print(
+                f"check_latest_tag: Compare tags['name']:'{tags['name']}' against version:'{self.version}'"
+            )
             # The latest can link to either "<stream>" or "<stream>-elX" or "<stream>-ubiX"
             if tags["from"]["name"] == self.version or tags["from"]["name"].startswith(
                 self.version + "-"
             ):
                 latest_tag_correct = True
+                print(f"Latest tag found.")
         return latest_tag_correct
 
     def check_imagestreams(self) -> int:
