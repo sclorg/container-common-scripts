@@ -16,6 +16,7 @@
 
 # may be redefined in the specific container testfile
 EXPECTED_EXIT_CODE=0
+export TESTSUITE_RESULT=0
 
 # ct_cleanup
 # --------------------
@@ -125,7 +126,7 @@ function ct_check_envs_set {
     for value in $stripped; do
         # If the falue checked does not go through env_filter we do not care about it
         echo "$value" | grep -q "$env_filter" || continue
-        if [ -n "${filtered_envs##${env_format//VALUE/$value}}" ]; then
+        if [ -n "${filtered_envs##"${env_format//VALUE/$value}"}" ]; then
             echo " Value $value is missing from variable $var_name"
             echo "$filtered_envs"
             IFS=$old_IFS
@@ -1066,7 +1067,7 @@ ct_check_testcase_result() {
     echo "Test for image '${IMAGE_NAME}' FAILED (exit code: ${result})"
     TESTCASE_RESULT=1
   fi
-  return $result
+  return "$result"
 }
 
 # ct_run_tests_from_testset
