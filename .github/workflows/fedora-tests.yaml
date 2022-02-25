@@ -45,7 +45,7 @@ jobs:
             "sha": "${{steps.sha.outputs.SHA}}",
             "state": "pending",
             "context": "Testing Farm - Fedora",
-            "target_url": "http://artifacts.dev.testing-farm.io/${{ steps.sched_test.outputs.req_id }}/pipeline.log"
+            "target_url": "https://artifacts.dev.testing-farm.io/${{ steps.sched_test.outputs.req_id }}/pipeline.log"
           }
           EOF
           echo "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/${{steps.sha.outputs.SHA}}"
@@ -115,7 +115,7 @@ jobs:
             "state": "pending",
             "context": "Testing Farm - Fedora",
             "description": "Build started",
-            "target_url": "http://artifacts.dev.testing-farm.io/${{ needs.build.outputs.REQ_ID }}/"
+            "target_url": "https://artifacts.dev.testing-farm.io/${{ needs.build.outputs.REQ_ID }}/"
           }
           EOF
           # Update GitHub status description to 'Build started'
@@ -183,7 +183,7 @@ jobs:
             "state": "${{steps.final_state.outputs.FINAL_STATE}}",
             "context": "Testing Farm - Fedora",
             "description": "Build finished${{steps.final_state.outputs.INFRA_STATE}}",
-            "target_url": "http://artifacts.dev.testing-farm.io/${{ needs.running.outputs.REQ_ID }}/"
+            "target_url": "https://artifacts.dev.testing-farm.io/${{ needs.running.outputs.REQ_ID }}/"
           }
           EOF
           cat final.json
