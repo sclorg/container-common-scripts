@@ -17,9 +17,11 @@ function ct_os_cleanup() {
   if [ $TESTSUITE_RESULT -eq 0 ] ; then
     # shellcheck disable=SC2153
     echo "OpenShift tests for ${IMAGE_NAME} succeeded."
+    exit 0
   else
     # shellcheck disable=SC2153
     echo "OpenShift tests for ${IMAGE_NAME} failed."
+    exit 1
   fi
 }
 
