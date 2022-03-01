@@ -126,7 +126,8 @@ function ct_check_envs_set {
     for value in $stripped; do
         # If the falue checked does not go through env_filter we do not care about it
         echo "$value" | grep -q "$env_filter" || continue
-        if [ -n "${filtered_envs##"${env_format//VALUE/$value}"}" ]; then
+        # shellcheck disable=SC2295
+        if [ -n "${filtered_envs##${env_format//VALUE/$value}}" ]; then
             echo " Value $value is missing from variable $var_name"
             echo "$filtered_envs"
             IFS=$old_IFS
