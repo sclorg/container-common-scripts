@@ -1083,7 +1083,7 @@ ct_run_tests_from_testset() {
   local app_name="$1"
   for test_case in $TEST_SET; do
     TESTCASE_RESULT=0
-    info "Running test $test_case ... "
+    echo "Running test $test_case ... "
     $test_case
     ct_check_testcase_result $?
     local test_msg
