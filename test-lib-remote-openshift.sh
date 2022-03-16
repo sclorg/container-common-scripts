@@ -31,13 +31,6 @@ function ct_os_set_path_oc_4() {
        return 1
     fi
     export PATH="${oc_path}:${PATH}"
-    oc version
-    if ! oc version | grep -q "Client Version: ${oc_version}." ; then
-        echo "ERROR: something went wrong, oc located at ${oc_path}, but oc of version ${oc_version} not found in PATH ($PATH)" >&1
-        return 1
-    else
-        echo "PATH set correctly, binary oc found in version ${oc_version}: $(command -v oc)"
-    fi
 }
 
 # ct_os_prepare_ocp4
@@ -54,10 +47,15 @@ function ct_os_set_ocp4() {
   OS_OC_CLIENT_VERSION=${OS_OC_CLIENT_VERSION:-4.4}
   ct_os_set_path_oc_4 "${OS_OC_CLIENT_VERSION}"
 
-  oc version
-
   login=$(cat "$KUBEPASSWORD")
   oc login -u kubeadmin -p "$login"
+  oc version
+  if ! oc version | grep -q "Client Version: ${OS_OC_CLIENT_VERSION}." ; then
+    echo "ERROR: something went wrong, oc located at ${oc_path}, but oc of version ${OS_OC_CLIENT_VERSION} not found in PATH ($PATH)" >&1
+    return 1
+  else
+    echo "PATH set correctly, binary oc found in version ${OS_OC_CLIENT_VERSION}: $(command -v oc)"
+  fi
   echo "Login to OpenShift ${OS_OC_CLIENT_VERSION} is DONE"
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
