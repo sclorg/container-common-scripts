@@ -1089,7 +1089,7 @@ ct_check_testcase_result() {
 # Uses: $TEST_SUMMARY - variable for storing test results
 # Uses: $IMAGE_NAME - name of the image being tested
 ct_run_tests_from_testset() {
-  local app_name="$1"
+  local app_name="${1:-appnamenotset}"
 
   # Let's store in the log what change do we test
   git show
