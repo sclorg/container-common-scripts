@@ -49,6 +49,24 @@ function ct_cleanup() {
   done
   rmdir "$CID_FILE_DIR"
   : "Done."
+
+  ct_show_results
+  exit $TESTCASE_RESULT
+}
+
+# ct_show_results
+# ---------------
+# Prints results of all test cases that are stored into TEST_SUMMARY variable.
+# Uses: $TEST_SUMMARY - text info about test-cases
+# Uses: $TESTCASE_RESULT - overall result of all tests
+function ct_show_results() {
+  echo "$TEST_SUMMARY"
+
+  if [ $TESTSUITE_RESULT -eq 0 ] ; then
+    echo "Tests for ${IMAGE_NAME} succeeded."
+  else
+    echo "Tests for ${IMAGE_NAME} failed."
+  fi
 }
 
 # ct_enable_cleanup
@@ -1118,14 +1136,14 @@ ct_run_tests_from_testset() {
 # ct_timestamp_s
 # --------------
 # Returns timestamp in seconds
-ct_timestamp_s() {
+function ct_timestamp_s() {
   date '+%s'
 }
 
 # ct_timestamp_pretty
 # -----------------
 # Returns timestamp readable to a human
-ct_timestamp_pretty() {
+function ct_timestamp_pretty() {
   date --rfc-3339=seconds
 }
 
@@ -1135,7 +1153,7 @@ ct_timestamp_pretty() {
 # Argument: start_date - Beginning (in seconds)
 # Argument: final_date - End (in seconds)
 # Returns: Time difference in format HH:MM:SS
-ct_timestamp_diff() {
+function ct_timestamp_diff() {
   local start_date=$1
   local final_date=$1
   date -u -d "0 $final_date seconds - $start_date seconds" +"%H:%M:%S"
