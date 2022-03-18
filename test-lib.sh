@@ -1090,11 +1090,18 @@ ct_check_testcase_result() {
 # Uses: $IMAGE_NAME - name of the image being tested
 ct_run_tests_from_testset() {
   local app_name="$1"
+
+  # Let's store in the log what change do we test
+  git show
+
   for test_case in $TEST_SET; do
     TESTCASE_RESULT=0
-    echo "Running test $test_case ... "
+    local time_beg_pretty=$(ct_timestamp_pretty)
+    local time_beg=$(ct_timestamp_s)
+    echo "Running test $test_case (starting at $time_beg_pretty) ... "
     $test_case
     ct_check_testcase_result $?
+    local time_end=$(ct_timestamp_s)
     local test_msg
     if [ $TESTCASE_RESULT -eq 0 ]; then
       test_msg="[PASSED]"
@@ -1102,8 +1109,36 @@ ct_run_tests_from_testset() {
       test_msg="[FAILED]"
       TESTSUITE_RESULT=1
     fi
-    printf -v TEST_SUMMARY "%s %s for '%s' %s\n" "${TEST_SUMMARY}" "${test_msg}" "${app_name}" "$test_case"
+    local time_diff=$(ct_timestamp_diff "$time_beg" "$time_end")
+    printf -v TEST_SUMMARY "%s %s for '%s' %s (%s)\n" "${TEST_SUMMARY}" "${test_msg}" "${app_name}" "$test_case" "$time_diff"
+    [ -n "${FAIL_QUICKLY:-}" ] && return 1
   done;
+}
+
+# ct_timestamp_s
+# --------------
+# Returns timestamp in seconds
+ct_timestamp_s() {
+  date '+%s'
+}
+
+# ct_timestamp_pretty
+# -----------------
+# Returns timestamp readable to a human
+ct_timestamp_pretty() {
+  date --rfc-3339=seconds
+}
+
+# ct_timestamp_diff
+# -----------------
+# Computes a time diff between two timestamps
+# Argument: start_date - Beginning (in seconds)
+# Argument: final_date - End (in seconds)
+# Returns: Time difference in format HH:MM:SS
+ct_timestamp_diff() {
+  local start_date=$1
+  local final_date=$1
+  date -u -d "0 $final_date seconds - $start_date seconds" +"%H:%M:%S"
 }
 
 # vim: set tabstop=2:shiftwidth=2:expandtab:
