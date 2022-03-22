@@ -51,7 +51,7 @@ function ct_cleanup() {
   : "Done."
 
   ct_show_results
-  exit $TESTCASE_RESULT
+  exit "${TESTCASE_RESULT:-0}"
 }
 
 # ct_show_results
@@ -60,12 +60,16 @@ function ct_cleanup() {
 # Uses: $TEST_SUMMARY - text info about test-cases
 # Uses: $TESTCASE_RESULT - overall result of all tests
 function ct_show_results() {
-  echo "$TEST_SUMMARY"
+  echo "${TEST_SUMMARY:-}"
 
-  if [ $TESTSUITE_RESULT -eq 0 ] ; then
-    echo "Tests for ${IMAGE_NAME} succeeded."
-  else
-    echo "Tests for ${IMAGE_NAME} failed."
+  if [ -n "${TESTSUITE_RESULT:-}" ] ; then
+    if [ "$TESTSUITE_RESULT" -eq 0 ] ; then
+      # shellcheck disable=SC2153
+      echo "Tests for ${IMAGE_NAME} succeeded."
+    else
+      # shellcheck disable=SC2153
+      echo "Tests for ${IMAGE_NAME} failed."
+    fi
   fi
 }
 
@@ -1108,26 +1112,30 @@ ct_check_testcase_result() {
 # Uses: $IMAGE_NAME - name of the image being tested
 ct_run_tests_from_testset() {
   local app_name="${1:-appnamenotset}"
+  local time_beg_pretty
+  local time_beg
+  local time_end
+  local time_diff
+  local test_msg
 
   # Let's store in the log what change do we test
   git show
 
   for test_case in $TEST_SET; do
     TESTCASE_RESULT=0
-    local time_beg_pretty=$(ct_timestamp_pretty)
-    local time_beg=$(ct_timestamp_s)
+    time_beg_pretty=$(ct_timestamp_pretty)
+    time_beg=$(ct_timestamp_s)
     echo "Running test $test_case (starting at $time_beg_pretty) ... "
     $test_case
     ct_check_testcase_result $?
-    local time_end=$(ct_timestamp_s)
-    local test_msg
+    time_end=$(ct_timestamp_s)
     if [ $TESTCASE_RESULT -eq 0 ]; then
       test_msg="[PASSED]"
     else
       test_msg="[FAILED]"
       TESTSUITE_RESULT=1
     fi
-    local time_diff=$(ct_timestamp_diff "$time_beg" "$time_end")
+    time_diff=$(ct_timestamp_diff "$time_beg" "$time_end")
     printf -v TEST_SUMMARY "%s %s for '%s' %s (%s)\n" "${TEST_SUMMARY:-}" "${test_msg}" "${app_name}" "$test_case" "$time_diff"
     [ -n "${FAIL_QUICKLY:-}" ] && return 1
   done;
