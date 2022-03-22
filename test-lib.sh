@@ -60,6 +60,10 @@ function ct_cleanup() {
 # Uses: $TEST_SUMMARY - text info about test-cases
 # Uses: $TESTCASE_RESULT - overall result of all tests
 function ct_show_results() {
+  echo
+  echo "==============================================="
+  echo "Test cases results:"
+  echo
   echo "${TEST_SUMMARY:-}"
 
   if [ -n "${TESTSUITE_RESULT:-}" ] ; then
@@ -1123,14 +1127,14 @@ ct_run_tests_from_testset() {
   echo
   git show
   echo
-  echo "Test cases results:"
-  echo
 
   for test_case in $TEST_SET; do
     TESTCASE_RESULT=0
     time_beg_pretty=$(ct_timestamp_pretty)
     time_beg=$(ct_timestamp_s)
+    echo "-----------------------------------------------"
     echo "Running test $test_case (starting at $time_beg_pretty) ... "
+    echo "-----------------------------------------------"
     $test_case
     ct_check_testcase_result $?
     time_end=$(ct_timestamp_s)
