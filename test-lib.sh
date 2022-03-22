@@ -951,6 +951,7 @@ ct_check_latest_imagestreams() {
 # Prints the available resources
 ct_show_resources()
 {
+  echo
   echo "Resources info:"
   echo "Memory:"
   free -h
@@ -1119,7 +1120,11 @@ ct_run_tests_from_testset() {
   local test_msg
 
   # Let's store in the log what change do we test
+  echo
   git show
+  echo
+  echo "Test cases results:"
+  echo
 
   for test_case in $TEST_SET; do
     TESTCASE_RESULT=0
