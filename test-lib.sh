@@ -34,12 +34,17 @@ function ct_cleanup() {
 
     : "Stopping and removing container $container..."
     docker stop "$container"
-    exit_status=$(docker inspect -f '{{.State.ExitCode}}' "$container")
-    if [ "$exit_status" != "$EXPECTED_EXIT_CODE" ]; then
-      : "Dumping logs for $container"
-      docker logs "$container"
+
+    # Container has not been removed by `docker stop` and still exists
+    if [ $( docker ps -a -f id=$container | wc -l ) -eq 2 ]; then
+      exit_status=$(docker inspect -f '{{.State.ExitCode}}' "$container")
+      if [ "$exit_status" != "$EXPECTED_EXIT_CODE" ]; then
+        : "Dumping logs for $container"
+        docker logs "$container"
+      fi
+      docker rm -v "$container"
     fi
-    docker rm -v "$container"
+
     rm "$cid_file"
   done
   rmdir "$CID_FILE_DIR"
