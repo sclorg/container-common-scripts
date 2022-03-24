@@ -71,7 +71,7 @@ function clean_image {
       previous_id=$(cat .image-id.raw)
       if test "$IMAGE_ID" != "$previous_id"; then
           # Also remove squashed image since it will change anyway
-          docker rmi "$previous_id" "$(cat .image-id)" || :
+          docker rmi --force "$previous_id" "$(cat .image-id)" || :
           rm -f ".image-id.raw" ".image-id" || :
       fi
   fi
