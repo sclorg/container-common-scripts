@@ -1145,6 +1145,9 @@ ct_run_tests_from_testset() {
   git show -s
   echo
 
+  echo "Running tests for image ${IMAGE_NAME}"
+  echo "Uncompressed size of the image: $(ct_get_image_size_uncompresseed "${IMAGE_NAME}")"
+
   for test_case in $TEST_SET; do
     TESTCASE_RESULT=0
     # shellcheck disable=SC2076
@@ -1202,6 +1205,17 @@ function ct_timestamp_diff() {
   local start_date=$1
   local final_date=$2
   date -u -d "0 $final_date seconds - $start_date seconds" +"%H:%M:%S"
+}
+
+# ct_get_image_size_uncompresseed
+# -------------------------------
+# Shows uncompressed image size in MB
+# Argument: image_name - image locally available
+ct_get_image_size_uncompresseed() {
+  local image_name=$1
+	local size_bytes
+	size_bytes=$(docker inspect "${image_name}" -f '{{.Size}}')
+  echo "$(( size_bytes / 1024 / 1024 ))MB"
 }
 
 # vim: set tabstop=2:shiftwidth=2:expandtab:
