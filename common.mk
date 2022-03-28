@@ -42,6 +42,7 @@ else ifeq ($(TARGET),rhel7)
 else ifeq ($(TARGET),fedora)
 	OS := fedora
 	DOCKERFILE ?= Dockerfile.fedora
+	REGISTRY := quay.io/
 else ifeq ($(TARGET),centos6)
 	OS := centos6
 	DOCKERFILE ?= Dockerfile.centos6
