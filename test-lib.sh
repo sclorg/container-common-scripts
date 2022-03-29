@@ -1410,6 +1410,55 @@ function ct_timestamp_diff() {
   date -u -d "0 $final_date seconds - $start_date seconds" +"%H:%M:%S"
 }
 
+# ct_get_certificate_timestamp
+# ----------------------------
+# Looks into a running container into a specified file (certificate) and extracts
+# a notBefore date.
+# Argument: container - ID of a running container
+# Argument: path - path to the certificate inside the running container
+# Returns: timestamp (seconds since Unix era) for the certificate generation
+function ct_get_certificate_timestamp() {
+  local container=$1
+  local path=$2
+  date '+%s' --date="$(docker exec "$container" bash -c "cat $path" | openssl x509  -startdate -noout | grep notBefore | sed -e 's/notBefore=//')"
+}
+
+# ct_get_certificate_age_s
+# ------------------------
+# Looks into a running container into a specified file and retuns age of the certificate
+# Argument: container - ID of a running container
+# Argument: path - path inside the running container
+# Returns: age of the certificate in seconds
+function ct_get_certificate_age_s() {
+  local container=$1
+  local path=$2
+  local now
+  local cert_timestamp
+  now=$(date '+%s')
+  cert_timestamp=$(ct_get_certificate_timestamp "$container" "$path")
+  echo $(( now - cert_timestamp ))
+}
+
+# ct_get_image_age_s
+# ------------------
+# Retuns age of a given image in seconds
+# Argument: image_name - name of a given image
+# Returns: age of the image in seconds
+function ct_get_image_age_s() {
+  local image_name=$1
+  local now
+  local image_created
+  local image_timestamp
+  now=$(date '+%s')
+	# docker inspect returns format <date> <time> <timezone_diff> <timezone_name>
+	# with is not understood by the date utility. Removing the <timezone_name> does
+	# not change the meaning of the time, so we can safely remove it, which makes
+	# the format read-able by the date utility
+  image_created=$(docker inspect -f '{{.Created}}' "${image_name}" | awk '{print $1, $2, $3}')
+  image_timestamp=$(date -d "${image_created}" '+%s')
+  echo $(( now - image_timestamp ))
+}
+
 # ct_get_image_size_uncompresseed
 # -------------------------------
 # Shows uncompressed image size in MB
