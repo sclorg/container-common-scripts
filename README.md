@@ -19,7 +19,7 @@ root Makefile in order to access the default rules used to call shared scripts.
 `make` or `make build`
 This rule will build an image without tagging it with any tags after it is built.
 After the image finishes building the scripts will squash the image using `docker-squash`.
-`make build` will also expect a `README.md` so that it can transfrom it into
+`make build` will also expect a `README.md` so that it can transform it into
 a man page that gets added to the image so make sure it is available and that
 you have the `go-md2man` tool installed on your host.
 
@@ -84,7 +84,7 @@ Dockerfile for the scripts to know which versions to build.
 
 `OS`
 OS version you want to build the images for. Currently the scripts are able to build for
-centos (default), centos6, centos8, rhel7, rhel8 and fedora.
+centos (default), centos6, c8s, c9s, rhel7, rhel8 and fedora.
 
 `SKIP_SQUASH`
 When set to 1 the build script will skip the squash phase of the build.
