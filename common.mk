@@ -46,9 +46,10 @@ else ifeq ($(TARGET),fedora)
 else ifeq ($(TARGET),centos6)
 	OS := centos6
 	DOCKERFILE ?= Dockerfile.centos6
-else ifeq ($(TARGET),centos8)
-	OS := centos8
-	DOCKERFILE ?= Dockerfile.centos8
+else ifeq ($(TARGET),c8s)
+	OS := c8s
+	DOCKERFILE ?= Dockerfile.c8s
+	REGISTRY := quay.io/
 else ifeq ($(TARGET),c9s)
 	OS := c9s
 	DOCKERFILE ?= Dockerfile.c9s
