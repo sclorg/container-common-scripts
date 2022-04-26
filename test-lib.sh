@@ -291,7 +291,7 @@ function ct_doc_content_old() {
     docker run --rm "${IMAGE_NAME}" /bin/bash -c "cat /${f}" >"${tmpdir}/$(basename "${f}")"
     # Check whether the files contain some important information
     for term in "$@" ; do
-      if ! grep -F -q -e "${term}" "${tmpdir}/$(basename "${f}")" ; then
+      if ! grep -E -q -e "${term}" "${tmpdir}/$(basename "${f}")" ; then
         echo "ERROR: File /${f} does not include '${term}'." >&2
         return 1
       fi
