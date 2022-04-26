@@ -1146,7 +1146,6 @@ ct_run_tests_from_testset() {
   echo
 
   echo "Running tests for image ${IMAGE_NAME}"
-  echo "Uncompressed size of the image: $(ct_get_image_size_uncompresseed "${IMAGE_NAME}")"
 
   for test_case in $TEST_SET; do
     TESTCASE_RESULT=0
@@ -1178,7 +1177,9 @@ ct_run_tests_from_testset() {
     time_diff=$(ct_timestamp_diff "$time_beg" "$time_end")
     printf -v TEST_SUMMARY "%s %s for '%s' %s (%s)\n" "${TEST_SUMMARY:-}" "${test_msg}" "${app_name}" "$test_case" "$time_diff"
     [ -n "${FAIL_QUICKLY:-}" ] && return 1
-  done;
+  done
+  echo "Tests were run for image ${IMAGE_NAME}"
+  echo "Uncompressed size of the image: $(ct_get_image_size_uncompresseed "${IMAGE_NAME}")"
 }
 
 # ct_timestamp_s
