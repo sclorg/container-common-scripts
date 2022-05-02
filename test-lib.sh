@@ -1053,6 +1053,8 @@ ct_test_app_dockerfile() {
   ct_test_response "http://$ip:${port}" 200 "${expected_text}"
   ret=$?
 
+  [[ $ret -eq 0 ]] || docker logs "$(ct_get_cid "${cname}")"
+
   # cleanup
   docker kill "$(ct_get_cid "${cname}")"
   sleep 2
