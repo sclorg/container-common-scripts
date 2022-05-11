@@ -1152,14 +1152,14 @@ ct_run_tests_from_testset() {
 
 # ct_timestamp_s
 # --------------
-# Returns timestamp in seconds
+# Returns timestamp in seconds since unix era -- a large integer
 function ct_timestamp_s() {
   date '+%s'
 }
 
 # ct_timestamp_pretty
 # -----------------
-# Returns timestamp readable to a human
+# Returns timestamp readable to a human, like 2022-05-18 10:52:44+02:00
 function ct_timestamp_pretty() {
   date --rfc-3339=seconds
 }
@@ -1167,8 +1167,8 @@ function ct_timestamp_pretty() {
 # ct_timestamp_diff
 # -----------------
 # Computes a time diff between two timestamps
-# Argument: start_date - Beginning (in seconds)
-# Argument: final_date - End (in seconds)
+# Argument: start_date - Beginning (in seconds since unix era -- a large integer)
+# Argument: final_date - End (in seconds since unix era -- a large integer)
 # Returns: Time difference in format HH:MM:SS
 function ct_timestamp_diff() {
   local start_date=$1
