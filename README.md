@@ -107,6 +107,9 @@ One or more files or directories to be scanned by the shellcheck, default is `.`
 means a whole repository directory. If a directory is provided then all of its content
 is scanned as well.
 
+`CT_OCP4_TEST`
+Set to true if you want to test container in OpenShift 4 environment.
+
 `clean-hook`
 Append Makefile rules to this variable to make sure additional cleaning actions are run
 when `make clean` is called.

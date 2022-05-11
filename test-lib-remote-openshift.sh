@@ -77,37 +77,11 @@ function ct_os_upload_image_external_registry() {
 }
 
 
-function ct_os_login_external_registry() {
-  local docker_token
-  # docker login fails with "404 page not found" error sometimes, just try it more times
-  # shellcheck disable=SC2034
-  echo "loging"
-  [ -z "${INTERNAL_DOCKER_REGISTRY:-}" ] && "INTERNAL_DOCKER_REGISTRY has to be set for working with Internal registry" && return 1
-  # shellcheck disable=SC2034
-  for i in $(seq 12) ; do
-    # shellcheck disable=SC2015
-    docker_token=$(cat "$DOCKER_UPSHIFT_TOKEN")
-    # shellcheck disable=SC2015
-    docker login -u rhscl-ci-testing -p "$docker_token" "${INTERNAL_DOCKER_REGISTRY}" && return 0 || :
-    sleep 5
-  done
-  return 1
-}
-
 function ct_os_import_image_ocp4() {
   local image_name="${1}"; shift
   local imagestream=${1:-$image_name:latest}
-  local namespace
 
-  namespace=${CT_NAMESPACE:-"$(oc project -q)"}
-  deploy_image_name="${INTERNAL_DOCKER_REGISTRY}/rhscl-ci-testing/${imagestream}"
-  echo "Uploading image ${image_name} as ${deploy_image_name} , ${imagestream} into external registry."
-  ct_os_upload_image_external_registry "${image_name}" "${imagestream}"
-  if [ "${CT_TAG_IMAGE:-false}" == 'true' ]; then
-    echo "Tag ${deploy_image_name} to ${namespace}/${imagestream}"
-    oc tag --source=docker "${deploy_image_name}" "${namespace}/${imagestream}" --insecure=true --reference-policy=local
-  else
-    echo "Import image into OpenShift 4 environment ${namespace}/${imagestream} from ${deploy_image_name}"
-    oc import-image "${namespace}/${imagestream}" --from="${deploy_image_name}" --confirm --reference-policy=local
-  fi
+  echo "Uploading image ${image_name} as ${imagestream} into OpenShift internal registry."
+  ct_os_upload_image_v4 "${image_name}" "${imagestream}"
+
 }

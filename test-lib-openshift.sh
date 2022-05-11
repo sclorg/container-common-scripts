@@ -399,12 +399,12 @@ function ct_delete_all_objects() {
   sleep 10
 }
 
-# ct_os_docker_login
+# ct_os_docker_login_v3
 # --------------------
 # Logs in into docker daemon
 # Uses global REGISRTY_ADDRESS environment variable for arbitrary registry address.
 # Does not do anything if REGISTRY_ADDRESS is set.
-function ct_os_docker_login() {
+function ct_os_docker_login_v3() {
   [ -n "${REGISTRY_ADDRESS:-}" ] && "REGISTRY_ADDRESS set, not trying to docker login." && return 0
   # docker login fails with "404 page not found" error sometimes, just try it more times
   # shellcheck disable=SC2034
@@ -416,6 +416,26 @@ function ct_os_docker_login() {
   return 1
 }
 
+# ct_os_docker_login_v4
+# --------------------
+# Logs in into docker daemon
+# Uses global REGISRTY_ADDRESS environment variable for arbitrary registry address.
+# Does not do anything if REGISTRY_ADDRESS is set.
+function ct_os_docker_login_v4() {
+  OCP4_REGISTER=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
+  echo "OCP4 loging address is $OCP4_ADDRESS."
+  if [ -z "${OCP4_REGISTER}" ]; then
+    echo "!!!OpenShift 4 registry address not found. This is an error. Check OpenShift 4 cluster!!!"
+    return 1
+  fi
+
+  if docker login -u kubeadmin -p "$(oc whoami -t)" "${OCP4_REGISTER}"; then
+    echo "Login to $OCP4_REGISTER was successfully."
+    return 0
+  fi
+  return 1
+}
+
 # ct_os_upload_image IMAGE [IMAGESTREAM]
 # --------------------
 # Uploads image from local registry to the OpenShift internal registry.
@@ -424,16 +444,42 @@ function ct_os_docker_login() {
 #                          In the format of name:tag ($image_name:latest by default)
 # Uses global REGISRTY_ADDRESS environment variable for arbitrary registry address.
 function ct_os_upload_image() {
+  local os_version="${1}" ; shift
   local input_name="${1}" ; shift
   local image_name=${input_name##*/}
   local imagestream=${1:-$image_name:latest}
   local output_name
+  local source_name
+  local docker_options=""
+  local image_tagged="${image_name%:*}:${VERSION}"
 
-  output_name="${REGISRTY_ADDRESS:-172.30.1.1:5000}/$(oc project -q)/$imagestream"
+  if [ "${os_version}" != "v3" ] && [ "${os_version}" != "v4" ]; then
+    echo "You have to specify OpenShift version to upload an image."
+    echo "Either 'v3' or 'v4' is allowed"
+    return 1
+  fi
 
-  ct_os_docker_login
-  docker tag "${input_name}" "${output_name}"
-  docker push "${output_name}"
+
+
+  if [ "${os_version}" == "v3" ]; then
+    output_name="${REGISRTY_ADDRESS:-172.30.1.1:5000}/$(oc project -q)/$imagestream"
+
+    if ! ct_os_docker_login_v3; then
+      return 1
+    fi
+    source_name="${input_name}"
+  fi
+  if [ "${os_version}" == "v4" ]; then
+    # Variable OCP4_ADDRESS is set in function ct_os_docker_login_v4
+    if ct_os_docker_login_v4; then
+      return 1
+    fi
+    source_name="${image_tagged}"
+    docker_options="--tls-verify=false"
+    output_name="$OCP4_ADDRESS/$namespace/$image_tagged"
+  fi
+  docker tag "${source_name}" "${output_name}"
+  docker push $docker_options "${output_name}"
 }
 
 # ct_os_is_tag_exists IS_NAME TAG
@@ -674,8 +720,9 @@ function ct_os_test_s2i_app_func() {
   local image_tagged="${image_name_no_namespace%:*}:${VERSION}"
 
   if [ "${CVP:-0}" -eq "0" ]; then
-    if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
-      ct_os_import_image_ocp4 "${image_name}" "${image_tagged}"
+    if [ "${CT_OCP4_TEST:-false}" == 'true' ] ; then
+      echo "Uploading image ${image_name} as ${image_tagged} into OpenShift internal registry."
+      ct_os_upload_image "v4" "${image_name}" "${image_tagged}"
     else
       # Create a specific imagestream tag for the image so that oc cannot use anything else
       if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
@@ -686,7 +733,7 @@ function ct_os_test_s2i_app_func() {
         ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
       else
         echo "Uploading image ${image_name} as ${image_tagged}"
-        ct_os_upload_image "${image_name}" "${image_tagged}"
+        ct_os_upload_image "v3" "${image_name}" "${image_tagged}"
       fi
     fi
   else
@@ -818,8 +865,9 @@ function ct_os_test_template_app_func() {
   # Upload main image is already done by CVP pipeline. No need to do it twice.
   if [ "${CVP:-0}" -eq "0" ]; then
     # Create a specific imagestream tag for the image so that oc cannot use anything else
-    if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
-      ct_os_import_image_ocp4 "${image_name}" "${image_tagged}"
+    if [ "${CT_OCP4_TEST:-false}" == 'true' ] ; then
+      echo "Uploading image ${image_name} as ${image_tagged} into OpenShift internal registry."
+      ct_os_upload_image "v4" "${image_name}" "${image_tagged}"
     else
       if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
         echo "Importing image ${image_name} as ${image_tagged}"
@@ -829,7 +877,7 @@ function ct_os_test_template_app_func() {
         ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
       else
         echo "Uploading image ${image_name} as ${image_tagged}"
-        ct_os_upload_image "${image_name}" "${image_tagged}"
+        ct_os_upload_image "v3" "${image_name}" "${image_tagged}"
       fi
     fi
   else
@@ -851,10 +899,11 @@ function ct_os_test_template_app_func() {
           exit 1
         fi
 
-        if [ "${CT_EXTERNAL_REGISTRY:-false}" == 'true' ] ; then
-          ct_os_import_image_ocp4 "${image_tag_a[0]}" "${image_tag_a[1]}"
+        if [ "${CT_OCP4_TEST:-false}" == 'true' ] ; then
+          echo "Uploading image ${image_tag_a[0]} as ${image_tag_a[1]} into OpenShift internal registry."
+          ct_os_upload_image "v4" "${image_name}" "${image_tag_a[1]}"
         else
-          ct_os_upload_image "${image_tag_a[0]}" "${image_tag_a[1]}"
+          ct_os_upload_image "v3" "${image_tag_a[0]}" "${image_tag_a[1]}"
         fi
       done
   fi
@@ -969,7 +1018,7 @@ ct_os_test_image_update() {
 
   # Get current image from repository and create an imagestream
   docker pull "$old_image:latest" 2>/dev/null
-  ct_os_upload_image "$old_image" "$istag"
+  ct_os_upload_image "v3" "$old_image" "$istag"
 
   # Setup example application with curent image
   oc new-app "$@" --name "$service_name"
@@ -981,7 +1030,7 @@ ct_os_test_image_update() {
   ct_assert_cmd_success "$check_command_exp"
 
   # Tag built image into the imagestream and wait for rebuild
-  ct_os_upload_image "$image_name" "$istag"
+  ct_os_upload_image "v3" "$image_name" "$istag"
   ct_os_wait_pod_ready "${service_name}-2" 60
 
   # Check application output
