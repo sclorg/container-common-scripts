@@ -1180,6 +1180,7 @@ ct_run_tests_from_testset() {
   done
   echo "Tests were run for image ${IMAGE_NAME}"
   echo "Uncompressed size of the image: $(ct_get_image_size_uncompresseed "${IMAGE_NAME}")"
+  echo "Compressed size of the image: $(ct_get_image_size_compresseed "${IMAGE_NAME}")"
 }
 
 # ct_timestamp_s
@@ -1214,8 +1215,20 @@ function ct_timestamp_diff() {
 # Argument: image_name - image locally available
 ct_get_image_size_uncompresseed() {
   local image_name=$1
-	local size_bytes
-	size_bytes=$(docker inspect "${image_name}" -f '{{.Size}}')
+  local size_bytes
+  size_bytes=$(docker inspect "${image_name}" -f '{{.Size}}')
+  echo "$(( size_bytes / 1024 / 1024 ))MB"
+}
+
+# ct_get_image_size_compresseed
+# -------------------------------
+# Shows compressed image size in MB
+# This might not be entirely same as podman, but should be close enough.
+# Argument: image_name - image locally available
+ct_get_image_size_compresseed() {
+  local image_name=$1
+  local size_bytes
+  size_bytes=$(podman save "${image_name}" | gzip - | wc --bytes)
   echo "$(( size_bytes / 1024 / 1024 ))MB"
 }
 
