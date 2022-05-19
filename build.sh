@@ -2,7 +2,7 @@
 
 # This script is used to build the OpenShift Docker images.
 #
-# OS - Specifies distribution - "rhel7", "rhel8", "centos7", "c8s", "c9s" or "fedora"
+# OS - Specifies distribution - "rhel7", "rhel8", "rhel9", "centos7", "c8s", "c9s" or "fedora"
 # VERSION - Specifies the image version - (must match with subdirectory in repo)
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
 
@@ -235,6 +235,8 @@ for dir in ${dirs}; do
   pushd "${dir}" > /dev/null
   if [ "$OS" == "rhel8" ] || [ "$OS" == "rhel8-candidate" ]; then
     docker_build_with_version Dockerfile.rhel8
+  elif [ "$OS" == "rhel9" ] || [ "$OS" == "rhel9-candidate" ]; then
+    docker_build_with_version Dockerfile.rhel9
   elif [ "$OS" == "rhel7" ] || [ "$OS" == "rhel7-candidate" ]; then
     docker_build_with_version Dockerfile.rhel7
   elif [ "$OS" == "fedora" ] || [ "$OS" == "fedora-candidate" ]; then

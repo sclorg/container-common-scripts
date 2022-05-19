@@ -119,7 +119,7 @@ class BetkaGenerator(object):
         if self.os_env == "centos7":
             msg = """
 'centos7' target is not supported.
-Target has to be e.g. rhel7, fedora or rhel8.
+Target has to be e.g. rhel7, rhel8, rhel9 or fedora.
 e.g. make betka TARGET=fedora VERSIONS=XY
             """
             logging.info(msg)
@@ -197,10 +197,15 @@ git config --global user.name <your name>
         fields = self.downstream_branch.split("-")
         if self.os_env == "rhel7":
             self.cwt_config = f"rhel7.yaml:{fields[0]}{fields[1].replace('.','')}0"
-        else:
+        elif self.os_env == "rhel8":
             release_fields = fields[1].split(".")
             self.cwt_config = (
                 f"rhel8.yaml:{fields[0]}{release_fields[0]}.{release_fields[1]}"
+            )
+        else:
+            release_fields = fields[1].split(".")
+            self.cwt_config = (
+                f"rhel9.yaml:{fields[0]}{release_fields[0]}.{release_fields[1]}"
             )
 
     def clone_and_switch_to_branch(self, downstream_name: str, branch_name: str) -> Any:
