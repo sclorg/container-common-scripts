@@ -25,6 +25,9 @@ export TESTSUITE_RESULT=0
 # unexpectedly. Removes the cid_files and CID_FILE_DIR as well.
 # Uses: $CID_FILE_DIR - path to directory containing cid_files
 # Uses: $EXPECTED_EXIT_CODE - expected container exit code
+# Uses: $TEST_SUMMARY - all run tests logged and marked PASSED/FAILED
+# Uses: $TESTSUITE_RESULT - 0 if all tests passed, 1 otherwise
+# Uses: $IMAGE_NAME - name of tested image
 function ct_cleanup() {
   ct_show_resources
   for cid_file in "$CID_FILE_DIR"/* ; do
@@ -49,6 +52,15 @@ function ct_cleanup() {
   done
   rmdir "$CID_FILE_DIR"
   : "Done."
+  # print stats and exit accordingly
+  echo ${TEST_SUMMARY:-}
+  if [ $TESTSUITE_RESULT -eq 0 ] ; then
+    echo "Container tests for ${IMAGE_NAME} succeeded."
+    exit 0
+  else
+    echo "Container tests for ${IMAGE_NAME} failed."
+    exit 1
+  fi
 }
 
 # ct_enable_cleanup
