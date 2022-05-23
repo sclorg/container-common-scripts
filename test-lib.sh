@@ -49,6 +49,32 @@ function ct_cleanup() {
   done
   rmdir "$CID_FILE_DIR"
   : "Done."
+
+  ct_show_results
+  exit "${TESTCASE_RESULT:-0}"
+}
+
+# ct_show_results
+# ---------------
+# Prints results of all test cases that are stored into TEST_SUMMARY variable.
+# Uses: $TEST_SUMMARY - text info about test-cases
+# Uses: $TESTCASE_RESULT - overall result of all tests
+function ct_show_results() {
+  echo
+  echo "==============================================="
+  echo "Test cases results:"
+  echo
+  echo "${TEST_SUMMARY:-}"
+
+  if [ -n "${TESTSUITE_RESULT:-}" ] ; then
+    if [ "$TESTSUITE_RESULT" -eq 0 ] ; then
+      # shellcheck disable=SC2153
+      echo "Tests for ${IMAGE_NAME} succeeded."
+    else
+      # shellcheck disable=SC2153
+      echo "Tests for ${IMAGE_NAME} failed."
+    fi
+  fi
 }
 
 # ct_enable_cleanup
@@ -929,6 +955,7 @@ ct_check_latest_imagestreams() {
 # Prints the available resources
 ct_show_resources()
 {
+  echo
   echo "Resources info:"
   echo "Memory:"
   free -h
@@ -1089,21 +1116,64 @@ ct_check_testcase_result() {
 # Uses: $TEST_SUMMARY - variable for storing test results
 # Uses: $IMAGE_NAME - name of the image being tested
 ct_run_tests_from_testset() {
-  local app_name="$1"
+  local app_name="${1:-appnamenotset}"
+  local time_beg_pretty
+  local time_beg
+  local time_end
+  local time_diff
+  local test_msg
+
+  # Let's store in the log what change do we test
+  echo
+  git show --no-patch
+  echo
+
   for test_case in $TEST_SET; do
     TESTCASE_RESULT=0
-    echo "Running test $test_case ... "
+    time_beg_pretty=$(ct_timestamp_pretty)
+    time_beg=$(ct_timestamp_s)
+    echo "-----------------------------------------------"
+    echo "Running test $test_case (starting at $time_beg_pretty) ... "
+    echo "-----------------------------------------------"
     $test_case
     ct_check_testcase_result $?
-    local test_msg
+    time_end=$(ct_timestamp_s)
     if [ $TESTCASE_RESULT -eq 0 ]; then
       test_msg="[PASSED]"
     else
       test_msg="[FAILED]"
       TESTSUITE_RESULT=1
     fi
-    printf -v TEST_SUMMARY "%s %s for '%s' %s\n" "${TEST_SUMMARY}" "${test_msg}" "${app_name}" "$test_case"
+    time_diff=$(ct_timestamp_diff "$time_beg" "$time_end")
+    printf -v TEST_SUMMARY "%s %s for '%s' %s (%s)\n" "${TEST_SUMMARY:-}" "${test_msg}" "${app_name}" "$test_case" "$time_diff"
+    [ -n "${FAIL_QUICKLY:-}" ] && return 1
   done;
+}
+
+# ct_timestamp_s
+# --------------
+# Returns timestamp in seconds since unix era -- a large integer
+function ct_timestamp_s() {
+  date '+%s'
+}
+
+# ct_timestamp_pretty
+# -----------------
+# Returns timestamp readable to a human, like 2022-05-18 10:52:44+02:00
+function ct_timestamp_pretty() {
+  date --rfc-3339=seconds
+}
+
+# ct_timestamp_diff
+# -----------------
+# Computes a time diff between two timestamps
+# Argument: start_date - Beginning (in seconds since unix era -- a large integer)
+# Argument: final_date - End (in seconds since unix era -- a large integer)
+# Returns: Time difference in format HH:MM:SS
+function ct_timestamp_diff() {
+  local start_date=$1
+  local final_date=$2
+  date -u -d "0 $final_date seconds - $start_date seconds" +"%H:%M:%S"
 }
 
 # vim: set tabstop=2:shiftwidth=2:expandtab:
