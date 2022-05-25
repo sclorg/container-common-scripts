@@ -1115,6 +1115,8 @@ ct_check_testcase_result() {
 # Uses: $TEST_SET - set of test cases to run
 # Uses: $TEST_SUMMARY - variable for storing test results
 # Uses: $IMAGE_NAME - name of the image being tested
+# Uses: $UNSTABLE_TESTS - set of tests, whose result can be ignored
+# Uses: $IGNORE_UNSTABLE_TESTS - flag to ignore unstable tests
 ct_run_tests_from_testset() {
   local app_name="${1:-appnamenotset}"
   local time_beg_pretty
@@ -1122,6 +1124,7 @@ ct_run_tests_from_testset() {
   local time_end
   local time_diff
   local test_msg
+  local is_unstable
 
   # Let's store in the log what change do we test
   echo
@@ -1130,6 +1133,11 @@ ct_run_tests_from_testset() {
 
   for test_case in $TEST_SET; do
     TESTCASE_RESULT=0
+    if [[ " ${UNSTABLE_TESTS[@]} " =~ " ${test_case} " ]]; then
+      is_unstable=1
+    else
+      is_unstable=0
+    fi
     time_beg_pretty=$(ct_timestamp_pretty)
     time_beg=$(ct_timestamp_s)
     echo "-----------------------------------------------"
@@ -1142,7 +1150,9 @@ ct_run_tests_from_testset() {
       test_msg="[PASSED]"
     else
       test_msg="[FAILED]"
-      TESTSUITE_RESULT=1
+      if [ -z $IGNORE_UNSTABLE_TESTS ] || [ $is_unstable -eq 0 ]; then
+        TESTSUITE_RESULT=1
+      fi
     fi
     time_diff=$(ct_timestamp_diff "$time_beg" "$time_end")
     printf -v TEST_SUMMARY "%s %s for '%s' %s (%s)\n" "${TEST_SUMMARY:-}" "${test_msg}" "${app_name}" "$test_case" "$time_diff"
