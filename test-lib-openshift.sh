@@ -1377,7 +1377,7 @@ function ct_os_show_all_image_stream_tags () {
 		file_name="$1"
 		shift
 		echo "Tags in the image stream $file_name:"
-    cat "$file_name" | jq -r '.spec.tags[] | ("- " + .name + " -> " + .from.name)'
+    jq -r '.spec.tags[] | ("- " + .name + " -> " + .from.name)' "$file_name"
   done
 }
 
