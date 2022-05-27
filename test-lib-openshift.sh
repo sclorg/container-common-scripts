@@ -1366,4 +1366,19 @@ function ct_os_service_image_info() {
   # so if the specified namespace does not succeed, try the current namespace
   oc get isimage -n "${namespace}" "${image_id##*/}" -o yaml || oc get isimage "${image_id##*/}" -o yaml
 }
+
+# ct_os_show_all_image_stream_tags IMAGE_STREAM_FILE [ IMAGE_STREAM_FILE ... ]
+# --------------------
+# Shows information about the tags in the image stream files given.
+# Argument: image_stream_file - JSON file with the imagestream definition
+function ct_os_show_all_image_stream_tags () {
+  local file_name
+	while [ $# -gt 0 ] ; do
+		file_name="$1"
+		shift
+		echo "Tags in the image stream $file_name:"
+    cat "$file_name" | jq -r '.spec.tags[] | ("- " + .name + " -> " + .from.name)'
+  done
+}
+
 # vim: set tabstop=2:shiftwidth=2:expandtab:
