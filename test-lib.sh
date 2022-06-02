@@ -18,6 +18,10 @@
 EXPECTED_EXIT_CODE=0
 export TESTSUITE_RESULT=0
 
+# define UNSTABLE_TESTS if not already defined, as this variable
+# is not mandatory for containers
+UNSTABLE_TESTS="${UNSTABLE_TESTS:-""}"
+
 # ct_cleanup
 # --------------------
 # Cleans up containers used during tests. Stops and removes all containers
@@ -1134,7 +1138,7 @@ ct_run_tests_from_testset() {
   for test_case in $TEST_SET; do
     TESTCASE_RESULT=0
     # shellcheck disable=SC2076
-    if [[ " ${UNSTABLE_TESTS[*]} " =~ " ${test_case} " ]]; then
+    if [[ " ${UNSTABLE_TESTS[*]} " =~ " ${app_name} " ]]; then
       is_unstable=1
     else
       is_unstable=0
@@ -1150,8 +1154,10 @@ ct_run_tests_from_testset() {
     if [ $TESTCASE_RESULT -eq 0 ]; then
       test_msg="[PASSED]"
     else
-      test_msg="[FAILED]"
-      if [ -z "$IGNORE_UNSTABLE_TESTS" ] || [ $is_unstable -eq 0 ]; then
+      if [ -n "${IGNORE_UNSTABLE_TESTS:-""}" ] && [ $is_unstable -eq 1 ]; then
+        test_msg="[FAILED][UNSTABLE-IGNORED]"
+      else
+        test_msg="[FAILED]"
         TESTSUITE_RESULT=1
       fi
     fi
