@@ -423,7 +423,7 @@ function ct_os_docker_login_v3() {
 # Does not do anything if REGISTRY_ADDRESS is set.
 function ct_os_docker_login_v4() {
   OCP4_REGISTER=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
-  echo "OCP4 loging address is $OCP4_ADDRESS."
+  echo "OCP4 loging address is $OCP4_REGISTER."
   if [ -z "${OCP4_REGISTER}" ]; then
     echo "!!!OpenShift 4 registry address not found. This is an error. Check OpenShift 4 cluster!!!"
     return 1
@@ -470,13 +470,13 @@ function ct_os_upload_image() {
     source_name="${input_name}"
   fi
   if [ "${os_version}" == "v4" ]; then
-    # Variable OCP4_ADDRESS is set in function ct_os_docker_login_v4
-    if ct_os_docker_login_v4; then
+    # Variable OCP4_REGISTER is set in function ct_os_docker_login_v4
+    if ! ct_os_docker_login_v4; then
       return 1
     fi
     source_name="${image_tagged}"
     docker_options="--tls-verify=false"
-    output_name="$OCP4_ADDRESS/$namespace/$image_tagged"
+    output_name="$OCP4_REGISTER/$namespace/$image_tagged"
   fi
   docker tag "${source_name}" "${output_name}"
   docker push $docker_options "${output_name}"
