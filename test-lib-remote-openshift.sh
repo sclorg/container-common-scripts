@@ -85,3 +85,19 @@ function ct_os_import_image_ocp4() {
   ct_os_upload_image_v4 "${image_name}" "${imagestream}"
 
 }
+
+# ct_os_check_login
+# ---------------
+# function checks if the login to openshift was successful
+# if successful returns 0
+# if not, write error message, sets test result to 1
+# and exits with non-zero
+# Uses: $TESTSUITE_RESULT - overall result of all tests
+function ct_os_check_login() {
+  oc status || {
+    echo "-------------------------------------------"
+    echo "It looks like oc is not properly logged in."
+    TESTSUITE_RESULT=1
+    return 1
+  }
+}
