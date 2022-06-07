@@ -29,6 +29,7 @@ UNSTABLE_TESTS="${UNSTABLE_TESTS:-""}"
 # unexpectedly. Removes the cid_files and CID_FILE_DIR as well.
 # Uses: $CID_FILE_DIR - path to directory containing cid_files
 # Uses: $EXPECTED_EXIT_CODE - expected container exit code
+# Uses: $TESTSUITE_RESULT - overall result of all tests
 function ct_cleanup() {
   ct_show_resources
   for cid_file in "$CID_FILE_DIR"/* ; do
@@ -55,14 +56,14 @@ function ct_cleanup() {
   : "Done."
 
   ct_show_results
-  exit "${TESTCASE_RESULT:-0}"
+  exit "${TESTSUITE_RESULT:-0}"
 }
 
 # ct_show_results
 # ---------------
 # Prints results of all test cases that are stored into TEST_SUMMARY variable.
 # Uses: $TEST_SUMMARY - text info about test-cases
-# Uses: $TESTCASE_RESULT - overall result of all tests
+# Uses: $TESTSUITE_RESULT - overall result of all tests
 function ct_show_results() {
   echo
   echo "==============================================="
