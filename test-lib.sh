@@ -654,6 +654,8 @@ ct_get_public_image_name() {
     public_image_name=$registry/rhscl/$base_image_name-${version//./}-rhel7
   elif [ "$os" == "rhel8" ]; then
     public_image_name=$registry/rhel8/$base_image_name-${version//./}
+  elif [ "$os" == "rhel9" ]; then
+    public_image_name=$registry/rhel9/$base_image_name-${version//./}
   elif [ "$os" == "centos7" ]; then
     public_image_name=$registry/centos7/$base_image_name-${version//./}-centos7
   elif [ "$os" == "c8s" ]; then

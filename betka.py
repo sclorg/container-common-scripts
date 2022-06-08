@@ -119,7 +119,7 @@ class BetkaGenerator(object):
         if self.os_env == "centos7":
             msg = """
 'centos7' target is not supported.
-Target has to be e.g. rhel7, fedora or rhel8.
+Target has to be e.g. rhel7, rhel8, rhel9 or fedora.
 e.g. make betka TARGET=fedora VERSIONS=XY
             """
             logging.info(msg)
@@ -178,7 +178,8 @@ git config --global user.name <your name>
 
     def get_valid_images(self, ver: str) -> List[str]:
         if self.os_env != "fedora":
-            self.convert_branch_to_cwt_tool()
+            if not self.convert_branch_to_cwt_tool():
+                return []
         cmd = f"""docker run -it --rm {self.cwt_docker_image} bash -c '{self.cwt_command} \
 --config={self.cwt_config} utils listupstream'
 """
@@ -192,16 +193,27 @@ git config --global user.name <your name>
         logging.debug(f"Valid images {valid_images}")
         return valid_images
 
-    def convert_branch_to_cwt_tool(self) -> Any:
+    def convert_branch_to_cwt_tool(self) -> bool:
         assert isinstance(self.downstream_branch, str)
         fields = self.downstream_branch.split("-")
         if self.os_env == "rhel7":
             self.cwt_config = f"rhel7.yaml:{fields[0]}{fields[1].replace('.','')}0"
-        else:
+        elif self.os_env == "rhel8":
             release_fields = fields[1].split(".")
             self.cwt_config = (
                 f"rhel8.yaml:{fields[0]}{release_fields[0]}.{release_fields[1]}"
             )
+        elif self.os_env == "rhel9":
+            release_fields = fields[1].split(".")
+            self.cwt_config = (
+                f"rhel9.yaml:{fields[0]}{release_fields[0]}.{release_fields[1]}"
+            )
+        else:
+            logging.info(
+                f"No proper OS target was selected {self.os_env}. Possible are 'rhel7, rhel8, and rhel9."
+            )
+            return False
+        return True
 
     def clone_and_switch_to_branch(self, downstream_name: str, branch_name: str) -> Any:
         cmd = f"git clone --branch {branch_name} {self.clone_url}/{downstream_name} {self.betka_tmp_dir.name}/results"
