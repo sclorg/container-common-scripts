@@ -46,6 +46,7 @@ function ct_os_check_compulsory_vars() {
 function ct_os_get_status() {
   oc get all
   oc status
+  oc status --suggest
 }
 
 # ct_os_print_logs
@@ -446,12 +447,10 @@ function ct_os_docker_login_v4() {
 function ct_os_upload_image() {
   local os_version="${1}" ; shift
   local input_name="${1}" ; shift
-  local image_name=${input_name##*/}
-  local imagestream=${1:-$image_name:latest}
+  local image_name=${1}
   local output_name
   local source_name
   local docker_options=""
-  local image_tagged="${image_name%:*}:${VERSION}"
 
   if [ "${os_version}" != "v3" ] && [ "${os_version}" != "v4" ]; then
     echo "You have to specify OpenShift version to upload an image."
@@ -459,27 +458,24 @@ function ct_os_upload_image() {
     return 1
   fi
 
-
-
+  source_name="${input_name}"
   if [ "${os_version}" == "v3" ]; then
-    output_name="${REGISRTY_ADDRESS:-172.30.1.1:5000}/$(oc project -q)/$imagestream"
+    output_name="${REGISRTY_ADDRESS:-172.30.1.1:5000}/$(oc project -q)/$image_name"
 
     if ! ct_os_docker_login_v3; then
       return 1
     fi
-    source_name="${input_name}"
+
   fi
   if [ "${os_version}" == "v4" ]; then
     # Variable OCP4_REGISTER is set in function ct_os_docker_login_v4
     if ! ct_os_docker_login_v4; then
       return 1
     fi
-    source_name="${image_tagged}"
-    docker_options="--tls-verify=false"
-    output_name="$OCP4_REGISTER/$namespace/$image_tagged"
+    output_name="$OCP4_REGISTER/$namespace/$image_name"
   fi
   docker tag "${source_name}" "${output_name}"
-  docker push $docker_options "${output_name}"
+  docker push "${output_name}"
 }
 
 # ct_os_is_tag_exists IS_NAME TAG
