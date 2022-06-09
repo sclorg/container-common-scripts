@@ -673,6 +673,7 @@ ct_get_public_image_name() {
 # Argument: CMD - Command to be run
 function ct_assert_cmd_success() {
   echo "Checking '$*' for success ..."
+  # shellcheck disable=SC2294
   if ! eval "$@" &>/dev/null; then
     echo " FAIL"
     return 1
@@ -687,6 +688,7 @@ function ct_assert_cmd_success() {
 # Argument: CMD - Command to be run
 function ct_assert_cmd_failure() {
   echo "Checking '$*' for failure ..."
+  # shellcheck disable=SC2294
   if eval "$@" &>/dev/null; then
     echo " FAIL"
     return 1

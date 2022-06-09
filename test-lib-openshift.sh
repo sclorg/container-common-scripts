@@ -405,7 +405,7 @@ function ct_delete_all_objects() {
 # Uses global REGISRTY_ADDRESS environment variable for arbitrary registry address.
 # Does not do anything if REGISTRY_ADDRESS is set.
 function ct_os_docker_login_v3() {
-  [ -n "${REGISTRY_ADDRESS:-}" ] && "REGISTRY_ADDRESS set, not trying to docker login." && return 0
+  [ -n "${REGISTRY_ADDRESS:-}" ] && echo "REGISTRY_ADDRESS set, not trying to docker login." && return 0
   # docker login fails with "404 page not found" error sometimes, just try it more times
   # shellcheck disable=SC2034
   for i in $(seq 12) ; do
