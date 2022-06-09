@@ -97,6 +97,7 @@ function ct_os_check_login() {
   oc status || {
     echo "-------------------------------------------"
     echo "It looks like oc is not properly logged in."
+    # shellcheck disable=SC2034
     TESTSUITE_RESULT=1
     return 1
   }
