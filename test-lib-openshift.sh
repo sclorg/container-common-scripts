@@ -450,7 +450,6 @@ function ct_os_upload_image() {
   local image_name=${1}
   local output_name
   local source_name
-  local docker_options=""
 
   if [ "${os_version}" != "v3" ] && [ "${os_version}" != "v4" ]; then
     echo "You have to specify OpenShift version to upload an image."
@@ -897,7 +896,7 @@ function ct_os_test_template_app_func() {
 
         if [ "${CT_OCP4_TEST:-false}" == 'true' ] ; then
           echo "Uploading image ${image_tag_a[0]} as ${image_tag_a[1]} into OpenShift internal registry."
-          ct_os_upload_image "v4" "${image_name}" "${image_tag_a[1]}"
+          ct_os_upload_image "v4" "${image_tag_a[0]}" "${image_tag_a[1]}"
         else
           ct_os_upload_image "v3" "${image_tag_a[0]}" "${image_tag_a[1]}"
         fi
