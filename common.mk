@@ -36,7 +36,6 @@ ifeq ($(TARGET),rhel8)
 	OS := rhel8
 	DOCKERFILE ?= Dockerfile.rhel8
 else ifeq ($(TARGET),rhel9)
-	SKIP_SQUASH ?= 0
 	OS := rhel9
 	DOCKERFILE ?= Dockerfile.rhel9
 else ifeq ($(TARGET),rhel7)
