@@ -1140,6 +1140,16 @@ ct_run_tests_from_testset() {
   git show -s
   echo
 
+  # The run_test_cb function can be defined in each of the containers,
+  # when they need specific way of running the tests.
+  # If, for the concrete container, is enough to run the test function
+  # when testing, then it can use run_test_cb defined below.
+  if [[ $(type -t run_test_cb) != function ]]; then
+    run_test_cb() {
+      $1
+    }
+  fi
+
   for test_case in $TEST_SET; do
     TESTCASE_RESULT=0
     # shellcheck disable=SC2076
@@ -1153,7 +1163,7 @@ ct_run_tests_from_testset() {
     echo "-----------------------------------------------"
     echo "Running test $test_case (starting at $time_beg_pretty) ... "
     echo "-----------------------------------------------"
-    $test_case
+    run_test_cb "$test_case"
     ct_check_testcase_result $?
     time_end=$(ct_timestamp_s)
     if [ $TESTCASE_RESULT -eq 0 ]; then
