@@ -95,9 +95,6 @@ the image while building. Useful for building rhel-based images on an unsubscrib
 Be aware that you cannot write to any .repo files used this way inside the image as they
 will be mounted into the image as read-only.
 
-`UPDATE_BASE`
-Set to 1 if you want the build script to always pull the base image when available.
-
 `DOCKER_BUILD_CONTEXT`
 Use this variable in case you want to have a different context for your builds. By default
 the context of the build is the versioned directory the Dockerfiles are contained in.

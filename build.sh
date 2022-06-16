@@ -136,9 +136,6 @@ function docker_build_with_version {
 
   git_version=$(git rev-parse --short HEAD)
   BUILD_OPTIONS+=" --label io.openshift.builder-version=\"${git_version}\""
-  if [[ "${UPDATE_BASE}" == "1" ]]; then
-    BUILD_OPTIONS+=" --pull=true"
-  fi
 
   # Add possibility to use a development repo
   #
