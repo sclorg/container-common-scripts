@@ -18,21 +18,18 @@ jobs:
             os_test: "fedora"
             context: "Fedora"
             compose: "Fedora-latest"
-            api_key: "TF_PUBLIC_API_KEY"
             branch: "main"
             tmt_repo: "https://github.com/sclorg/sclorg-testing-farm"
           - tmt_plan: "centos7"
             os_test: "centos7"
             context: "CentOS7"
             compose: "CentOS-7"
-            api_key: "TF_PUBLIC_API_KEY"
             branch: "main"
             tmt_repo: "https://github.com/sclorg/sclorg-testing-farm"
           - tmt_plan: "rhel7-docker"
             os_test: "rhel7"
             context: "RHEL7"
             compose: "RHEL-7.9-Released"
-            api_key: "TF_INTERNAL_API_KEY"
             branch: "master"
             tmt_repo: "https://gitlab.cee.redhat.com/platform-eng-core-services/sclorg-tmt-plans"
             tf_scope: "private"
@@ -40,7 +37,6 @@ jobs:
             os_test: "rhel8"
             context: "RHEL8"
             compose: "RHEL-8.6.0-Nightly"
-            api_key: "TF_INTERNAL_API_KEY"
             branch: "master"
             tmt_repo: "https://gitlab.cee.redhat.com/platform-eng-core-services/sclorg-tmt-plans"
             tf_scope: "private"
@@ -60,7 +56,6 @@ jobs:
         id: github_action
         uses: sclorg/testing-farm-as-github-action@v1
         with:
-          api_key: ${{ secrets[matrix.api_key] }}
           git_url: ${{ matrix.tmt_repo }}
           git_ref: ${{ matrix.branch }}
           tf_scope: ${{ matrix.tf_scope }}
