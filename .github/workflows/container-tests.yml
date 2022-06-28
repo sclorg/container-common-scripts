@@ -44,7 +44,7 @@ jobs:
             else
               compose="CentOS-7"
               context="CentOS7"
-              tmt_plan="centos7
+              tmt_plan="centos7"
           else
             if [ "${{ matrix.os }}" == "rhel7" ]; then
               compose="RHEL-7.9-Released"
@@ -72,7 +72,7 @@ jobs:
         id: github_action
         uses: sclorg/testing-farm-as-github-action@v1
         with:
-          api_key: ${{ steps.vars.output.api_key }}
+          api_key: secrets[${{ steps.vars.output.api_key }}]
           git_url: ${{ steps.vars.output.tmt_repo }}
           git_ref: ${{ steps.vars.output.branch }}
           tf_scope: ${{ steps.vars.output.tf_scope }}
