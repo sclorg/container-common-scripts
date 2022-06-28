@@ -2,9 +2,9 @@
 
 IMAGE_REVISION=master
 
-test -n "${OS-}" || false 'make sure $OS is defined'
-test -n "${TESTED_IMAGE-}" || false 'make sure $TESTED_IMAGE is defined'
-test -n "${TESTED_SCENARIO-}" || false 'make sure $TESTED_SCENARIO is defined'
+test -n "${OS-}" || (echo 'make sure $OS is defined' >&2 ; exit 1)
+test -n "${TESTED_IMAGE-}" || (echo 'make sure $TESTED_IMAGE is defined' >&2 ; exit 1)
+test -n "${TESTED_SCENARIO-}" || (echo 'make sure $TESTED_SCENARIO is defined' >&2 ; exit 1)
 
 MERGE_INTO=origin/master
 
