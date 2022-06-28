@@ -80,6 +80,6 @@ jobs:
           git_ref: ${{ steps.vars.outputs.branch }}
           tf_scope: ${{ steps.vars.outputs.tf_scope }}
           tmt_plan_regex: ${{ steps.vars.outputs.tmt_plan }}
-          pull_request_status_name: "${{ steps.vars.outputs.context }}-${{ matrix.container-to-test }}"
+          pull_request_status_name: "${{ steps.vars.outputs.context }} - ${{ matrix.container-to-test }}"
           variables: "REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY;REPO_NAME=$GITHUB_REPOSITORY;PR_NUMBER=${{ github.event.issue.number }};OS=${{ matrix.os }};TEST_NAME=test;TESTED_IMAGE=${{ matrix.container-to-test }}"
           compose: ${{ steps.vars.outputs.compose }}
