@@ -28,12 +28,12 @@ jobs:
       - name: Set variables for Testing Farm
         id: vars
         run: |
-          api_key="TF_INTERNAL_API_KEY"
+          api_key=${{ secrets[TF_INTERNAL_API_KEY] }}
           branch="master"
           tf_scope="private"
           tmt_repo="https://gitlab.cee.redhat.com/platform-eng-core-services/sclorg-tmt-plans"
           if [ "${{ matrix.os }}" == "fedora" ] || [ "${{ matrix.os }}" == "centos7" ]; then
-            api_key="TF_PUBLIC_API_KEY"
+            api_key=${{ secrets[TF_PUBLIC_API_KEY] }}
             branch="main"
             tf_scope="public"
             tmt_repo="https://github.com/sclorg/sclorg-testing-farm"
@@ -74,7 +74,7 @@ jobs:
         id: github_action
         uses: sclorg/testing-farm-as-github-action@v1
         with:
-          api_key: secrets[${{ steps.vars.output.api_key }}]
+          api_key: ${{ steps.vars.output.api_key }}
           git_url: ${{ steps.vars.output.tmt_repo }}
           git_ref: ${{ steps.vars.output.branch }}
           tf_scope: ${{ steps.vars.output.tf_scope }}
