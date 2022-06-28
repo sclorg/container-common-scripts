@@ -45,6 +45,7 @@ jobs:
               compose="CentOS-7"
               context="CentOS7"
               tmt_plan="centos7"
+            fi
           else
             if [ "${{ matrix.os }}" == "rhel7" ]; then
               compose="RHEL-7.9-Released"
