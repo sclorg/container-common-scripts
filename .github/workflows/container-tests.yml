@@ -66,6 +66,7 @@ jobs:
           echo "::set-output name=tf_scope::$tf_scope"
           echo "::set-output name=tmt_repo::$tmt_repo"
           echo "::set-output name=compose::$compose"
+          echo "::set-output name=context::$context"
         shell: bash
 
       # https://github.com/sclorg/testing-farm-as-github-action
