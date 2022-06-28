@@ -32,12 +32,12 @@ jobs:
           branch="master"
           tf_scope="private"
           tmt_repo="https://gitlab.cee.redhat.com/platform-eng-core-services/sclorg-tmt-plans"
-          if [ ${{ matrix.os }} == "fedora" }} || ${{ matrix.os }} == "centos7" }} ]; then
+          if [ "${{ matrix.os }}" == "fedora" || "${{ matrix.os }}" == "centos7" ]; then
             api_key="TF_PUBLIC_API_KEY"
             branch="main"
             tf_scope="public"
             tmt_repo="https://github.com/sclorg/sclorg-testing-farm"
-            if [ ${{ matrix.os }} == "fedora" ]; then
+            if [ "${{ matrix.os }}" == "fedora" ]; then
               compose="Fedora-latest"
               context="Fedora"
               tmt_plan="fedora"
@@ -46,11 +46,11 @@ jobs:
               context="CentOS7"
               tmt_plan="centos7
           else
-            if [ ${{ matrix.os }} == "rhel7" ]; then
+            if [ "${{ matrix.os }}" == "rhel7" ]; then
               compose="RHEL-7.9-Released"
               context="RHEL7"
               tmt_plan="rhel7-docker"
-            elif [ ${{ matrix.os }} == "rhel8" ]; then
+            elif [ "${{ matrix.os }}" == "rhel8" ]; then
               compose="RHEL-8.6.0-Nightly"
               context="RHEL8"
               tmt_plan="rhel8-docker"
