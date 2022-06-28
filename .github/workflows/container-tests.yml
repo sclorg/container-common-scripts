@@ -32,7 +32,7 @@ jobs:
           branch="master"
           tf_scope="private"
           tmt_repo="https://gitlab.cee.redhat.com/platform-eng-core-services/sclorg-tmt-plans"
-          if [ "${{ matrix.os }}" == "fedora" || "${{ matrix.os }}" == "centos7" ]; then
+          if [ "${{ matrix.os }}" == "fedora" ] || [ "${{ matrix.os }}" == "centos7" ]; then
             api_key="TF_PUBLIC_API_KEY"
             branch="main"
             tf_scope="public"
