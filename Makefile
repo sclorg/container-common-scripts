@@ -3,14 +3,7 @@ SHELL := /usr/bin/env bash
 all:
 	@echo >&2 "Only 'make check' allowed"
 
-
-TESTED_IMAGES = \
-	postgresql-container \
-	s2i-python-container \
-	s2i-nodejs-container
-
 .PHONY: check test all check-failures
-
 
 TEST_LIB_TESTS = \
 	path_foreach \
@@ -28,6 +21,10 @@ test-lib-foreach:
 check-test-lib: $(TEST_LIB_TESTS)
 
 test: check
+	TESTED_SCENARIO=test tests/remote-containers.sh
+
+test-openshift-4: check
+	TESTED_SCENARIO=test-openshift-4 tests/remote-containers.sh
 
 shellcheck:
 	./run-shellcheck.sh `git ls-files *.sh`
@@ -50,7 +47,4 @@ check-latest-imagestream:
 check-betka:
 	cd tests && ./check_betka.sh
 
-check-remote-containers:
-	TESTED_IMAGES="$(TESTED_IMAGES)" tests/remote-containers.sh
-
-check: check-failures check-squash check-latest-imagestream check-remote-containers
+check: check-failures check-squash check-latest-imagestream
