@@ -56,6 +56,7 @@ jobs:
         id: github_action
         uses: sclorg/testing-farm-as-github-action@v1
         with:
+          api_key: "something bad"
           git_url: ${{ matrix.tmt_repo }}
           git_ref: ${{ matrix.branch }}
           tf_scope: ${{ matrix.tf_scope }}
