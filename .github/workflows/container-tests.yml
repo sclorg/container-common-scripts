@@ -12,6 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        container-to-test: ["postgresql-container", "s2i-nodejs-container", "s2i-python-container"]
         include:
           - tmt_plan: "fedora"
             os_test: "fedora"
@@ -64,6 +65,6 @@ jobs:
           git_ref: ${{ matrix.branch }}
           tf_scope: ${{ matrix.tf_scope }}
           tmt_plan_regex: ${{ matrix.tmt_plan }}
-          pull_request_status_name: ${{ matrix.context }}
-          variables: "REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY;REPO_NAME=$GITHUB_REPOSITORY;PR_NUMBER=${{ github.event.issue.number }};OS=${{ matrix.os_test }};TEST_NAME=test"
+          pull_request_status_name: "${{ matrix.context }}-${{ matrix.container-to-test }}
+          variables: "REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY;REPO_NAME=$GITHUB_REPOSITORY;PR_NUMBER=${{ github.event.issue.number }};OS=${{ matrix.os_test }};TEST_NAME=test;TESTED_IMAGE=${{ matrix.container-to-test }}"
           compose: ${{ matrix.compose }}
