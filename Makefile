@@ -1,9 +1,9 @@
 SHELL := /usr/bin/env bash
 
 all:
-	@echo >&2 "Only 'make check' allowed"
+	@echo >&2 "Only 'make shellcheck', 'make test', or 'make test-openshift-4' are allowed"
 
-.PHONY: check test all check-failures
+.PHONY: test all check-failures check-squash check-latest-imagestream test test-openshift-4
 
 TEST_LIB_TESTS = \
 	path_foreach \
@@ -20,10 +20,10 @@ test-lib-foreach:
 
 check-test-lib: $(TEST_LIB_TESTS)
 
-test: check
+test: check-failures check-squash check-latest-imagestream
 	TESTED_SCENARIO=test tests/remote-containers.sh
 
-test-openshift-4: check
+test-openshift-4: check-failures check-squash check-latest-imagestream
 	TESTED_SCENARIO=test-openshift-4 tests/remote-containers.sh
 
 shellcheck:
@@ -46,5 +46,3 @@ check-latest-imagestream:
 
 check-betka:
 	cd tests && ./check_betka.sh
-
-check: check-failures check-squash check-latest-imagestream
