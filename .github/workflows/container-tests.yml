@@ -56,7 +56,7 @@ jobs:
               context="RHEL8"
               tmt_plan="rhel8-docker"
             else
-              compose="RHEL-9.1.0-Nightly"
+              compose="RHEL-9.0.0-Nightly"
               context="RHEL9"
               tmt_plan="rhel9-docker"
             fi
