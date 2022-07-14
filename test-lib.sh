@@ -1143,7 +1143,8 @@ ct_run_tests_from_testset() {
   for test_case in $TEST_SET; do
     TESTCASE_RESULT=0
     # shellcheck disable=SC2076
-    if [[ " ${UNSTABLE_TESTS[*]} " =~ " ${app_name} " ]]; then
+    if [[ " ${UNSTABLE_TESTS[*]} " =~ " ${app_name} " ]] || \
+       [[ " ${UNSTABLE_TESTS[*]} " =~ " ${test_case} " ]]; then
       is_unstable=1
     else
       is_unstable=0
