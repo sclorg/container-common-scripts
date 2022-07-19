@@ -2,9 +2,9 @@
 
 set -e
 
-if grep -q "Red Hat Enterprise Linux release 8" /etc/system-release; then
-  # No use testing squash.py on rhel8 for now as it does not work at all
-  echo "  ! test case ignored on RHEL8 host"
+if grep -q "Red Hat Enterprise Linux release 8" /etc/system-release || grep -q "Red Hat Enterprise Linux release 9" /etc/system-release ; then
+  # No use testing squash.py on rhel8 and rhel9 for now as it does not work at all
+  echo "  ! test case ignored on RHEL8 and RHEL9 host"
   exit 0
 fi
 
