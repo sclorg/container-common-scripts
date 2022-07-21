@@ -29,7 +29,7 @@ if [[ -f "./manifest.sh" ]]; then
     exit 1
   fi
 else
-  echo "This container does not use dist-gen. Skipping a check for generating files by the dist-gen."
+  echo "This container does not use dist-gen. Skipping it."
 fi
 
 for dir in ${VERSIONS}; do
