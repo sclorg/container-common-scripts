@@ -18,7 +18,8 @@ root Makefile in order to access the default rules used to call shared scripts.
 
 `make` or `make build`
 This rule will build an image without tagging it with any tags after it is built.
-After the image finishes building the scripts will squash the image using `docker-squash`.
+If the builder is podman, then the image would also be squashed by default
+during the build.
 `make build` will also expect a `README.md` so that it can transform it into
 a man page that gets added to the image so make sure it is available and that
 you have the `go-md2man` tool installed on your host.
