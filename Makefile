@@ -3,7 +3,7 @@ SHELL := /usr/bin/env bash
 all:
 	@echo >&2 "Only 'make shellcheck', 'make test', or 'make test-openshift-4' are allowed"
 
-.PHONY: test all check-failures check-squash check-latest-imagestream test test-openshift-4 push-to-containers
+.PHONY: test all check-failures check-latest-imagestream test test-openshift-4 push-to-containers
 
 TEST_LIB_TESTS = \
 	path_foreach \
@@ -16,14 +16,12 @@ $(TEST_LIB_TESTS):
 	@echo "  RUN TEST '$@'" ; \
 	$(SHELL) tests/test-lib/$@ || $(SHELL) -x tests/lib/$@
 
-test-lib-foreach:
-
 check-test-lib: $(TEST_LIB_TESTS)
 
-test: check-failures check-squash check-latest-imagestream
+test: check-failures check-latest-imagestream
 	TESTED_SCENARIO=test tests/remote-containers.sh
 
-test-openshift-4: check-failures check-squash check-latest-imagestream
+test-openshift-4: check-failures check-latest-imagestream
 	TESTED_SCENARIO=test-openshift-4 tests/remote-containers.sh
 
 shellcheck:
@@ -37,9 +35,6 @@ pre-commit-check:
 check-failures: check-test-lib
 	cd tests/failures/check && make tag && ! make check && make clean
 	cd tests/failures/check && ./check_skip_squash.sh
-
-check-squash:
-	./tests/squash/squash.sh
 
 check-latest-imagestream:
 	cd tests && ./check_imagestreams.sh
