@@ -127,7 +127,6 @@ Check the shell syntax of all `*.sh` files tracked by the git in this repository
 Dependencies for testsuite:
 
 - /usr/bin/docker (either `docker` or `podman` + `podman-docker`)
-- docker-squash (if `docker` is used, otherwise set `SKIP_SQUASH`, which is done automatically on non-EL-7)
 - git
 - go-md2man
 - make
