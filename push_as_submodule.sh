@@ -25,19 +25,19 @@
 # parameters to configure by the user
 
 declare -a all_sclorg_images=(\
-"s2i-base"
-"mysql"
-"mariadb"
-"postgresql"
-"redis"
-"s2i-php"
-"s2i-python"
-"s2i-perl"
-"s2i-ruby"
-"varnish"
-"nginx"
-"s2i-nodejs"
-"httpd"
+"s2i-base-container"
+"mysql-container"
+"mariadb-container"
+"postgresql-container"
+"redis-container"
+"s2i-php-container"
+"s2i-python-container"
+"s2i-perl-container"
+"s2i-ruby-container"
+"varnish-container"
+"nginx-container"
+"s2i-nodejs-container"
+"httpd-container"
 )
 
 branch=master
@@ -50,18 +50,17 @@ function exit_on_err() {
   local ret=$1
   local reason=${2:-"unknown"}
   if [[ $ret -ne 0 ]]; then
-    echo "ERR: Exiting for reason: $reason" 2>&1 && exit 42
+    echo "ERR: Exiting for reason: $reason" 2>&1 && exit 1
   fi
 }
 
 function clone_repo() {
-  local image=$1
-  [[ -z $image ]] && exit_on_err 1 "image name for cloning repository is missing"
-  local container="${image}-container"
+  local container=$1
+  [[ -z $container ]] && exit_on_err 1 "container name for cloning repository is missing"
   local url="git@github.com:sclorg/${container}.git"
-  git clone "$url" "$image"
+  git clone "$url" "$container"
   exit_on_err $? "git clone failed"
-  cd "$image" || return 1
+  cd "$container" || return 1
   git submodule update --init
   exit_on_err $? "submodule init failed"
   cd ..
@@ -85,12 +84,12 @@ function commit_change() {
 }
 
 function show_diff() {
-  local image=$1
+  local container=$1
   local answer
   git diff $branch $remote/$branch
   exit_on_err $? "diff failed"
   echo "Are you sure, you want to push the above changes to $remote/$branch of"
-  echo "git@github.com:sclorg/${image}-container.git?"
+  echo "git@github.com:sclorg/${container}.git?"
   echo "Y/n"
   read -r answer
   while [[ $answer != Y && $answer != n ]]; do

@@ -47,6 +47,6 @@ check-latest-imagestream:
 check-betka:
 	cd tests && ./check_betka.sh
 
-push-to-containers:
+push-as-submodule:
 	@echo "THIS COULD BE DANGEROUS, WILL PUSH TO ALL SCLORG CONTAINER REPOSITORIES"
 	./push_as_submodule.sh
