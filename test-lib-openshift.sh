@@ -112,8 +112,14 @@ function ct_os_run_in_pod() {
 # Arguments: service_name - name of the service
 function ct_os_get_service_ip() {
   local service_name="${1}" ; shift
+  local ocp_docker_address='172\.30\.[0-9\.]*'
+  if [ "${CVP:-0}" -eq "1" ]; then
+    # shellcheck disable=SC2034
+    ocp_docker_address='172\.27\.[0-9\.]*'
+  fi
+  # shellcheck disable=SC2016
   oc get "svc/${service_name}" -o yaml | grep clusterIP | \
-     cut -d':' -f2 | grep -oe '172\.30\.[0-9\.]*'
+     cut -d':' -f2 | grep -oe '$ocp_docker_address'
 }
 
 
@@ -188,6 +194,7 @@ function ct_os_get_pod_ip() {
 # Arguments: pod_name
 function ct_os_get_sti_build_logs() {
   local pod_prefix="${1}"
+  oc status --suggest
   pod_name=$(ct_os_get_buildconfig_pod_name "${pod_prefix}")
   # Print logs but do not failed. Just for traces
   if [ x"${pod_name}" != "x" ]; then
@@ -392,7 +399,13 @@ function ct_os_delete_project() {
 # Deletes all objects within the project.
 # Handy when we have one project and want to run more tests.
 function ct_delete_all_objects() {
-  for x in bc builds dc is isimage istag po pv pvc rc routes secrets svc ; do
+  local objects="bc builds dc is isimage istag po pv pvc rc routes secrets svc"
+  if [ "${CVP:-0}" -eq "1" ]; then
+    echo "Testing in CVP environment. No need to delete isimage and istag in OpenShift project. This is done by CVP pipeline"
+    objects="bc builds dc po pvc rc routes"
+  fi
+  for x in $objects; do
+    oc get "$x"
     oc delete "$x" --all
   done
   # for some objects it takes longer to be really deleted, so a dummy sleep

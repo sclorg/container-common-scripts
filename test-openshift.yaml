@@ -18,6 +18,7 @@
   environment:
     VERSION: VERSION_NUMBER
     OS: OS_NUMBER
+    SHORT_NAME: CONTAINER_NAME
     IMAGE_FULL_NAME: "{{ image_full_name }}"
     IMAGE_REGISTRY_URL: "{{ image_registry_url }}"
     IMAGE_NAMESPACE: "{{ image_namespace }}"
@@ -51,7 +52,12 @@
           shell: oc project {{ openshift_project_name }}
 
         - name: Import the image into OpenShift
-          shell: oc import-image {{ image_name }} --from={{ image_full_name }} --insecure=true --confirm
+          shell: oc import-image {{ image_name }}:{{ environment[0]['VERSION'] }} --from={{ image_full_name }} --insecure=true --confirm
+          retries: 3
+          delay: 10
+
+        - name: Tag image into OpenShift
+          shell: oc tag {{ image_name }}:{{ environment[0]['VERSION'] }} {{ environment[0]['SHORT_NAME'}}:{{ environment[0]['VERSION'] }}
           retries: 3
           delay: 10
 
@@ -68,4 +74,4 @@
 
         # Run tests on OpenShift 4
         - name: Run a sclorg test suite in OpenShift 4
-          shell: VERSION={{ environment[0]['VERSION'] }} IMAGE_NAME={{ image_name }} OS={{ environment[0]['OS'] }} CVP=1 bash test/run-openshift-remote-cluster  | tee {{ cvp_artifacts_dir }}/{{ image_name }}.log
+          shell: VERSION={{ environment[0]['VERSION'] }} IMAGE_NAME={{ image_name }} OS={{ environment[0]['OS'] }} CVP=1 bash {{ playbook_dir }}/run-openshift-remote-cluster  | tee {{ cvp_artifacts_dir }}/{{ image_name }}.log
