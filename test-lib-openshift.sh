@@ -112,7 +112,7 @@ function ct_os_run_in_pod() {
 # Arguments: service_name - name of the service
 function ct_os_get_service_ip() {
   local service_name="${1}" ; shift
-  ocp_docker_address='172\.30\.[0-9\.]*'
+  local ocp_docker_address='172\.30\.[0-9\.]*'
   if [ "${CVP:-0}" -eq "1" ]; then
     # shellcheck disable=SC2034
     ocp_docker_address='172\.27\.[0-9\.]*'
@@ -399,7 +399,7 @@ function ct_os_delete_project() {
 # Deletes all objects within the project.
 # Handy when we have one project and want to run more tests.
 function ct_delete_all_objects() {
-  objects="bc builds dc is isimage istag po pv pvc rc routes secrets svc"
+  local objects="bc builds dc is isimage istag po pv pvc rc routes secrets svc"
   if [ "${CVP:-0}" -eq "1" ]; then
     echo "Testing in CVP environment. No need to delete isimage and istag in OpenShift project. This is done by CVP pipeline"
     objects="bc builds dc po pvc rc routes"

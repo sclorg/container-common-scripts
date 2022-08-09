@@ -107,6 +107,9 @@ is scanned as well.
 `CT_OCP4_TEST`
 Set to true if you want to test container in OpenShift 4 environment.
 
+`CVP`
+Set to true if you want to test container in Container Validation Pipeline environment.
+
 `clean-hook`
 Append Makefile rules to this variable to make sure additional cleaning actions are run
 when `make clean` is called.
