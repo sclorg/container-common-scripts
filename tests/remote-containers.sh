@@ -59,9 +59,9 @@ test -e "$TESTED_IMAGE" && die "directory '$TESTED_IMAGE' exists"
         # Go back, wherever we are.
         cd "$testdir"
         # Try to cleanup, if available (and if needed).
-        make clean -C "$image" || :
+        make clean -C "$TESTED_IMAGE" || :
         # Drop the image sources.
-        test ! -d "$image" || rm -rf "$image"
+        test ! -d "$TESTED_IMAGE" || rm -rf "$TESTED_IMAGE"
     }
     trap cleanup EXIT
 
@@ -73,7 +73,7 @@ test -e "$TESTED_IMAGE" && die "directory '$TESTED_IMAGE' exists"
     cd "$TESTED_IMAGE"
 
     if ! test "${IMAGE_REVISION}" = master; then
-        info "Fetching $image PR ${IMAGE_REVISION}"
+        info "Fetching $TESTED_IMAGE PR ${IMAGE_REVISION}"
         git fetch origin "pull/${IMAGE_REVISION}/head":PR_BRANCH
         git checkout PR_BRANCH
         git submodule update
@@ -93,10 +93,10 @@ test -e "$TESTED_IMAGE" && die "directory '$TESTED_IMAGE' exists"
     make clean
 
     if test $test_ret_value -eq 0 ; then
-      info "Tests for $image succeeded."
+      info "Tests for $TESTED_IMAGE succeeded."
       exit 0
     else
-      info "Tests for $image failed."
+      info "Tests for $TESTED_IMAGE failed."
       exit 1
     fi
 )
