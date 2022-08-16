@@ -57,7 +57,7 @@
           delay: 10
 
         - name: Tag image into OpenShift
-          shell: oc tag {{ image_name }}:{{ environment[0]['VERSION'] }} {{ environment[0]['SHORT_NAME'}}:{{ environment[0]['VERSION'] }}
+          shell: oc tag {{ image_name }}:{{ environment[0]['VERSION'] }} {{ environment[0]['SHORT_NAME'] }}:{{ environment[0]['VERSION'] }}
           retries: 3
           delay: 10
 
