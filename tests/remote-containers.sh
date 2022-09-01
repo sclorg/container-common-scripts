@@ -1,6 +1,8 @@
 #! /bin/bash
 
 IMAGE_REVISION=master
+test_short_summary=""
+TESTSUITE_RESULT=1
 
 test -n "${OS-}" || (echo 'make sure $OS is defined' >&2 ; exit 1)
 test -n "${TESTED_IMAGE-}" || (echo 'make sure $TESTED_IMAGE is defined' >&2 ; exit 1)
@@ -43,16 +45,32 @@ analyse_commits ()
     done < <(git log --format=%B --reverse "$MERGE_INTO"..HEAD)
 }
 
-analyse_commits
+archive_common()
+{
+  local archive=$1
+  tar czf $archive --exclude=".git" .
+}
 
-test_short_summary=""
-TESTSUITE_RESULT=0
+final_cleanup() {
+  rm $common_archive
+  if [[ $TESTSUITE_RESULT -eq 0 ]]; then
+    info "Tests for $TESTED_IMAGE succeeded."
+  else
+    info "Tests for $TESTED_IMAGE failed."
+  fi
+  exit $TESTSUITE_RESULT
+}
+
+trap final_cleanup EXIT SIGINT
+analyse_commits
+common_archive=/tmp/common-$RANDOM.tar.gz
+archive_common $common_archive
 
 # We don't want to remove user's WIP stuff.
 test -e "$TESTED_IMAGE" && die "directory '$TESTED_IMAGE' exists"
 
 (   testdir=$PWD
-    cleanup () {
+    _cleanup () {
         set -x
         # Ensure the cleanup finishes!
         trap '' INT
@@ -63,7 +81,6 @@ test -e "$TESTED_IMAGE" && die "directory '$TESTED_IMAGE' exists"
         # Drop the image sources.
         test ! -d "$TESTED_IMAGE" || rm -rf "$TESTED_IMAGE"
     }
-    trap cleanup EXIT
 
     info "Testing $TESTED_IMAGE image"
 
@@ -81,37 +98,15 @@ test -e "$TESTED_IMAGE" && die "directory '$TESTED_IMAGE' exists"
 
     # We fail if the 'common' directory doesn't exist.
     test -d common
-    rm -rf common
+    rm -rf common && mkdir common
     info "Replacing common with PR's version"
-    ln -s ../ common
+    tar xvf $common_archive --directory=./common/ > /dev/null
 
-    # TODO: Do we have to test all $(VERSION)s?
     # TODO: The PS4 hack doesn't work if we run the testsuite as UID=0.
     PS4="+ [$TESTED_IMAGE] " make TARGET="$OS" $TESTED_SCENARIO
-    test_ret_value=$?
-    # Cleanup.
-    make clean
+    result=$?
 
-    if test $test_ret_value -eq 0 ; then
-      info "Tests for $TESTED_IMAGE succeeded."
-      exit 0
-    else
-      info "Tests for $TESTED_IMAGE failed."
-      exit 1
-    fi
+    _cleanup
+    exit $result
 )
-if test $? -eq 0 ; then
-  printf -v test_short_summary "${test_short_summary}[PASSED] $TESTED_IMAGE\n"
-else
-  printf -v test_short_summary "${test_short_summary}[FAILED] $TESTED_IMAGE\n"
-  TESTSUITE_RESULT=1
-fi
-
-echo "$test_short_summary"
-if [ $TESTSUITE_RESULT -eq 0 ] ; then
-  echo "Tests for 'container-common-scripts' succeeded."
-else
-  echo "Tests for 'container-common-scripts' failed."
-fi
-
-exit $TESTSUITE_RESULT
+TESTSUITE_RESULT=$?
