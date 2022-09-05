@@ -17,7 +17,7 @@ source "$(dirname "${BASH_SOURCE[0]}")"/test-lib.sh
 # If the currently available version of oc is not of this version,
 # it first takes a look into /usr/local/oc-<ver>/bin directory,
 
-# Arguments: oc_version - X.Y part of the version of OSE (e.g. 3.9)
+# Arguments: oc_version - X.Y part of the version of OSE (e.g. 4.4)
 function ct_os_set_path_oc_4() {
     echo "Setting OCP4 client"
     local oc_version=$1
@@ -27,7 +27,7 @@ function ct_os_set_path_oc_4() {
         oc_path="${installed_oc_path}"
         echo "Binary oc found in ${installed_oc_path}" >&2
     else
-       echo "OCP4 not found"
+       echo "OpenShift Client binary on path ${installed_oc_path} not found"
        return 1
     fi
     export PATH="${oc_path}:${PATH}"
@@ -44,7 +44,7 @@ function ct_os_set_ocp4() {
     return
   fi
   local login
-  OS_OC_CLIENT_VERSION=${OS_OC_CLIENT_VERSION:-4.4}
+  OS_OC_CLIENT_VERSION=${OS_OC_CLIENT_VERSION:-4}
   ct_os_set_path_oc_4 "${OS_OC_CLIENT_VERSION}"
 
   login=$(cat "$KUBEPASSWORD")
