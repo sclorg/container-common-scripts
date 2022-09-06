@@ -23,13 +23,14 @@ if [[ -f "./manifest.sh" ]]; then
   if ! git diff --ignore-submodules=all --exit-code; then
     git show -s
     echo "Pull request does not contain properly generated files."
+    echo "Generated files should be added as a separate commit."
     echo "Please run these command in order to update pull request:"
     echo "'make clean-versions'"
     echo "'make generate-all'"
     exit 1
   fi
 else
-  echo "This container does not use dist-gen. Skipping it."
+  echo "This container does not use dist-gen. Skipping a check for generating files by the dist-gen."
 fi
 
 for dir in ${VERSIONS}; do
