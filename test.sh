@@ -8,6 +8,12 @@
 
 set -e
 
+# This adds backwards compatibility if only single version needs to be testing
+# In CI we would like to test single version but VERSIONS= means, that nothing is tested
+# make test TARGET=<OS> VERSIONS=<something> ... checks single version for CLI
+# make test TARGET=<OS> SINGLE_VERSION=<something> ... checks single version from Testing Farm
+VERSIONS=${SINGLE_VERSION:-$VERSIONS}
+
 for dir in ${VERSIONS}; do
   [ ! -e "${dir}/.image-id" ] && echo "-> Image for version $dir not built, skipping tests." && continue
   pushd "${dir}" > /dev/null
