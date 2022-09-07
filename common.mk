@@ -18,7 +18,7 @@ betka = $(SHELL) $(common_dir)/betka.sh
 
 DG ?= /bin/dg
 
-generator = DG="$(DG)" $(SHELL) $(common_dir)/generate.sh
+generator = $(common_dir)/generator.py
 
 
 # pretty printers
@@ -146,19 +146,12 @@ clean-versions:
 
 generate-all: generate
 
-MANIFEST_FILE ?= manifest.sh
-
-auto_targets.mk: $(MANIFEST_FILE)
-	MANIFEST_FILE="$(MANIFEST_FILE)" \
-	VERSIONS="$(VERSIONS)" \
-	SKIP_GENERATOR_FOR="${SKIP_GENERATOR_FOR}" \
-	$(generator)
-
-# triggers build of auto_targets.mk automatically
--include auto_targets.mk
-
-# We have to remove auto_targets.mk here, otherwise subsequent make calls
-# with different VERSIONS=* option keeps the auto_targets.mk unchanged.
-.PHONY: generate
-generate: $(DISTGEN_TARGETS) $(DISTGEN_MULTI_TARGETS) $(COPY_TARGETS) $(SYMLINK_TARGETS)
-	rm auto_targets.mk
+.PHOHY: generate
+generate:
+	for version in ${VERSIONS} ; do \
+		if [[ "$$version" == *-minimal ]]; then \
+			$(generator) -v $$version -m manifest-minimal.yml -s specs/multispec.yml ; \
+		else \
+			$(generator) -v $$version -m manifest.yml -s specs/multispec.yml ; \
+		fi \
+	done
