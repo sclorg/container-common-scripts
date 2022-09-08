@@ -112,14 +112,14 @@ function ct_os_run_in_pod() {
 # Arguments: service_name - name of the service
 function ct_os_get_service_ip() {
   local service_name="${1}" ; shift
-  local ocp_docker_address='172\.30\.[0-9\.]*'
+  local ocp_docker_address="172\.30\.[0-9\.]*"
   if [ "${CVP:-0}" -eq "1" ]; then
     # shellcheck disable=SC2034
-    ocp_docker_address='172\.27\.[0-9\.]*'
+    ocp_docker_address="172\.27\.[0-9\.]*"
   fi
   # shellcheck disable=SC2016
   oc get "svc/${service_name}" -o yaml | grep clusterIP | \
-     cut -d':' -f2 | grep -oe '$ocp_docker_address'
+     cut -d':' -f2 | grep -oe "$ocp_docker_address"
 }
 
 
