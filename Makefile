@@ -3,7 +3,7 @@ SHELL := /usr/bin/env bash
 all:
 	@echo >&2 "Only 'make shellcheck', 'make test', or 'make test-openshift-4' are allowed"
 
-.PHONY: test all check-failures check-squash check-latest-imagestream test test-openshift-4
+.PHONY: test all check-failures check-squash check-latest-imagestream test test-openshift-4 push-to-containers
 
 TEST_LIB_TESTS = \
 	path_foreach \
@@ -46,3 +46,7 @@ check-latest-imagestream:
 
 check-betka:
 	cd tests && ./check_betka.sh
+
+push-as-submodule:
+	@echo "THIS COULD BE DANGEROUS, WILL PUSH TO ALL SCLORG CONTAINER REPOSITORIES"
+	./push_as_submodule.sh
