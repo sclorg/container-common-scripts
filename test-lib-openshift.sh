@@ -1250,9 +1250,11 @@ function ct_os_test_image_stream_template() {
     # Most functions depend on the set -e anyway at this point.
   fi
   ct_os_wait_pod_ready "${service_name}" 120
+  result=$?
 
   # shellcheck disable=SC2119
   ct_os_delete_project
+  return $?
 }
 
 # ct_os_wait_stream_ready IMAGE_STREAM_FILE NAMESPACE [ TIMEOUT ]
