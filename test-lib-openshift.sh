@@ -1254,7 +1254,7 @@ function ct_os_test_image_stream_template() {
 
   # shellcheck disable=SC2119
   ct_os_delete_project
-  return $?
+  return $result
 }
 
 # ct_os_wait_stream_ready IMAGE_STREAM_FILE NAMESPACE [ TIMEOUT ]
