@@ -61,6 +61,19 @@ function ct_os_set_ocp4() {
   sleep 3
 }
 
+function ct_os_tag_image_for_cvp() {
+  if [ "${CVP:-0}" -eq "0" ]; then
+    echo "The function is valid only for CVP pipeline."
+    return
+  fi
+  local tag_image_name="$1"
+  local tag="-el7"
+  if [ "${OS}" == "rhel8" ]; then
+    tag="-el8"
+  fi
+  oc tag "${tag_image_name}:${VERSION}" "${tag_image_name}:${VERSION}${tag}"
+}
+
 function ct_os_upload_image_external_registry() {
   local input_name="${1}" ; shift
   local image_name=${input_name##*/}
