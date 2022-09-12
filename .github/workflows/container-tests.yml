@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        container-to-test: ["postgresql-container", "s2i-nodejs-container", "s2i-python-container"]
+        container-to-test: ["postgresql-container", "nginx", "s2i-perl-container", "s2i-python-container"]
         os: ["fedora", "centos7", "rhel7", "rhel8", "rhel9"]
 
     if: |
