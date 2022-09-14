@@ -8,9 +8,6 @@
 
 set -e
 
-script_name=$(readlink -f "$0")
-script_dir=$(dirname "$script_name")
-
 OS=${1-$OS}
 VERSION=${2-$VERSION}
 
@@ -64,16 +61,13 @@ parse_output ()
   (exit $rc)
 }
 
-# "best-effort" cleanup of previous image
+# "best-effort" cleanup of image
 function clean_image {
-  if test -f .image-id.raw; then
-      local previous_id
-      previous_id=$(cat .image-id.raw)
-      if test "$IMAGE_ID" != "$previous_id"; then
-          # Also remove squashed image since it will change anyway
-          docker rmi --force "$previous_id" "$(cat .image-id)" || :
-          rm -f ".image-id.raw" ".image-id" || :
-      fi
+  if test -f .image-id; then
+      local id
+      id=$(cat .image-id)
+      docker rmi --force "$id" || :
+      rm -f ".image-id" || :
   fi
 }
 
@@ -122,6 +116,7 @@ function docker_build_with_version {
   local exclude=.exclude-${OS}
   local devel_repo_file=.devel-repo-${OS}
   local devel_repo_var="DEVEL_REPO_$OS"
+  local is_podman
   if [ -e "$exclude" ]; then
     echo "-> $exclude file exists for version $dir, skipping build."
     clean_image
@@ -170,58 +165,18 @@ function docker_build_with_version {
 
   pull_image "$dockerfile"
 
+  docker info 2>/dev/null | grep podman 1>/dev/null || :
+  is_podman=$?
+
+  # squash is possible only for podman. In docker it is usable only in experimental mode.
+  if [[ "$SKIP_SQUASH" -eq 0 ]] && [[ "$is_podman" -eq 1 ]]; then
+    BUILD_OPTIONS+=" --squash"
+  fi
   # shellcheck disable=SC2016
   parse_output 'docker build '"$BUILD_OPTIONS"' -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}"' \
                "tail -n 1 | awk '/Successfully built|(^--> )?(Using cache )?[a-fA-F0-9]+$/{print \$NF}'" \
                IMAGE_ID
-  clean_image
-  echo "$IMAGE_ID" > .image-id.raw
-
-  squash "${dockerfile}"
   echo "$IMAGE_ID" > .image-id
-}
-
-# squash DOCKERFILE
-# -----------------
-# Use python library docker_squash[1] and squash the result image
-# when necessary.
-# [1] https://github.com/goldmann/docker-squash
-# Reads:
-#   $IMAGE_ID
-# Sets:
-#   $IMAGE_ID
-squash ()
-{
-  local base squashed_from squashed='' unsquashed=$IMAGE_ID
-  test "$SKIP_SQUASH" = 1 && return 0
-
-  if test -f .image-id.squashed; then
-      squashed=$(cat .image-id.squashed)
-      # We (maybe) already have squashed file.
-      if test -f .image-id.squashed_from; then
-          squashed_from=$(cat .image-id.squashed_from)
-          if test "$squashed_from" = "$IMAGE_ID"; then
-              # $squashed is up2date
-              IMAGE_ID=$squashed
-              echo "Image '$unsquashed' already squashed as '$squashed'"
-              return 0
-          fi
-      fi
-
-      # We are going to squash now, so if there's existing squashed image, try
-      # to do the best-effort 'rmi' to not waste memory unnecessarily.
-      docker rmi "$squashed" || :
-  fi
-
-  base=$(awk '/^FROM/{print $2}' "$1")
-
-  echo "Squashing the image '$unsquashed' from '$base' layer."
-  IMAGE_ID=$("${PYTHON-python3}" "$script_dir"/squash.py "$unsquashed" "$base")
-
-  echo "Squashed as '$IMAGE_ID'."
-
-  echo "$unsquashed" > .image-id.squashed_from
-  echo "$IMAGE_ID" > .image-id.squashed
 }
 
 # Versions are stored in subdirectories. You can specify VERSION variable

@@ -13,6 +13,7 @@ set -e
 # make test TARGET=<OS> VERSIONS=<something> ... checks single version for CLI
 # make test TARGET=<OS> SINGLE_VERSION=<something> ... checks single version from Testing Farm
 VERSIONS=${SINGLE_VERSION:-$VERSIONS}
+echo "Tested versions are: $VERSIONS"
 
 for dir in ${VERSIONS}; do
   [ ! -e "${dir}/.image-id" ] && echo "-> Image for version $dir not built, skipping tests." && continue

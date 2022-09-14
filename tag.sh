@@ -26,12 +26,5 @@ for dir in ${VERSIONS}; do
   docker tag "$IMAGE_ID" "$full_reg_name:latest"
   docker tag "$IMAGE_ID" "$full_reg_name:$date_and_hash"
 
-  for suffix in squashed raw; do
-    id_file=.image-id.$suffix
-    if test -f "$id_file"; then
-        docker tag "$(cat "$id_file")" "$full_reg_name:$suffix" || rm .image-id."$suffix"
-    fi
-  done
-
   popd > /dev/null
 done
