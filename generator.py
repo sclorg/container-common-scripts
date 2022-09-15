@@ -146,9 +146,14 @@ def main():
                 print(f"LN\t{spec['src']} → {spec['dest']}")
                 symlink(spec["src"], spec["dest"])
                 # Remove dead symlinks
+                # This is needed for backward-compatible symlink Dockerfile → Dockerfile.centos7
+                # because we want to delete it when Dockerfile.centos7 does not exist.
+                # When we drop Centos 7, we can stop doing this.
+                # In the meantime, if you need to create a dead symlink on purpose,
+                # use check_symlink: false in manifest.yml config file.
                 # It's easier to remove dead symlinks than checking
                 # the relative path of the destination beforehand.
-                if not spec["dest"].exists():
+                if spec.get("check_symlink", True) and not spec["dest"].exists():
                     print(f"WARN: {spec['dest']} is a dead symlink, removed.")
                     unlink(spec["dest"])
 
