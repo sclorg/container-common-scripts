@@ -1,5 +1,0 @@
-language: shell
-os: linux
-script:
-  - make shellcheck
-  - make pre-commit-check
