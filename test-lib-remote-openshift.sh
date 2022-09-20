@@ -67,9 +67,16 @@ function ct_os_tag_image_for_cvp() {
     return
   fi
   local tag_image_name="$1"
-  local tag="-el7"
-  if [ "${OS}" == "rhel8" ]; then
+  local tag=""
+  if [ "${OS}" == "rhel7" ]; then
+    tag="-el7"
+  elif [ "${OS}" == "rhel8" ]; then
     tag="-el8"
+  elif [ "${OS}" == "rhel9" ]; then
+    tag="-el9"
+  else
+    echo "Only RHEL images are supported."
+    return
   fi
   oc tag "${tag_image_name}:${VERSION}" "${tag_image_name}:${VERSION}${tag}"
 }
