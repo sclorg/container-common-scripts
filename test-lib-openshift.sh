@@ -891,29 +891,32 @@ function ct_os_test_template_app_func() {
   else
     echo "Import is already done by CVP pipeline."
   fi
-  # Other images are not uploaded by CVP pipeline. We need to do it.
-  if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'false' ] ; then
-      # upload also other images, that template might need (list of pairs in the format <image>|<tag>
-      local image_tag_a
-      local i_t
-      for i_t in ${other_images} ; do
-        echo "${i_t}"
-        IFS='|' read -ra image_tag_a <<< "${i_t}"
-        if [[ "$(docker images -q "$image_name" 2>/dev/null)" == "" ]]; then
-          echo "ERROR: Image $image_name is not pulled yet."
-          docker images
-          echo "Add to the beginning of scripts run-openshift-remote-cluster and run-openshift row"
-          echo "'ct_pull_image $image_name true'."
-          exit 1
-        fi
+  # Upload main image is already done by CVP pipeline. No need to do it twice.
+  if [ "${CVP:-0}" -eq "0" ]; then
+    # Other images are not uploaded by CVP pipeline. We need to do it.
+    if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'false' ] ; then
+        # upload also other images, that template might need (list of pairs in the format <image>|<tag>
+        local image_tag_a
+        local i_t
+        for i_t in ${other_images} ; do
+          echo "${i_t}"
+          IFS='|' read -ra image_tag_a <<< "${i_t}"
+          if [[ "$(docker images -q "$image_name" 2>/dev/null)" == "" ]]; then
+            echo "ERROR: Image $image_name is not pulled yet."
+            docker images
+            echo "Add to the beginning of scripts run-openshift-remote-cluster and run-openshift row"
+            echo "'ct_pull_image $image_name true'."
+            exit 1
+          fi
 
-        if [ "${CT_OCP4_TEST:-false}" == 'true' ] ; then
-          echo "Uploading image ${image_tag_a[0]} as ${image_tag_a[1]} into OpenShift internal registry."
-          ct_os_upload_image "v4" "${image_tag_a[0]}" "${image_tag_a[1]}"
-        else
-          ct_os_upload_image "v3" "${image_tag_a[0]}" "${image_tag_a[1]}"
-        fi
-      done
+          if [ "${CT_OCP4_TEST:-false}" == 'true' ] ; then
+            echo "Uploading image ${image_tag_a[0]} as ${image_tag_a[1]} into OpenShift internal registry."
+            ct_os_upload_image "v4" "${image_tag_a[0]}" "${image_tag_a[1]}"
+          else
+            ct_os_upload_image "v3" "${image_tag_a[0]}" "${image_tag_a[1]}"
+          fi
+        done
+    fi
   fi
 
   # get the template file from remote or local location; if not found, it is
