@@ -1,0 +1,36 @@
+#! /bin/bash
+
+. ./test-lib.sh
+
+
+function foo_neg() {
+  echo "running foo_neg"
+  TESTCASE_RESULT=1
+}
+function bar() {
+  echo "running bar"
+  TESTCASE_RESULT=0
+}
+function foo() {
+  echo "running foo"
+  TESTCASE_RESULT=0
+}
+
+TEST_SET_POS="foo bar"
+TEST_SET_NEG="foo_neg bar"
+UNSTABLE_TESTS=""
+IGNORE_UNSTABLE_TESTS=0
+
+# positive test
+CID_FILE_DIR=$(mktemp -d)
+TEST_SUMMARY=""
+TEST_SET=${TEST_SET_POS} ct_run_tests_from_testset "should_pass" >> /dev/null
+(ct_cleanup >> /dev/null)
+test $? -eq 0
+
+# negative test
+CID_FILE_DIR=$(mktemp -d)
+TEST_SUMMARY=""
+TEST_SET=${TEST_SET_NEG} ct_run_tests_from_testset "should_fail" >> /dev/null
+(ct_cleanup >> /dev/null)
+test $? -eq 1
