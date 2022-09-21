@@ -1,3 +1,0 @@
-#! /bin/sh -x
-
-false this must fail the whole testsuite
