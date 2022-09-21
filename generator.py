@@ -67,12 +67,16 @@ def filename_to_distro_config(filename, version, mapping):
     combination of distro and version is not included
     in distgen configuration (multispec).
     """
-    if m := re.match(r".*\.rhel(\d+)$", filename):
-        config = f"rhel-{m.group(1)}-x86_64.yaml"
-    elif m := re.match(r".*\.c(\d+)s$", filename):
-        config = f"centos-stream-{m.group(1)}-x86_64.yaml"
-    elif m := re.match(r".*\.centos(\d+)$", filename):
-        config = f"centos-{m.group(1)}-x86_64.yaml"
+    rhel_match = re.match(r".*\.rhel(\d+)$", filename)
+    centos_stream_match = re.match(r".*\.c(\d+)s$", filename)
+    centos_match = re.match(r".*\.centos(\d+)$", filename)
+
+    if rhel_match:
+        config = f"rhel-{rhel_match.group(1)}-x86_64.yaml"
+    elif centos_stream_match:
+        config = f"centos-stream-{centos_stream_match.group(1)}-x86_64.yaml"
+    elif centos_match:
+        config = f"centos-{centos_match.group(1)}-x86_64.yaml"
     elif filename.endswith(".fedora"):
         sorted_configs = sorted(
             c for c in mapping[version] if c.startswith("fedora")
