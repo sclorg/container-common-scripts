@@ -3,6 +3,11 @@
 # shellcheck source=/dev/null
 source "$(dirname "${BASH_SOURCE[0]}")"/test-lib.sh
 
+# this should be returned when something related to the openshift cluster
+# goes wrong during the test pipeline
+# shellcheck disable=SC2034
+readonly OC_ERR=11
+
 # Set of functions for testing docker images in OpenShift using 'oc' command
 
 # A variable containing the overall test result
