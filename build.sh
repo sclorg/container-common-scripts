@@ -7,6 +7,7 @@
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
 
 set -e
+[ -n "${DEBUG:-}" ] && set -x
 
 OS=${1-$OS}
 VERSION=${2-$VERSION}
