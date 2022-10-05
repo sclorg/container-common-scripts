@@ -1,5 +1,7 @@
 #! /bin/sh
 
+[ -n "${DEBUG:-}" ] && set -x
+
 test -f auto_targets.mk && rm auto_targets.mk
 
 for version

@@ -8,6 +8,7 @@
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
 
 set -e
+[ -n "${DEBUG:-}" ] && set -x
 
 for dir in ${VERSIONS}; do
   [ ! -e "${dir}/.image-id" ] && echo "-> Image for version $dir not built, skipping tag." && continue

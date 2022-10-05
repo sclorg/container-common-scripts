@@ -7,6 +7,7 @@
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
 
 set -e
+[ -n "${DEBUG:-}" ] && set -x
 
 # This adds backwards compatibility if only single version needs to be testing
 # In CI we would like to test single version but VERSIONS= means, that nothing is tested
