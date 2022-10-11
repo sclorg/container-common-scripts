@@ -10,6 +10,7 @@ TEST_LIB_TESTS = \
 	random_string \
 	test_npm \
 	image_availability \
+	run_all_tests\
 	public_image_name
 
 $(TEST_LIB_TESTS):
