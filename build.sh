@@ -166,8 +166,7 @@ function docker_build_with_version {
 
   pull_image "$dockerfile"
 
-  docker info 2>/dev/null | grep podman 1>/dev/null || :
-  is_podman=$?
+  docker info 2>/dev/null | grep podman 1>/dev/null && is_podman=1 || is_podman=0
 
   # squash is possible only for podman. In docker it is usable only in experimental mode.
   if [[ "$SKIP_SQUASH" -eq 0 ]] && [[ "$is_podman" -eq 1 ]]; then
