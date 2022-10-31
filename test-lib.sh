@@ -1223,12 +1223,14 @@ ct_get_image_size_uncompresseed() {
 # ct_get_image_size_compresseed
 # -------------------------------
 # Shows compressed image size in MB
-# This might not be entirely same as podman, but should be close enough.
+# This is a slight hack, that counts compressed size based on the compressed
+# content. It might not be entirely same as what docker pull shows, but should
+# be close enough.
 # Argument: image_name - image locally available
 ct_get_image_size_compresseed() {
   local image_name=$1
   local size_bytes
-  size_bytes=$(podman save "${image_name}" | gzip - | wc --bytes)
+  size_bytes=$(docker save "${image_name}" | gzip - | wc --bytes)
   echo "$(( size_bytes / 1024 / 1024 ))MB"
 }
 
