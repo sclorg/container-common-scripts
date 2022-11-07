@@ -64,12 +64,15 @@ parse_output ()
 
 # "best-effort" cleanup of image
 function clean_image {
-  if test -f .image-id; then
-      local id
-      id=$(cat .image-id)
-      docker rmi --force "$id" || :
-      rm -f ".image-id" || :
-  fi
+  for id_file in .image-id .image-id-from; do
+    if test -f $id_file; then
+        local id
+        id=$(cat $id_file)
+        test -n "$id" || continue
+        docker rmi --force "$id" || :
+        rm -f "$id_file" || :
+    fi
+  done
 }
 
 # Pull image based on FROM, before we build our own.
@@ -100,7 +103,7 @@ function pull_image {
 
     # Try pulling the image to see if it is accessible
     # WORKAROUND: Since Fedora registry sometimes fails randomly, let's try it more times
-    while ! docker pull "$image_name"; do
+    while ! docker pull "$image_name" > .image-id-from; do
       ((loop++)) || :
       echo "Pulling image $image_name failed."
       [ "$loop" -gt "$loops" ] && { echo "It happened $loops times. Giving up." ; return 1; }
