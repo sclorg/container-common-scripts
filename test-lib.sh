@@ -32,30 +32,35 @@ UNSTABLE_TESTS="${UNSTABLE_TESTS:-""}"
 # Uses: $TESTSUITE_RESULT - overall result of all tests
 function ct_cleanup() {
   ct_show_resources
+  ct_show_results
+
+  if [[ -z ${CID_FILE_DIR:-} ]]; then
+    echo "The \$CID_FILE_DIR is not set. Container cleaning is to be skipped."
+    exit "${TESTSUITE_RESULT:-0}"
+  fi;
+
+  echo "Examining CID files in $CID_FILE_DIR"
   for cid_file in "$CID_FILE_DIR"/* ; do
     [ -f "$cid_file" ] || continue
     local container
     container=$(cat "$cid_file")
 
-    : "Stopping and removing container $container..."
+    echo "Stopping and removing container $container..."
     docker stop "$container"
 
     # Container has not been removed by `docker stop` and still exists
     if [ "$( docker ps -a -f "id=$container" | wc -l )" -eq 2 ]; then
       exit_status=$(docker inspect -f '{{.State.ExitCode}}' "$container")
       if [ "$exit_status" != "$EXPECTED_EXIT_CODE" ]; then
-        : "Dumping logs for $container"
+        echo "Dumping logs for $container"
         docker logs "$container"
       fi
       docker rm -v "$container"
     fi
-
     rm "$cid_file"
   done
-  rmdir "$CID_FILE_DIR"
-  : "Done."
 
-  ct_show_results
+  rmdir "$CID_FILE_DIR"
   exit "${TESTSUITE_RESULT:-0}"
 }
 
