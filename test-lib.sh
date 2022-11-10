@@ -4,15 +4,11 @@
 #
 # Always use sourced from a specific container testfile
 #
-# reguires definition of CID_FILE_DIR
-# CID_FILE_DIR=$(mktemp --suffix=<container>_test_cidfiles -d)
-# reguires definition of TEST_LIST
-# TEST_LIST="\
-# ctest_container_creation
-# ctest_doc_content"
 
 # Container CI tests
 # abbreviated as "ct"
+
+# run ct_init before starting the actual testsuite
 
 # shellcheck disable=SC2148
 if [ -z "${sourced_test_lib:-}" ]; then
@@ -23,11 +19,26 @@ fi
 
 # may be redefined in the specific container testfile
 EXPECTED_EXIT_CODE=0
-export TESTSUITE_RESULT=0
 
 # define UNSTABLE_TESTS if not already defined, as this variable
 # is not mandatory for containers
 UNSTABLE_TESTS="${UNSTABLE_TESTS:-""}"
+
+# ct_init
+# --------------------
+# This function needs to be called before any container test starts
+# Sets: $APP_ID_FILE_DIR - path to directory used for storing
+# IDs of application images used during tests.
+# Sets: $CID_FILE_DIR - path to directory containing cid_files
+# Sets: $TEST_SUMMARY - string, where test results are written
+# Sets: $TESTSUITE_RESULT - overall result of run testuite
+function ct_init() {
+  APP_ID_FILE_DIR="$(mktemp -d)"
+  CID_FILE_DIR="$(mktemp -d)"
+  TEST_SUMMARY=""
+  TESTSUITE_RESULT=0
+  ct_enable_cleanup
+}
 
 # ct_cleanup
 # --------------------
@@ -40,13 +51,14 @@ UNSTABLE_TESTS="${UNSTABLE_TESTS:-""}"
 function ct_cleanup() {
   ct_show_resources
   ct_show_results
+  ct_clean_app_images
 
   if [[ -z ${CID_FILE_DIR:-} ]]; then
     echo "The \$CID_FILE_DIR is not set. Container cleaning is to be skipped."
     exit "${TESTSUITE_RESULT:-0}"
   fi;
 
-  echo "Examining CID files in $CID_FILE_DIR"
+  echo "Examining CID files in \$CID_FILE_DIR=$CID_FILE_DIR"
   for cid_file in "$CID_FILE_DIR"/* ; do
     [ -f "$cid_file" ] || continue
     local container
@@ -69,6 +81,25 @@ function ct_cleanup() {
 
   rmdir "$CID_FILE_DIR"
   exit "${TESTSUITE_RESULT:-0}"
+}
+
+# ct_clean_app_images
+# --------------------
+# Cleans up application images referenced by APP_ID_FILE_DIR
+# Uses: $APP_ID_FILE_DIR - path to directory containing cid_files
+function ct_clean_app_images() {
+  local image
+  if [[ ! -d ${APP_ID_FILE_DIR:-} ]]; then
+    echo "The \$APP_ID_FILE_DIR=$APP_ID_FILE_DIR is not created. App cleaning is to be skipped."
+    return 0
+  fi;
+  echo "Examining image ID files in \$APP_ID_FILE_DIR=$APP_ID_FILE_DIR"
+  for file in "${APP_ID_FILE_DIR:?}"/*; do
+    image="$(cat "$file")"
+    docker rm -f "$(docker ps -q -a -f ancestor="$image")" 2>/dev/null
+    docker rmi -f "$image"
+  done
+  rm -fr "$APP_ID_FILE_DIR"
 }
 
 # ct_show_results
@@ -446,7 +477,9 @@ FROM $IMAGE_NAME
 RUN command -v $binary | grep "$binary_path"
 EOF
   # Build an image, looking for expected path in the output
-  if ! docker build -f "$tmpdir/Dockerfile" --no-cache "$tmpdir"; then
+  local id_file
+  id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
+  if ! docker build -f "$tmpdir/Dockerfile" --no-cache "$tmpdir" --iidfile "$id_file"; then
     echo "  ERROR: Failed to find $binary in Dockerfile!" >&2
     return 1
   fi
@@ -849,7 +882,9 @@ EOF
     read -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
     # Run the build and tag the result
-    docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" --no-cache=true -t "$dst_image" .
+    local id_file
+    id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
+    docker build ${mount_options[@]+"${mount_options[@]}"} --iidfile="$id_file" -f "$df_name" --no-cache=true -t "$dst_image" .
     )
 }
 
@@ -929,7 +964,9 @@ EOF
   # Check if -v parameter is present in s2i_args and add it into docker build command
   read -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
-  docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" --no-cache=true -t "$dst_image" .
+  local id_file
+  id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
+  docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" --iidfile="$id_file" --no-cache=true -t "$dst_image" .
   )
 }
 
@@ -1089,7 +1126,9 @@ ct_test_app_dockerfile() {
   fi
 
   echo "Building '${app_image_name}' image using docker build"
-  if ! docker build --no-cache=true -t "${app_image_name}" . ; then
+  local id_file
+  id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
+  if ! docker build --no-cache=true --iidfile="$id_file" -t "${app_image_name}" . ; then
     echo "ERROR: The image cannot be built from ${dockerfile} and application ${app_url}."
     echo "Terminating the Dockerfile build."
     return 1
