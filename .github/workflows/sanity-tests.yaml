@@ -18,7 +18,7 @@ jobs:
         id: pr_nr
         run: |
           PR_URL="${{ github.event.comment.issue_url }}"
-          echo "::set-output name=PR_NR::${PR_URL##*/}"
+          echo "PR_NR=${PR_URL##*/}" >> $GITHUB_OUTPUT
 
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -28,7 +28,7 @@ jobs:
       - name: Get sha
         id: sha
         run: |
-          echo "::set-output name=SHA::$(git rev-parse HEAD)"
+          echo "SHA=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Install needed dependences for sanity checks
         id: sched_test
@@ -59,7 +59,7 @@ jobs:
         run: |
           set +e
           make pre-commit-check
-          echo ::set-output name=exit_status::$?
+          echo "exit_status=$?" >> $GITHUB_OUTPUT
 
       - name: Switch to final state
         run: |
