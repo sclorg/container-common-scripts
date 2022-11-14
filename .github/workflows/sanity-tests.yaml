@@ -33,7 +33,7 @@ jobs:
       - name: Install needed dependences for sanity checks
         id: sched_test
         run: |
-          sudo apt-get update && sudo apt-get -y install curl jq make git shellcheck python3 python3-pip
+          sudo apt-get update && sudo apt-get -y install curl jq make git python3 python3-pip
           pip3 install pre-commit
 
       - name: Create status check to pending
@@ -53,14 +53,6 @@ jobs:
             https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/${{ steps.sha.outputs.SHA }} \
             --data @pending.json
 
-
-      - name: Run Sanity shell tests
-        id: shellcheck_tests
-        continue-on-error: true
-        run: |
-          set +e
-          make shellcheck
-          echo ::set-output name=exit_status::$?
       - name: Run Sanity pre-commit tests
         continue-on-error: true
         id: pre_commit_tests
@@ -71,10 +63,9 @@ jobs:
 
       - name: Switch to final state
         run: |
-          echo "Result from shellcheck_tests is ${{ steps.shellcheck_tests.outputs.exit_status }}"
           echo "Result from pre_commit_tests is ${{ steps.pre_commit_tests.outputs.exit_status }}"
 
-          if [[ ${{ steps.shellcheck_tests.outputs.exit_status }} == 0 ]] && [[ ${{ steps.pre_commit_tests.outputs.exit_status }} == 0 ]]; then
+          if [[ ${{ steps.pre_commit_tests.outputs.exit_status }} == 0 ]]; then
             FINAL_STATE="success"
           else
             FINAL_STATE="failure"
