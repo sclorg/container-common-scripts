@@ -24,6 +24,17 @@ EXPECTED_EXIT_CODE=0
 # is not mandatory for containers
 UNSTABLE_TESTS="${UNSTABLE_TESTS:-""}"
 
+# following lines are added only for preserving backwards compatibility
+# and can be removed, when PR #306 is fully integrated to all container
+# repositories.
+TESTSUITE_RESULT=0
+APP_ID_FILE_DIR="/tmp/APP_ID_FILE_DIR_$RANDOM"
+# when removing this remove also all these lines:
+# mkdir -p "${APP_ID_FILE_DIR:?}"
+# as the $APP_ID_FILE_DIR should be created only in the ct_init function
+# ---------------------------------------------------------------------
+
+
 # ct_init
 # --------------------
 # This function needs to be called before any container test starts
@@ -478,6 +489,7 @@ RUN command -v $binary | grep "$binary_path"
 EOF
   # Build an image, looking for expected path in the output
   local id_file
+  mkdir -p "${APP_ID_FILE_DIR:?}"
   id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
   if ! docker build -f "$tmpdir/Dockerfile" --no-cache "$tmpdir" --iidfile "$id_file"; then
     echo "  ERROR: Failed to find $binary in Dockerfile!" >&2
@@ -883,6 +895,7 @@ EOF
 
     # Run the build and tag the result
     local id_file
+    mkdir -p "${APP_ID_FILE_DIR:?}"
     id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
     docker build ${mount_options[@]+"${mount_options[@]}"} --iidfile="$id_file" -f "$df_name" --no-cache=true -t "$dst_image" .
     )
@@ -965,6 +978,7 @@ EOF
   read -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
   local id_file
+  mkdir -p "${APP_ID_FILE_DIR:?}"
   id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
   docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" --iidfile="$id_file" --no-cache=true -t "$dst_image" .
   )
@@ -1127,6 +1141,7 @@ ct_test_app_dockerfile() {
 
   echo "Building '${app_image_name}' image using docker build"
   local id_file
+  mkdir -p "${APP_ID_FILE_DIR:?}"
   id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
   if ! docker build --no-cache=true --iidfile="$id_file" -t "${app_image_name}" . ; then
     echo "ERROR: The image cannot be built from ${dockerfile} and application ${app_url}."
