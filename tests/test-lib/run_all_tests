@@ -20,17 +20,29 @@ TEST_SET_POS="foo bar"
 TEST_SET_NEG="foo_neg bar"
 UNSTABLE_TESTS=""
 IGNORE_UNSTABLE_TESTS=0
+ret_val=0
 
-# positive test
+echo "running positive TC that should pass"
 CID_FILE_DIR=$(mktemp -d)
 TEST_SUMMARY=""
 TEST_SET=${TEST_SET_POS} ct_run_tests_from_testset "should_pass" >> /dev/null
-(ct_cleanup >> /dev/null)
-test $? -eq 0
+(ct_cleanup >> /dev/null 2>&1)
+if test $? -eq 0 ; then
+  echo "TC has passed"
+else
+  echo "positive TC has failed"
+  ret_val=1
+fi
 
-# negative test
+echo "running positive TC that should fail"
 CID_FILE_DIR=$(mktemp -d)
 TEST_SUMMARY=""
 TEST_SET=${TEST_SET_NEG} ct_run_tests_from_testset "should_fail" >> /dev/null
-(ct_cleanup >> /dev/null)
-test $? -eq 1
+(ct_cleanup >> /dev/null 2>&1)
+if test $? -eq 1 ; then
+  echo "TC has failed successfuly"
+else
+  echo "negative TC has succeeded, which is bad"
+  ret_val=1
+fi
+exit $ret_val
