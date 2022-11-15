@@ -67,9 +67,14 @@ function ct_cleanup() {
 # ct_show_results
 # ---------------
 # Prints results of all test cases that are stored into TEST_SUMMARY variable.
+# Uses: $IMAGE_NAME - name of the tested container image
 # Uses: $TEST_SUMMARY - text info about test-cases
 # Uses: $TESTSUITE_RESULT - overall result of all tests
 function ct_show_results() {
+  # shellcheck disable=SC2153
+  echo "Tests were run for image ${IMAGE_NAME}"
+  echo "Uncompressed size of the image: $(ct_get_image_size_uncompresseed "${IMAGE_NAME}")"
+  echo "Compressed size of the image: $(ct_get_image_size_compresseed "${IMAGE_NAME}")"
   echo
   echo "==============================================="
   echo "Test cases results:"
@@ -1183,9 +1188,6 @@ ct_run_tests_from_testset() {
     printf -v TEST_SUMMARY "%s %s for '%s' %s (%s)\n" "${TEST_SUMMARY:-}" "${test_msg}" "${app_name}" "$test_case" "$time_diff"
     [ -n "${FAIL_QUICKLY:-}" ] && return 1
   done
-  echo "Tests were run for image ${IMAGE_NAME}"
-  echo "Uncompressed size of the image: $(ct_get_image_size_uncompresseed "${IMAGE_NAME}")"
-  echo "Compressed size of the image: $(ct_get_image_size_compresseed "${IMAGE_NAME}")"
 }
 
 # ct_timestamp_s
