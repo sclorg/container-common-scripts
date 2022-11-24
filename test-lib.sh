@@ -14,6 +14,13 @@
 # Container CI tests
 # abbreviated as "ct"
 
+# shellcheck disable=SC2148
+if [ -z "${sourced_test_lib:-}" ]; then
+  sourced_test_lib=1
+else
+  return 0
+fi
+
 # may be redefined in the specific container testfile
 EXPECTED_EXIT_CODE=0
 export TESTSUITE_RESULT=0
