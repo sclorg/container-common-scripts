@@ -36,49 +36,40 @@ jobs:
           sudo apt-get update && sudo apt-get -y install curl jq make git python3 python3-pip
           pip3 install pre-commit
 
-      - name: Create status check to pending
-        id: pending
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cat << EOF > pending.json
-          {
-            "sha": "${{ steps.sha.outputs.SHA }}",
-            "state": "pending",
-            "context": "Sanity tests"
-          }
-          EOF
-          echo "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/${{ steps.sha.outputs.SHA}} "
-          curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/${{ steps.sha.outputs.SHA }} \
-            --data @pending.json
+      - name: Set status to pending
+        uses: myrotvorets/set-commit-status-action@1.1.5
+        with:
+          context: "Sanity check"
+          sha: ${{ steps.sha.outputs.sha }}
 
       - name: Run Sanity pre-commit tests
         continue-on-error: true
+        shell: bash
         id: pre_commit_tests
         run: |
           set +e
           make pre-commit-check
-          echo "exit_status=$?" >> $GITHUB_OUTPUT
-
-      - name: Switch to final state
-        run: |
-          echo "Result from pre_commit_tests is ${{ steps.pre_commit_tests.outputs.exit_status }}"
-
-          if [[ ${{ steps.pre_commit_tests.outputs.exit_status }} == 0 ]]; then
-            FINAL_STATE="success"
+          exit_status=$?
+          if [[ "$exit_status" -eq 0 ]]; then
+            result="success"
           else
-            FINAL_STATE="failure"
+            result="failure"
           fi
-          cat << EOF > final.json
-          {
-            "sha": "${{ steps.sha.outputs.SHA }}",
-            "state": "${FINAL_STATE}",
-            "context": "Sanity tests",
-            "description": "Build finished"
-          }
-          EOF
-          cat final.json
-          curl -X POST -H "Authorization: Bearer ${{secrets.GITHUB_TOKEN}}" -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/${{ steps.sha.outputs.SHA }} \
-            --data @final.json
+          echo "Result from pre_commit_tests is $result"
+          echo "result=$result" >> $GITHUB_OUTPUT
+
+      - name: Set status to final state
+        uses: myrotvorets/set-commit-status-action@1.1.5
+        with:
+          context: "Sanity check"
+          status: ${{ steps.pre_commit_tests.outputs.result }}
+          sha: ${{ steps.sha.outputs.sha }}
+
+      - name: Exit on ERR
+        shell: bash
+        run: |
+          if [[ "${{ steps.pre_commit_tests.outputs.result }}" == "failure" ]]; then
+            echo "Sanity checks failed."
+            echo "See the reason in 'Run Sanity pre-commit tests' step."
+            exit 1
+          fi
