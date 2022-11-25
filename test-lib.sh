@@ -74,24 +74,45 @@ function ct_cleanup() {
     [ -f "$cid_file" ] || continue
     local container
     container=$(cat "$cid_file")
+    rm "$cid_file"
+
+    ct_container_exists "$container" || continue
 
     echo "Stopping and removing container $container..."
-    docker stop "$container"
-
-    # Container has not been removed by `docker stop` and still exists
-    if [ "$( docker ps -a -f "id=$container" | wc -l )" -eq 2 ]; then
-      exit_status=$(docker inspect -f '{{.State.ExitCode}}' "$container")
-      if [ "$exit_status" != "$EXPECTED_EXIT_CODE" ]; then
-        echo "Dumping logs for $container"
-        docker logs "$container"
-      fi
-      docker rm -v "$container"
+    if ct_container_running "$container"; then
+      docker stop "$container"
     fi
-    rm "$cid_file"
+
+    exit_status=$(docker inspect -f '{{.State.ExitCode}}' "$container")
+    if [ "$exit_status" != "$EXPECTED_EXIT_CODE" ]; then
+      echo "Dumping logs for $container"
+      docker logs "$container"
+    fi
+    docker rm -v "$container"
   done
 
   rmdir "$CID_FILE_DIR"
   exit "${TESTSUITE_RESULT:-0}"
+}
+
+# ct_container_running
+# --------------------
+# Return 0 if given container is in running state
+# Uses: $1 - container id to check
+function ct_container_running() {
+  local running
+  running="$(docker inspect -f '{{.State.Running}}' "$1")"
+  [ "$running" = "true" ] || return 1
+}
+
+# ct_container_exists
+# --------------------
+# Return 0 if given container exists
+# Uses: $1 - container id to check
+function ct_container_exists() {
+  local exists
+  exists="$(docker ps -q -f "id=$1")"
+  [ -n "$exists" ] || return 1
 }
 
 # ct_clean_app_images
@@ -100,14 +121,16 @@ function ct_cleanup() {
 # Uses: $APP_ID_FILE_DIR - path to directory containing cid_files
 function ct_clean_app_images() {
   local image
-  if [[ ! -d ${APP_ID_FILE_DIR:-} ]]; then
+  if [[ ! -d "${APP_ID_FILE_DIR:-}" ]]; then
     echo "The \$APP_ID_FILE_DIR=$APP_ID_FILE_DIR is not created. App cleaning is to be skipped."
     return 0
   fi;
   echo "Examining image ID files in \$APP_ID_FILE_DIR=$APP_ID_FILE_DIR"
   for file in "${APP_ID_FILE_DIR:?}"/*; do
     image="$(cat "$file")"
-    docker rm -f "$(docker ps -q -a -f ancestor="$image")" 2>/dev/null
+    docker inspect "$image" > /dev/null 2>&1 || continue
+    containers="$(docker ps -q -a -f ancestor="$image")"
+    [[ -z "$containers" ]] || docker rm -f "$containers" 2>/dev/null
     docker rmi -f "$image"
   done
   rm -fr "$APP_ID_FILE_DIR"
