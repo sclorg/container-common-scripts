@@ -78,17 +78,19 @@ def filename_to_distro_config(filename, version, mapping):
     elif centos_match:
         config = f"centos-{centos_match.group(1)}-x86_64.yaml"
     elif filename.endswith(".fedora"):
-        sorted_configs = sorted(
-            c for c in mapping[version] if c.startswith("fedora")
-        )
+        sorted_configs = sorted(c for c in mapping[version] if c.startswith("fedora"))
         if len(sorted_configs) > 1:
-            raise RuntimeError("Multiple Fedora configs for single version exist:", sorted_configs)
+            raise RuntimeError(
+                "Multiple Fedora configs for single version exist:", sorted_configs
+            )
         elif len(sorted_configs) == 1:
             config = sorted_configs[0]
         else:
             config = None
     else:
-        raise RuntimeError(f"File {filename} does not match any of the known suffixes: .rhelXX, .cXs, .centosX or .fedora")
+        raise RuntimeError(
+            f"File {filename} does not match any of the known suffixes: .rhelXX, .cXs, .centosX or .fedora"
+        )
 
     if config in mapping[version]:
         return config
