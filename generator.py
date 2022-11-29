@@ -7,12 +7,19 @@ from os import chmod, makedirs, mkdir, symlink, unlink
 from pathlib import Path
 from shutil import copy2, rmtree
 from subprocess import CalledProcessError, check_output
+from typing import Dict, List, TextIO
 
 import yaml
 from distgen.multispec import Multispec
 
 
-def run_distgen(src, dest, multispec_path, distro_config, version):
+def run_distgen(
+    src: str,
+    dest: Path,
+    multispec_path: str,
+    distro_config: str,
+    version: str,
+) -> None:
     cmd = [
         "dg",
         "--multispec",
@@ -33,7 +40,9 @@ def run_distgen(src, dest, multispec_path, distro_config, version):
         print("[ERROR] distgen failed:", e)
 
 
-def get_version_distro_mapping(multispec_file):
+def get_version_distro_mapping(
+    multispec_file: TextIO,
+) -> Dict[str, List[str]]:
     """Get all combinations from multispec file like:
 
     [{"distro": "rhel-8-x86_64.yaml", "version": "3.9"},
@@ -54,7 +63,9 @@ def get_version_distro_mapping(multispec_file):
     return mapping
 
 
-def filename_to_distro_config(filename, version, mapping):
+def filename_to_distro_config(
+    filename: str, version: str, mapping: Dict[str, List[str]]
+) -> str:
     """Find distgen distro config from a filename.
 
     This is usually needed only for dockerfiles.
@@ -63,7 +74,7 @@ def filename_to_distro_config(filename, version, mapping):
     - Dockerfile.centosX → centos-X-x86_64.yaml
     - Dockerfile.fedora → the newest fedora-XX-x86_64.yaml
 
-    If not found, None is returned indicating that the
+    If not found, empty string is returned indicating that the
     combination of distro and version is not included
     in distgen configuration (multispec).
     """
@@ -86,18 +97,16 @@ def filename_to_distro_config(filename, version, mapping):
         elif len(sorted_configs) == 1:
             config = sorted_configs[0]
         else:
-            config = None
+            config = ""
     else:
         raise RuntimeError(
             f"File {filename} does not match any of the known suffixes: .rhelXX, .cXs, .centosX or .fedora"
         )
 
-    if config in mapping[version]:
-        return config
-    return None
+    return config
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     arg_parser = argparse.ArgumentParser(
         description="Helper script for distgen in S2I container images"
     )
@@ -128,7 +137,7 @@ def parse_args():
     return arg_parser.parse_args()
 
 
-def main():
+def main() -> None:
     args = parse_args()
     manifest = yaml.load(args.manifest, Loader=yaml.SafeLoader)
     version_distro_map = get_version_distro_mapping(args.multispec)
