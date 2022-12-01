@@ -1,3 +1,10 @@
+# shellcheck disable=SC2148
+if [ -z "${sourced_test_lib_remote_openshift:-}" ]; then
+  sourced_test_lib_remote_openshift=1
+else
+  return 0
+fi
+
 # shellcheck shell=bash
 # some functions are used from test-lib.sh, that is usually in the same dir
 # shellcheck source=/dev/null
