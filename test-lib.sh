@@ -516,7 +516,7 @@ EOF
   id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
   docker build -f "$tmpdir/Dockerfile" -q --no-cache "$tmpdir" > "$id_file"
   #shellcheck disable=SC2181
-  if [ "$?" -ne 0 ]; then
+  if [ $? -ne 0 ]; then
     echo "  ERROR: Failed to find $binary in \$PATH!" >&2
     return 1
   fi
