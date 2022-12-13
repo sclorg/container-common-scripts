@@ -458,9 +458,10 @@ function ct_build_s2i_npm_variables()
 # Checks existance of the npm tool and runs it.
 function ct_npm_works() {
   local tmpdir
+  local cid_file
   tmpdir=$(mktemp -d)
   : "  Testing npm in the container image"
-  local cid_file="${tmpdir}/cid"
+  cid_file="$(mktemp --dry-run --tmpdir="${CID_FILE_DIR}")"
   if ! docker run --rm "${IMAGE_NAME}" /bin/bash -c "npm --version" >"${tmpdir}/version" ; then
     echo "ERROR: 'npm --version' does not work inside the image ${IMAGE_NAME}." >&2
     return 1
@@ -487,7 +488,6 @@ function ct_npm_works() {
 
   if [ -f "$cid_file" ]; then
       docker stop "$(cat "$cid_file")"
-      rm "$cid_file"
   fi
   : "  Success!"
 }
@@ -514,8 +514,10 @@ EOF
   local id_file
   mkdir -p "${APP_ID_FILE_DIR:?}"
   id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
-  if ! docker build -f "$tmpdir/Dockerfile" --no-cache "$tmpdir" --iidfile "$id_file"; then
-    echo "  ERROR: Failed to find $binary in Dockerfile!" >&2
+  docker build -f "$tmpdir/Dockerfile" -q --no-cache "$tmpdir" > "$id_file"
+  #shellcheck disable=SC2181
+  if [ "$?" -ne 0 ]; then
+    echo "  ERROR: Failed to find $binary in \$PATH!" >&2
     return 1
   fi
   : "  Success!"
@@ -920,7 +922,7 @@ EOF
     local id_file
     mkdir -p "${APP_ID_FILE_DIR:?}"
     id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
-    docker build ${mount_options[@]+"${mount_options[@]}"} --iidfile="$id_file" -f "$df_name" --no-cache=true -t "$dst_image" .
+    docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" -q --no-cache=true -t "$dst_image" . >"$id_file"
     )
 }
 
@@ -1003,7 +1005,7 @@ EOF
   local id_file
   mkdir -p "${APP_ID_FILE_DIR:?}"
   id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
-  docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" --iidfile="$id_file" --no-cache=true -t "$dst_image" .
+  docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" -q --no-cache=true -t "$dst_image" . > "$id_file"
   )
 }
 
@@ -1166,7 +1168,7 @@ ct_test_app_dockerfile() {
   local id_file
   mkdir -p "${APP_ID_FILE_DIR:?}"
   id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
-  if ! docker build --no-cache=true --iidfile="$id_file" -t "${app_image_name}" . ; then
+  if ! docker build --no-cache=true -q -t "${app_image_name}" . >"$id_file" ; then
     echo "ERROR: The image cannot be built from ${dockerfile} and application ${app_url}."
     echo "Terminating the Dockerfile build."
     return 1
