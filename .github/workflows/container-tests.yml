@@ -56,18 +56,18 @@ jobs:
               context="RHEL8"
               tmt_plan="rhel8-docker"
             else
-              compose="RHEL-9.0.0-Nightly"
+              compose="RHEL-9.1.0-Nightly"
               context="RHEL9"
               tmt_plan="rhel9-docker"
             fi
           fi
-          echo "::set-output name=api_key::$api_key"
-          echo "::set-output name=branch::$branch"
-          echo "::set-output name=tf_scope::$tf_scope"
-          echo "::set-output name=tmt_repo::$tmt_repo"
-          echo "::set-output name=compose::$compose"
-          echo "::set-output name=context::$context"
-          echo "::set-output name=tmt_plan::$tmt_plan"
+          echo "api_key=$api_key" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "tf_scope=$tf_scope" >> "$GITHUB_OUTPUT"
+          echo "tmt_repo=$tmt_repo" >> "$GITHUB_OUTPUT"
+          echo "compose=$compose" >> "$GITHUB_OUTPUT"
+          echo "context=$context" >> "$GITHUB_OUTPUT"
+          echo "tmt_plan=$tmt_plan" >> "$GITHUB_OUTPUT"
         shell: bash
 
       # https://github.com/sclorg/testing-farm-as-github-action
