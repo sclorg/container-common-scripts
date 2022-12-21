@@ -70,10 +70,10 @@ def get_number_of_cores():
     Read number of CPU cores.
     """
 
-    limits = [_read_cpu_quota(), _read_cpuset_size()]
+    limits = [l for l in [_read_cpu_quota(), _read_cpuset_size()] if l]
     if not limits:
         return None
-    return min([l for l in limits if l])
+    return min(limits)
 
 
 def _read_cpu_quota():
