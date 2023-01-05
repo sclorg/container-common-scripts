@@ -68,6 +68,8 @@ function ct_os_set_ocp4() {
   else
     echo "PATH set correctly, binary oc found in version ${OS_OC_CLIENT_VERSION}: $(command -v oc)"
   fi
+  # Switch to default project as soon as we are logged to cluster
+  oc project default
   echo "Login to OpenShift ${OS_OC_CLIENT_VERSION} is DONE"
   # let openshift cluster to sync to avoid some race condition errors
   sleep 3
