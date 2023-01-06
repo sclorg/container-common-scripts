@@ -60,6 +60,8 @@ How to test this script:
 
 from __future__ import division
 from __future__ import print_function
+
+import os.path
 import sys
 import subprocess
 
@@ -167,10 +169,10 @@ def _read_nproc():
     where cgroups v2 resource limits cannot be set without a specific
     configuration (per podman-run(1) man page).
     """
-    try:
-        return int(subprocess.run('nproc', capture_output=True).stdout)
-    except FileNotFoundError:
+    # Binary /usr/bin/nproc is available from package coreutils-single
+    if not os.path.exists("/usr/bin/nproc"):
         return None
+    return int(subprocess.run('/usr/bin/nproc', stdout=subprocess.PIPE).stdout)
 
 
 if __name__ == "__main__":
