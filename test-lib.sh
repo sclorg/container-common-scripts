@@ -95,6 +95,33 @@ function ct_cleanup() {
   exit "${TESTSUITE_RESULT:-0}"
 }
 
+# ct_build_image_and_parse_id
+# --------------------
+# Return 0 if build was successful, 1 otherwise
+# Uses: $1 - path to docckerfile
+# Uses: $2 - build params
+# Uses: $APP_IMAGE_ID - sets the app image id value to this variable
+# this should be replaced by the --iidfile parameter
+# when it becames supported by all versions of podman and docker that we support
+ct_build_image_and_parse_id() {
+  local tmpdir
+  local log_file
+  local ret_val
+  local dockerfile
+  local command
+  log_file="$(mktemp)"
+  ret_val=1
+  [ -n "$1" ] && dockerfile="-f $1"
+  command="$(echo "docker build --no-cache $dockerfile $2" | tr -d "'")"
+
+  if $command > "$log_file" 2>&1; then
+    APP_IMAGE_ID="$(tail -n 1 "$log_file")"
+    ret_val=0
+  fi
+  cat "$log_file" ; rm -r "$log_file"
+  return "$ret_val"
+}
+
 # ct_container_running
 # --------------------
 # Return 0 if given container is in running state
@@ -500,6 +527,7 @@ function ct_npm_works() {
 #                  /opt/rh by default
 function ct_binary_found_from_df() {
   local tmpdir
+  local id_file
   local binary=$1; shift
   local binary_path=${1:-"^/opt/rh"}
   tmpdir=$(mktemp -d)
@@ -511,16 +539,15 @@ FROM $IMAGE_NAME
 RUN command -v $binary | grep "$binary_path"
 EOF
   # Build an image, looking for expected path in the output
-  local id_file
-  mkdir -p "${APP_ID_FILE_DIR:?}"
-  id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
-  docker build -f "$tmpdir/Dockerfile" -q --no-cache "$tmpdir" > "$id_file"
+  ct_build_image_and_parse_id "$tmpdir/Dockerfile" "$tmpdir"
   #shellcheck disable=SC2181
   if [ $? -ne 0 ]; then
     echo "  ERROR: Failed to find $binary in \$PATH!" >&2
     return 1
   fi
-  : "  Success!"
+  mkdir -p "${APP_ID_FILE_DIR:?}"
+  id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
+  echo "$APP_IMAGE_ID" > "$id_file"
 }
 
 # ct_check_exec_env_vars [env_filter]
@@ -833,6 +860,7 @@ ct_s2i_build_as_df()
     local tmpdir=
     local incremental=false
     local mount_options=()
+    local id_file
 
     # Run the entire thing inside a subshell so that we do not leak shell options outside of the function
     (
@@ -919,10 +947,15 @@ EOF
     read -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
     # Run the build and tag the result
-    local id_file
+    ct_build_image_and_parse_id "$df_name" "${mount_options[*]+${mount_options[*]}} -t $dst_image ."
+    #shellcheck disable=SC2181
+    if [ "$?" -ne 0 ]; then
+      echo "  ERROR: Failed to to build $df_name" >&2
+      return 1
+    fi
     mkdir -p "${APP_ID_FILE_DIR:?}"
     id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
-    docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" -q --no-cache=true -t "$dst_image" . >"$id_file"
+    echo "$APP_IMAGE_ID" > "$id_file"
     )
 }
 
@@ -945,6 +978,7 @@ ct_s2i_multistage_build() {
   local local_app="app-src"
   local user_id=
   local mount_options=()
+  local id_file
 
 
   # Run the entire thing inside a subshell so that we do not leak shell options outside of the function
@@ -1002,10 +1036,15 @@ EOF
   # Check if -v parameter is present in s2i_args and add it into docker build command
   read -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
-  local id_file
+  ct_build_image_and_parse_id "$df_name" "${mount_options[*]+${mount_options[*]}} -t $dst_image ."
+  #shellcheck disable=SC2181
+  if [ "$?" -ne 0 ]; then
+    echo "  ERROR: Failed to to build $df_name" >&2
+    return 1
+  fi
   mkdir -p "${APP_ID_FILE_DIR:?}"
   id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
-  docker build ${mount_options[@]+"${mount_options[@]}"} -f "$df_name" -q --no-cache=true -t "$dst_image" . > "$id_file"
+  echo "$APP_IMAGE_ID" > "$id_file"
   )
 }
 
@@ -1129,6 +1168,7 @@ ct_test_app_dockerfile() {
   local app_image_name=myapp
   local ret
   local cname=app_dockerfile
+  local id_file
 
   if [ -z "$app_dir" ] ; then
     echo "ERROR: Option app_dir not set. Terminating the Dockerfile build."
@@ -1165,14 +1205,14 @@ ct_test_app_dockerfile() {
   fi
 
   echo "Building '${app_image_name}' image using docker build"
-  local id_file
-  mkdir -p "${APP_ID_FILE_DIR:?}"
-  id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
-  if ! docker build --no-cache=true -q -t "${app_image_name}" . >"$id_file" ; then
+  if ! ct_build_image_and_parse_id "" "-t ${app_image_name} ." ; then
     echo "ERROR: The image cannot be built from ${dockerfile} and application ${app_url}."
     echo "Terminating the Dockerfile build."
     return 1
   fi
+  mkdir -p "${APP_ID_FILE_DIR:?}"
+  id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
+  echo "$APP_IMAGE_ID" > "$id_file"
 
   if ! docker run -d --cidfile="${CID_FILE_DIR}/app_dockerfile" --rm "${app_image_name}"  ; then
     echo "ERROR: The image ${app_image_name} cannot be run for ${dockerfile} and application ${app_url}."
