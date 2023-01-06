@@ -111,7 +111,7 @@ function ct_container_running() {
 # Uses: $1 - container id to check
 function ct_container_exists() {
   local exists
-  exists="$(docker ps -q -f "id=$1")"
+  exists="$(docker ps -q -a -f "id=$1")"
   [ -n "$exists" ] || return 1
 }
 
