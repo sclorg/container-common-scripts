@@ -146,7 +146,7 @@ def _read_cpuset_size():
     if line is None:
         # None of the files above exists when running podman as non-root,
         # so in that case, this warning is printed every-time
-        print("Warning: Can't detect cpuset size from cgroups",
+        print("Warning: Can't detect cpuset size from cgroups, will use nproc",
               file=sys.stderr)
         return None
 
@@ -168,8 +168,11 @@ def _read_nproc():
     configuration (per podman-run(1) man page).
     """
     try:
-        return int(subprocess.run('nproc', capture_output=True).stdout)
-    except FileNotFoundError:
+        stdout, stderr = subprocess.Popen('nproc', stdout=subprocess.PIPE).communicate()
+        return int(stdout)
+    except EnvironmentError as e:
+        if e.errno != errno.ENOENT:
+            raise
         return None
 
 
