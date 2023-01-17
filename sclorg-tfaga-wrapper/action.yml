@@ -1,0 +1,79 @@
+---
+
+name: 'Run Testing Farm as GitHub Action for SCLOrg use-cases'
+author: 'RHSCL team'
+
+inputs:
+  compose:
+    description: ''
+    required: true
+  api_key:
+    description: ''
+    required: true
+  git_url:
+    description: ''
+    required: true
+  git_ref:
+    description: ''
+    required: true
+  tf_scope:
+    description: ''
+    required: true
+  tmt_plan_regex:
+    description: ''
+    required: true
+  pull_request_status_name:
+    description: ''
+    required: true
+  version:
+    description: ''
+    required: true
+  os_test:
+    description: ''
+    required: true
+  test_name:
+    description: ''
+    required: true
+
+runs:
+  using: 'composite'
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          ref: "refs/pull/${{ github.event.issue.number }}/head"
+
+      - name: Prepare needed variables
+        shell: bash
+        id: vars
+        run: |
+          dockerfile="Dockerfile.${{ inputs.os_test }}"
+          if [[ ${{ inputs.os_test }} == "centos7" ]]; then
+            dockerfile="Dockerfile"
+          fi
+          echo "DOCKERFILE_NAME=${dockerfile}" >> "$GITHUB_OUTPUT"
+
+      - name: Check if ${{ inputs.version }}/${{ steps.vars.outputs.DOCKERFILE_NAME }} is present
+        id: check_dockerfile
+        uses: andstor/file-existence-action@v1
+        with:
+          files: "${{ inputs.version }}/${{ steps.vars.outputs.DOCKERFILE_NAME }}"
+
+      - name: Check .exclude-${{ inputs.os_test }} file presents
+        id: check_exclude_file
+        uses: andstor/file-existence-action@v1
+        with:
+          files: "${{ inputs.version }}/.exclude-${{ inputs.os_test }}"
+
+      - name: Schedule tests for ${{ inputs.version }} - ${{ inputs.context }}
+        if: ${{ steps.check_exclude_file.outputs.files_exists == 'false' && steps.check_dockerfile.outputs.files_exists == 'true' }}
+        uses: sclorg/testing-farm-as-github-action@v1
+        with:
+          api_key: ${{ secrets[inputs.api_key] }}
+          git_url: ${{ inputs.tmt_repo }}
+          git_ref: ${{ inputs.branch }}
+          tf_scope: ${{ inputs.tf_scope }}
+          tmt_plan_regex: ${{ inputs.tmt_plan }}
+          pull_request_status_name: "${{ inputs.context }} - ${{ inputs.version }}"
+          variables: "REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY;REPO_NAME=$GITHUB_REPOSITORY;PR_NUMBER=${{ github.event.issue.number }};SINGLE_VERSION=${{ inputs.version }};OS=${{ inputs.os_test }};TEST_NAME=${{ inputs.test_name }}"
+          compose: ${{ inputs.compose }}
