@@ -16,44 +16,44 @@ inputs:
 
 runs:
   using: 'composite'
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v2
-        with:
-          ref: "refs/pull/${{ github.event.issue.number }}/head"
+  steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+      with:
+        ref: "refs/pull/${{ github.event.issue.number }}/head"
 
-      - name: Prepare needed variables
-        shell: bash
-        id: vars
-        run: ./export_variables.sh "${{ inputs.os_test }}" "${{ inputs.test_case }}"
+    - name: Prepare needed variables
+      shell: bash
+      id: vars
+      run: ./export_variables.sh "${{ inputs.os_test }}" "${{ inputs.test_case }}"
 
-      - name: Check if ${{ inputs.version }}/${{ steps.vars.outputs.dockerfile }} is present
-        id: check_dockerfile
-        uses: andstor/file-existence-action@v1
-        with:
-          files: "${{ inputs.version }}/${{ steps.vars.outputs.dockerfile }}"
+    - name: Check if ${{ inputs.version }}/${{ steps.vars.outputs.dockerfile }} is present
+      id: check_dockerfile
+      uses: andstor/file-existence-action@v1
+      with:
+        files: "${{ inputs.version }}/${{ steps.vars.outputs.dockerfile }}"
 
-      - name: Check .exclude-${{ steps.vars.outputs.os_test }} file presents
-        id: check_exclude_file
-        uses: andstor/file-existence-action@v1
-        with:
-          files: "${{ inputs.version }}/.exclude-${{ steps.vars.outputs.os_test }}"
+    - name: Check .exclude-${{ steps.vars.outputs.os_test }} file presents
+      id: check_exclude_file
+      uses: andstor/file-existence-action@v1
+      with:
+        files: "${{ inputs.version }}/.exclude-${{ steps.vars.outputs.os_test }}"
 
-      - name: Schedule tests for ${{ inputs.version }} - ${{ steps.vars.outputs.os_test }}
-        if: ${{ steps.check_exclude_file.outputs.files_exists == 'false' && \
-                steps.check_dockerfile.outputs.files_exists == 'true' }}
-        uses: sclorg/testing-farm-as-github-action@v1
-        with:
-          api_key:  ${{ steps.vars.outputs.os_test }}
-          compose:  ${{ steps.vars.outputs.compose }}
-          git_url:  ${{ steps.vars.outputs.tmt_repo }}
-          git_ref:  ${{ steps.vars.outputs.branch }}
-          tf_scope: ${{ steps.vars.outputs.tf_scope }}
-          tmt_plan_regex: ${{ steps.vars.outputs.tmt_plan }}
-          pull_request_status_name: "${{ steps.vars.outputs.context }} - ${{ inputs.version }}"
-          variables: "REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY;" \
-                     "REPO_NAME=$GITHUB_REPOSITORY;" \
-                     "PR_NUMBER=${{ github.event.issue.number }};" \
-                     "SINGLE_VERSION=${{ inputs.version }};" \
-                     "OS=${{ steps.vars.outputs.os_test }};" \
-                     "TEST_NAME=${{ steps.vars.outputs.test_name }}"
+    - name: Schedule tests for ${{ inputs.version }} - ${{ steps.vars.outputs.os_test }}
+      if: ${{ steps.check_exclude_file.outputs.files_exists == 'false' && \
+              steps.check_dockerfile.outputs.files_exists == 'true' }}
+      uses: sclorg/testing-farm-as-github-action@v1
+      with:
+        api_key:  ${{ steps.vars.outputs.os_test }}
+        compose:  ${{ steps.vars.outputs.compose }}
+        git_url:  ${{ steps.vars.outputs.tmt_repo }}
+        git_ref:  ${{ steps.vars.outputs.branch }}
+        tf_scope: ${{ steps.vars.outputs.tf_scope }}
+        tmt_plan_regex: ${{ steps.vars.outputs.tmt_plan }}
+        pull_request_status_name: "${{ steps.vars.outputs.context }} - ${{ inputs.version }}"
+        variables: "REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY;" \
+                   "REPO_NAME=$GITHUB_REPOSITORY;" \
+                   "PR_NUMBER=${{ github.event.issue.number }};" \
+                   "SINGLE_VERSION=${{ inputs.version }};" \
+                   "OS=${{ steps.vars.outputs.os_test }};" \
+                   "TEST_NAME=${{ steps.vars.outputs.test_name }}"
