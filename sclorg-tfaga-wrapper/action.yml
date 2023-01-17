@@ -22,10 +22,13 @@ runs:
       with:
         ref: "refs/pull/${{ github.event.issue.number }}/head"
 
+    - run: echo "${{ github.action_path }}" >> "$GITHUB_PATH"
+      shell: bash
+
     - name: Prepare needed variables
       shell: bash
       id: vars
-      run: ./export_variables.sh "${{ inputs.os_test }}" "${{ inputs.test_case }}"
+      run: export_variables.sh "${{ inputs.os_test }}" "${{ inputs.test_case }}"
 
     - name: Check if ${{ inputs.version }}/${{ steps.vars.outputs.dockerfile }} is present
       id: check_dockerfile
@@ -40,20 +43,14 @@ runs:
         files: "${{ inputs.version }}/.exclude-${{ steps.vars.outputs.os_test }}"
 
     - name: Schedule tests for ${{ inputs.version }} - ${{ steps.vars.outputs.os_test }}
-      if: ${{ steps.check_exclude_file.outputs.files_exists == 'false' && \
-              steps.check_dockerfile.outputs.files_exists == 'true' }}
+      if: ${{ steps.check_exclude_file.outputs.files_exists == 'false' && steps.check_dockerfile.outputs.files_exists == 'true' }}
       uses: sclorg/testing-farm-as-github-action@v1
       with:
-        api_key:  ${{ steps.vars.outputs.os_test }}
+        api_key:  ${{ secrets[steps.vars.outputs.api_key] }}
         compose:  ${{ steps.vars.outputs.compose }}
         git_url:  ${{ steps.vars.outputs.tmt_repo }}
         git_ref:  ${{ steps.vars.outputs.branch }}
         tf_scope: ${{ steps.vars.outputs.tf_scope }}
         tmt_plan_regex: ${{ steps.vars.outputs.tmt_plan }}
         pull_request_status_name: "${{ steps.vars.outputs.context }} - ${{ inputs.version }}"
-        variables: "REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY;" \
-                   "REPO_NAME=$GITHUB_REPOSITORY;" \
-                   "PR_NUMBER=${{ github.event.issue.number }};" \
-                   "SINGLE_VERSION=${{ inputs.version }};" \
-                   "OS=${{ steps.vars.outputs.os_test }};" \
-                   "TEST_NAME=${{ steps.vars.outputs.test_name }}"
+        variables: "REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY;REPO_NAME=$GITHUB_REPOSITORY;PR_NUMBER=${{ github.event.issue.number }};SINGLE_VERSION=${{ inputs.version }};OS=${{ steps.vars.outputs.os_test }};TEST_NAME=${{ steps.vars.outputs.test_name }}"
