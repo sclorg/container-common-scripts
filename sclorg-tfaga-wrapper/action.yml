@@ -13,6 +13,12 @@ inputs:
   test_case:
     description: 'container/openshift'
     required: true
+  public_api_key:
+    description: ''
+    required: true
+  private_api_key:
+    description: ''
+    required: true
 
 runs:
   using: 'composite'
@@ -30,6 +36,19 @@ runs:
       id: vars
       run: export_variables.sh "${{ inputs.os_test }}" "${{ inputs.test_case }}"
 
+    - name: Use correct API key
+      shell: bash
+      id: api_key
+      run: |
+        if [ "${{ steps.vars.outputs.api_key }}" == "TF_PUBLIC_API_KEY" ]; then
+          echo "value=${{ inputs.public_api_key }}" >> "$GITHUB_OUTPUT"
+        elif [ "${{ steps.vars.outputs.api_key }}" == "TF_PRIVATE_API_KEY" ]; then
+          echo "value=${{ inputs.private_api_key }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "err, invalid API_KEY value" >&2
+          exit 2
+        fi
+
     - name: Check if ${{ inputs.version }}/${{ steps.vars.outputs.dockerfile }} is present
       id: check_dockerfile
       uses: andstor/file-existence-action@v1
@@ -46,7 +65,7 @@ runs:
       if: ${{ steps.check_exclude_file.outputs.files_exists == 'false' && steps.check_dockerfile.outputs.files_exists == 'true' }}
       uses: sclorg/testing-farm-as-github-action@v1
       with:
-        api_key:  ${{ secrets[steps.vars.outputs.api_key] }}
+        api_key:  ${{ steps.api_key.outputs.value }}
         compose:  ${{ steps.vars.outputs.compose }}
         git_url:  ${{ steps.vars.outputs.tmt_repo }}
         git_ref:  ${{ steps.vars.outputs.branch }}
