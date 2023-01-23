@@ -1310,6 +1310,11 @@ ct_run_tests_from_testset() {
         TESTSUITE_RESULT=1
       fi
     fi
+    # As soon as test is finished
+    # switch the project from sclorg-test-<NUMBER> to default.
+    if [ "${CT_OCP4_TEST:-false}" == "true" ]; then
+      oc project default
+    fi
     time_diff=$(ct_timestamp_diff "$time_beg" "$time_end")
     printf -v TEST_SUMMARY "%s %s for '%s' %s (%s)\n" "${TEST_SUMMARY:-}" "${test_msg}" "${app_name}" "$test_case" "$time_diff"
     [ -n "${FAIL_QUICKLY:-}" ] && return 1
