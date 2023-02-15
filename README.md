@@ -111,9 +111,6 @@ Set to true if you want to test container in OpenShift 4 environment.
 `CVP`
 Set to true if you want to test container in Container Validation Pipeline environment.
 
-`NO_GIT_COMMAND`
-Set to true if you want to build and tag container without git command usage.
-
 `clean-hook`
 Append Makefile rules to this variable to make sure additional cleaning actions are run
 when `make clean` is called.

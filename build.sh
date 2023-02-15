@@ -133,7 +133,8 @@ function docker_build_with_version {
   fi
   echo "-> Version ${dir}: building image from '${dockerfile}' ..."
 
-  if [ "${NO_GIT_COMMAND:-"false"}" == "false" ] ; then
+  # We need to check '.git' dir in root directory
+  if [ -d "../.git" ] ; then
     git_version=$(git rev-parse --short HEAD)
     BUILD_OPTIONS+=" --label io.openshift.builder-version=\"${git_version}\""
   fi

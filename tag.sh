@@ -16,7 +16,8 @@ for dir in ${VERSIONS}; do
   IMAGE_ID=$(cat .image-id)
   name=$(docker inspect -f "{{.Config.Labels.name}}" "$IMAGE_ID")
   version=$(docker inspect -f "{{.Config.Labels.version}}" "$IMAGE_ID")
-  if [ "${NO_GIT_COMMAND:-"false"}" == "false" ] ; then
+  # We need to check '.git' dir in root directory
+  if [ -d "../.git" ] ; then
     commit_date=$(git show -s HEAD --format=%cd --date=short | sed 's/-//g')
     date_and_hash="${commit_date}-$(git rev-parse --short HEAD)"
   else
