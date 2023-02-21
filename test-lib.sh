@@ -74,7 +74,6 @@ function ct_cleanup() {
     [ -f "$cid_file" ] || continue
     local container
     container=$(cat "$cid_file")
-    rm "$cid_file"
 
     ct_container_exists "$container" || continue
 
@@ -89,6 +88,7 @@ function ct_cleanup() {
       docker logs "$container"
     fi
     docker rm -v "$container"
+    rm -f "$cid_file"
   done
 
   rmdir "$CID_FILE_DIR"
