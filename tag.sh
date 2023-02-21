@@ -16,8 +16,13 @@ for dir in ${VERSIONS}; do
   IMAGE_ID=$(cat .image-id)
   name=$(docker inspect -f "{{.Config.Labels.name}}" "$IMAGE_ID")
   version=$(docker inspect -f "{{.Config.Labels.version}}" "$IMAGE_ID")
-  commit_date=$(git show -s HEAD --format=%cd --date=short | sed 's/-//g')
-  date_and_hash="${commit_date}-$(git rev-parse --short HEAD)"
+  # We need to check '.git' dir in root directory
+  if [ -d "../.git" ] ; then
+    commit_date=$(git show -s HEAD --format=%cd --date=short | sed 's/-//g')
+    date_and_hash="${commit_date}-$(git rev-parse --short HEAD)"
+  else
+    date_and_hash="$(date +%Y%m%d%H%M%S)"
+  fi
 
   full_reg_name="$REGISTRY$name"
   echo "-> Tagging image '$IMAGE_ID' as '$full_reg_name:$version' and '$full_reg_name:latest' and '$full_reg_name:$OS' and '$full_reg_name:$date_and_hash'"
