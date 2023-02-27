@@ -26,16 +26,6 @@ EXPECTED_EXIT_CODE=0
 # is not mandatory for containers
 UNSTABLE_TESTS="${UNSTABLE_TESTS:-""}"
 
-# following lines are added only for preserving backwards compatibility
-# and can be removed, when PR #306 is fully integrated to all container
-# repositories.
-TESTSUITE_RESULT=0
-APP_ID_FILE_DIR="/tmp/APP_ID_FILE_DIR_$RANDOM"
-# when removing this remove also all these lines:
-# mkdir -p "${APP_ID_FILE_DIR:?}"
-# as the $APP_ID_FILE_DIR should be created only in the ct_init function
-# ---------------------------------------------------------------------
-
 
 # ct_init
 # --------------------
@@ -599,7 +589,6 @@ EOF
     echo "  ERROR: Failed to find $binary in \$PATH!" >&2
     return 1
   fi
-  mkdir -p "${APP_ID_FILE_DIR:?}"
   id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
   echo "$APP_IMAGE_ID" > "$id_file"
 }
@@ -1007,7 +996,6 @@ EOF
       echo "  ERROR: Failed to to build $df_name" >&2
       return 1
     fi
-    mkdir -p "${APP_ID_FILE_DIR:?}"
     id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
     echo "$APP_IMAGE_ID" > "$id_file"
     )
@@ -1096,7 +1084,6 @@ EOF
     echo "  ERROR: Failed to to build $df_name" >&2
     return 1
   fi
-  mkdir -p "${APP_ID_FILE_DIR:?}"
   id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
   echo "$APP_IMAGE_ID" > "$id_file"
   )
@@ -1272,7 +1259,6 @@ ct_test_app_dockerfile() {
     echo "Terminating the Dockerfile build."
     return 1
   fi
-  mkdir -p "${APP_ID_FILE_DIR:?}"
   id_file="${APP_ID_FILE_DIR:?}"/"$RANDOM"
   echo "$APP_IMAGE_ID" > "$id_file"
 
