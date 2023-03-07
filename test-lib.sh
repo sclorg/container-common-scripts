@@ -91,7 +91,7 @@ function ct_cleanup() {
     rm -f "$cid_file"
   done
 
-  rmdir "$CID_FILE_DIR"
+  rm -rf "$CID_FILE_DIR"
   exit "${TESTSUITE_RESULT:-0}"
 }
 
