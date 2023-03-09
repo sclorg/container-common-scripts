@@ -412,7 +412,9 @@ function ct_delete_all_objects() {
     objects="bc builds dc po pvc rc routes"
   fi
   for x in $objects; do
+    echo "oc gets info about $x"
     oc get "$x"
+    echo "oc deletes $x with --all --force --grace-timeout=0"
     oc delete "$x" --all --force --grace-timeout=0
   done
   # for some objects it takes longer to be really deleted, so a dummy sleep
