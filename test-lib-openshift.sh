@@ -414,8 +414,8 @@ function ct_delete_all_objects() {
   for x in $objects; do
     echo "oc gets info about $x"
     oc get "$x"
-    echo "oc deletes $x with --all --force --grace-timeout=0"
-    oc delete "$x" --all --force --grace-timeout=0
+    echo "oc deletes $x with --all --force --grace-period=0"
+    oc delete "$x" --all --force --grace-period=0
   done
   # for some objects it takes longer to be really deleted, so a dummy sleep
   # to avoid some races when other test can see not-yet-deleted objects and can fail
