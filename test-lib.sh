@@ -109,15 +109,27 @@ ct_build_image_and_parse_id() {
   local ret_val
   local dockerfile
   local command
+  local pid_build
+  local pid_sleep
+  local sleep_time
   log_file="$(mktemp)"
-  ret_val=1
+  sleep_time="10m"
   [ -n "$1" ] && dockerfile="-f $1"
   command="$(echo "docker build --no-cache $dockerfile $2" | tr -d "'")"
+  (
+    $command > "$log_file" 2>&1
+  ) & pid_build=$!
+  (
+    trap 'exit 0' ALRM; sleep "$sleep_time" && kill $pid_build
+  ) & pid_sleep=$!
+  wait $pid_build
+  ret_val=$?
+  kill -s ALRM $pid_sleep 2>/dev/null || ret_val=1
 
-  if $command > "$log_file" 2>&1; then
+  if [ $ret_val -eq 0 ]; then
     APP_IMAGE_ID="$(tail -n 1 "$log_file")"
-    ret_val=0
   fi
+
   cat "$log_file" ; rm -r "$log_file"
   return "$ret_val"
 }
