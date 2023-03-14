@@ -60,39 +60,12 @@ function ct_init() {
 # Uses: $EXPECTED_EXIT_CODE - expected container exit code
 # Uses: $TESTSUITE_RESULT - overall result of all tests
 function ct_cleanup() {
-  ct_show_resources
-  ct_show_results
+  echo "--------------------------------------------------"
+  echo "Cleaning of testing containers and images started."
+  echo "It may take a few seconds."
+  echo "--------------------------------------------------"
   ct_clean_app_images
-
-  if [[ -z ${CID_FILE_DIR:-} ]]; then
-    echo "The \$CID_FILE_DIR is not set. Container cleaning is to be skipped."
-    exit "${TESTSUITE_RESULT:-0}"
-  fi;
-
-  echo "Examining CID files in \$CID_FILE_DIR=$CID_FILE_DIR"
-  for cid_file in "$CID_FILE_DIR"/* ; do
-    [ -f "$cid_file" ] || continue
-    local container
-    container=$(cat "$cid_file")
-
-    ct_container_exists "$container" || continue
-
-    echo "Stopping and removing container $container..."
-    if ct_container_running "$container"; then
-      docker stop "$container"
-    fi
-
-    exit_status=$(docker inspect -f '{{.State.ExitCode}}' "$container")
-    if [ "$exit_status" != "$EXPECTED_EXIT_CODE" ]; then
-      echo "Dumping logs for $container"
-      docker logs "$container"
-    fi
-    docker rm -v "$container"
-    rm -f "$cid_file"
-  done
-
-  rm -rf "$CID_FILE_DIR"
-  exit "${TESTSUITE_RESULT:-0}"
+  ct_clean_containers
 }
 
 # ct_build_image_and_parse_id
@@ -157,7 +130,7 @@ function ct_container_exists() {
 # ct_clean_app_images
 # --------------------
 # Cleans up application images referenced by APP_ID_FILE_DIR
-# Uses: $APP_ID_FILE_DIR - path to directory containing cid_files
+# Uses: $APP_ID_FILE_DIR - path to directory containing image ID files
 function ct_clean_app_images() {
   local image
   if [[ ! -d "${APP_ID_FILE_DIR:-}" ]]; then
@@ -175,6 +148,41 @@ function ct_clean_app_images() {
   rm -fr "$APP_ID_FILE_DIR"
 }
 
+# ct_clean_containers
+# --------------------
+# Cleans up containers referenced by CID_FILE_DIR
+# Uses: $CID_FILE_DIR - path to directory containing cid_files
+function ct_clean_containers() {
+  if [[ -z ${CID_FILE_DIR:-} ]]; then
+    echo "The \$CID_FILE_DIR is not set. Container cleaning is to be skipped."
+    return
+  fi;
+
+  echo "Examining CID files in \$CID_FILE_DIR=$CID_FILE_DIR"
+  for cid_file in "$CID_FILE_DIR"/* ; do
+    [ -f "$cid_file" ] || continue
+    local container
+    container=$(cat "$cid_file")
+
+    ct_container_exists "$container" || continue
+
+    echo "Stopping and removing container $container..."
+    if ct_container_running "$container"; then
+      docker stop "$container"
+    fi
+
+    exit_status=$(docker inspect -f '{{.State.ExitCode}}' "$container")
+    if [ "$exit_status" != "$EXPECTED_EXIT_CODE" ]; then
+      echo "Dumping logs for $container"
+      docker logs "$container"
+    fi
+    docker rm -v "$container"
+    rm -f "$cid_file"
+  done
+
+  rm -rf "$CID_FILE_DIR"
+}
+
 # ct_show_results
 # ---------------
 # Prints results of all test cases that are stored into TEST_SUMMARY variable.
@@ -182,11 +190,9 @@ function ct_clean_app_images() {
 # Uses: $TEST_SUMMARY - text info about test-cases
 # Uses: $TESTSUITE_RESULT - overall result of all tests
 function ct_show_results() {
-  # shellcheck disable=SC2153
+  echo "==============================================="
+  #shellcheck disable=SC2153
   echo "Tests were run for image ${IMAGE_NAME}"
-  echo "Uncompressed size of the image: $(ct_get_image_size_uncompresseed "${IMAGE_NAME}")"
-  echo "Compressed size of the image: $(ct_get_image_size_compresseed "${IMAGE_NAME}")"
-  echo
   echo "==============================================="
   echo "Test cases results:"
   echo
@@ -207,7 +213,34 @@ function ct_show_results() {
 # --------------------
 # Enables automatic container cleanup after tests.
 function ct_enable_cleanup() {
-  trap ct_cleanup EXIT SIGINT
+  trap ct_trap_on_exit EXIT
+  trap ct_trap_on_sigint SIGINT
+}
+
+# ct_trap_on_exit
+# --------------------
+function ct_trap_on_exit() {
+  local exit_code=$?
+  [ $exit_code -eq 130 ] && return # we do not want to catch SIGINT here
+  # We should not really care about what the script returns
+  # as the tests are constructed the way they never exit the shell.
+  # The check is added just to be sure that we catch some not expected behavior
+  # if any is added in the future.
+  echo "Tests finished with EXIT=$exit_code"
+  [ $exit_code -eq 0 ] && exit_code="${TESTSUITE_RESULT:-0}"
+  ct_show_resources
+  ct_cleanup
+  ct_show_results
+  exit $exit_code
+}
+
+# ct_trap_on_sigint
+# --------------------
+function ct_trap_on_sigint() {
+  echo "Tests were stopped by SIGINT signal"
+  ct_cleanup
+  ct_show_results
+  exit 130
 }
 
 # ct_pull_image
@@ -1110,6 +1143,7 @@ ct_check_latest_imagestreams() {
 ct_show_resources()
 {
   echo
+  echo "==============================================="
   echo "Resources info:"
   echo "Memory:"
   free -h
@@ -1117,6 +1151,13 @@ ct_show_resources()
   df -h || :
   echo "CPU"
   lscpu
+
+  echo "==============================================="
+  echo "Image ${IMAGE_NAME} information:"
+  echo "==============================================="
+  echo "Uncompressed size of the image: $(ct_get_image_size_uncompresseed "${IMAGE_NAME}")"
+  echo "Compressed size of the image: $(ct_get_image_size_compresseed "${IMAGE_NAME}")"
+  echo
 }
 
 # ct_clone_git_repository
@@ -1329,7 +1370,6 @@ ct_run_tests_from_testset() {
     fi
     time_diff=$(ct_timestamp_diff "$time_beg" "$time_end")
     printf -v TEST_SUMMARY "%s %s for '%s' %s (%s)\n" "${TEST_SUMMARY:-}" "${test_msg}" "${app_name}" "$test_case" "$time_diff"
-    [ -n "${FAIL_QUICKLY:-}" ] && return 1
   done
 }
 
