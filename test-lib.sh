@@ -17,6 +17,8 @@ else
   return 0
 fi
 
+LINE="=============================================="
+
 # may be redefined in the specific container testfile
 EXPECTED_EXIT_CODE=0
 
@@ -60,10 +62,10 @@ function ct_init() {
 # Uses: $EXPECTED_EXIT_CODE - expected container exit code
 # Uses: $TESTSUITE_RESULT - overall result of all tests
 function ct_cleanup() {
-  echo "--------------------------------------------------"
+  echo "$LINE"
   echo "Cleaning of testing containers and images started."
   echo "It may take a few seconds."
-  echo "--------------------------------------------------"
+  echo "$LINE"
   ct_clean_app_images
   ct_clean_containers
 }
@@ -190,10 +192,10 @@ function ct_clean_containers() {
 # Uses: $TEST_SUMMARY - text info about test-cases
 # Uses: $TESTSUITE_RESULT - overall result of all tests
 function ct_show_results() {
-  echo "==============================================="
+  echo "$LINE"
   #shellcheck disable=SC2153
   echo "Tests were run for image ${IMAGE_NAME}"
-  echo "==============================================="
+  echo "$LINE"
   echo "Test cases results:"
   echo
   echo "${TEST_SUMMARY:-}"
@@ -1143,7 +1145,7 @@ ct_check_latest_imagestreams() {
 ct_show_resources()
 {
   echo
-  echo "==============================================="
+  echo "$LINE"
   echo "Resources info:"
   echo "Memory:"
   free -h
@@ -1152,9 +1154,9 @@ ct_show_resources()
   echo "CPU"
   lscpu
 
-  echo "==============================================="
+  echo "$LINE"
   echo "Image ${IMAGE_NAME} information:"
-  echo "==============================================="
+  echo "$LINE"
   echo "Uncompressed size of the image: $(ct_get_image_size_uncompresseed "${IMAGE_NAME}")"
   echo "Compressed size of the image: $(ct_get_image_size_compresseed "${IMAGE_NAME}")"
   echo
