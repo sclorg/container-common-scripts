@@ -20,15 +20,16 @@ TESTSUITE_RESULT=0
 OS_CLUSTER_STARTED_BY_TEST=0
 
 function ct_os_cleanup() {
+  local exit_code=$?
   echo "${TEST_SUMMARY:-}"
-  if [ $TESTSUITE_RESULT -eq 0 ] ; then
-    # shellcheck disable=SC2153
-    echo "OpenShift tests for ${IMAGE_NAME} succeeded."
-    exit 0
-  else
+  if [ $TESTSUITE_RESULT -ne 0 ] || [ $exit_code -ne 0 ]; then
     # shellcheck disable=SC2153
     echo "OpenShift tests for ${IMAGE_NAME} failed."
     exit 1
+  else
+    # shellcheck disable=SC2153
+    echo "OpenShift tests for ${IMAGE_NAME} succeeded."
+    exit 0
   fi
 }
 
