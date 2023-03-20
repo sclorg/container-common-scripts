@@ -1319,6 +1319,22 @@ ct_check_testcase_result() {
   return "$result"
 }
 
+# ct_update_test_result
+# -----------------------------
+# adds result to the $TEST_SUMMARY variable
+# Argument: test_msg
+# Argument: app_name
+# Argument: test_name
+# Argument: time_diff (optional)
+# Uses: $TEST_SUMMARY - variable for storing test results
+ct_update_test_result() {
+  local test_msg="$1"
+  local app_name="$2"
+  local test_case="$3"
+  local time_diff="${4:-}"
+  printf -v TEST_SUMMARY "%s %s for '%s' %s (%s)\n" "${TEST_SUMMARY:-}" "${test_msg}" "${app_name}" "$test_case" "$time_diff"
+}
+
 # ct_run_tests_from_testset
 # -----------------------------
 # Runs all tests in $TEST_SET, prints result to
@@ -1378,7 +1394,7 @@ ct_run_tests_from_testset() {
       oc project default
     fi
     time_diff=$(ct_timestamp_diff "$time_beg" "$time_end")
-    printf -v TEST_SUMMARY "%s %s for '%s' %s (%s)\n" "${TEST_SUMMARY:-}" "${test_msg}" "${app_name}" "$test_case" "$time_diff"
+    ct_update_test_result "${test_msg}" "${app_name}" "$test_case" "$time_diff"
   done
 }
 
