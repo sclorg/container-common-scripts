@@ -115,6 +115,32 @@ Set to true if you want to test container in Container Validation Pipeline envir
 Append Makefile rules to this variable to make sure additional cleaning actions are run
 when `make clean` is called.
 
+Files affecting behaviour
+-------------------------
+The directory with Dockerfiles can optionally include some specific files that affect
+how scripts in this repo work:
+
+`.exclude-<OS>`
+If this file exists, the tooling will not run the build and tests for the specific Dockerfile.
+For example, if `.exclude-rhel7` file exists, the `Dockerfile.rhel7` will not be expected
+in the same directory, build and tests will be skipped.
+Content of the file is not important at this point.
+
+`.devel-repo-<OS>`
+This file is useful if we need to work with RPMs that are not available publically yet.
+Content of the file is not important at this point.
+If such a file exists in the repository, then the building scripts will take a look
+at a correspondent variable, e.g.  DEVEL_REPO_rhel8, and will use the repository file
+defined by that variable.
+That means that definition of the DEVEL_REPO_rhel8 variable is a responsibility of
+the test/CI environment.
+
+`.build-args-<OS>`
+Some images require some specific build options, let them be set in a file specific
+for a Dockerfile. This is useful for example for setting setting capabilities for
+micro images, that install RPMs into an alternative directory and podman versions
+of 4.4.0+ do not set such capabilities by default.
+
 Regression tests
 ----------------
 
