@@ -177,7 +177,9 @@ function docker_build_with_version {
   # let them be included in the build command.
   # The content of the .build-opts-<OS> will be used as part of the docker build command.
   if [ -f "$build_args_file" ] ; then
-      BUILD_OPTIONS+=" $(cat "$build_args_file")"
+      build_opts_from_file="$(cat "$build_args_file")"
+      echo '⚠️ Be aware, using additional build arguments: ' "${build_opts_from_file}"
+      BUILD_OPTIONS+=" ${build_opts_from_file}"
   fi
 
   pull_image "$dockerfile"
