@@ -137,7 +137,7 @@ the test/CI environment.
 
 `.build-args-<OS>`
 Some images require some specific build options, let them be set in a file specific
-for a Dockerfile. This is useful for example for setting setting capabilities for
+for a Dockerfile. This is useful for example for setting capabilities for
 micro images, that install RPMs into an alternative directory and podman versions
 of 4.4.0+ do not set such capabilities by default.
 
