@@ -6,13 +6,15 @@
 # VERSION - Specifies the image version - (must match with subdirectory in repo)
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
 
-set -e
+set -eE
 [ -n "${DEBUG:-}" ] && set -x
 
 OS=${1-$OS}
 VERSION=${2-$VERSION}
 
 error() { echo "ERROR: $*" ; false ; }
+
+trap 'echo "errexit on line $LINENO, $0" >&2' ERR
 
 
 # _parse_output_inner
