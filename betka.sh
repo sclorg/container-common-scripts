@@ -5,7 +5,9 @@
 # The result directory will contain generated sources from upstream directories
 #
 
-set -ex
+set -eEx
+
+trap 'echo "errexit on line $LINENO, $0" >&2' ERR
 
 function load_configuration() {
   # shellcheck disable=SC2268
