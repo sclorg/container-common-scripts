@@ -18,6 +18,7 @@ function foo() {
 
 TEST_SET_POS="foo bar"
 TEST_SET_NEG="foo_neg bar"
+TESTSUITE_RESULT=0
 UNSTABLE_TESTS=""
 IGNORE_UNSTABLE_TESTS=0
 ret_val=0
