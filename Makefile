@@ -15,7 +15,7 @@ TEST_LIB_TESTS = \
 
 $(TEST_LIB_TESTS):
 	@echo "  RUN TEST '$@'" ; \
-	$(SHELL) tests/test-lib/$@ || $(SHELL) -x tests/lib/$@
+	$(SHELL) tests/test-lib/$@
 
 check-test-lib: $(TEST_LIB_TESTS)
 
