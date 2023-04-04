@@ -3,19 +3,19 @@ import os
 
 from typing import List, Optional
 
-def get_versions() -> List[str]:
+
+def load_makefile_var(var_name: str) -> Optional[List[str]]:
     """
-    Loads readme from repository versions define in VERSIONS as list of strings
+    Returns list of values definied in var_name in Makefile
     """
-    versions = []
     with open("../Makefile") as makefile:
         lines = makefile.readlines()
-        pattern = "VERSIONS = "
+        pattern = var_name + " = "
         for line in lines:
             if re.match(pattern, line):
                 line = line.strip()
-                versions = line[len(pattern):].split(" ")
-    return versions
+                return line[len(pattern):].split(" ")
+    return None
 
 
 def load_readme(dir: str) -> Optional[str]:
