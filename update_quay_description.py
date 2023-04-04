@@ -67,3 +67,16 @@ def update_description(username: str, token: str, org_name: str, extension: str,
     data = {"description": readme}
     r = requests.put(repo_path, headers=headers, data=data)
     return r.status_code()
+
+
+def main(org_name, username, token) -> int:
+    versions = load_makefile_var("VERSIONS")
+    cont_name = load_makefile_var("BASE_IMAGE_NAME")[0]
+
+    for version in versions:
+        version_dir = f"..{version}"
+        readme = load_readme(version_dir)
+        extensions = get_quay_extensions(version_dir, org_name)
+        for extension in extensions:
+            update_description(username, token, org_name, extension,
+                               version, cont_name, readme)
