@@ -5,6 +5,9 @@ import os
 from typing import List
 
 def get_versions() -> List[str]:
+    """
+    Loads readme from repository versions define in VERSIONS as list of strings
+    """
     versions = []
     with open("../Makefile") as makefile:
         lines = makefile.readlines()
