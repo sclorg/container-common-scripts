@@ -1,6 +1,7 @@
 import re
 import os
 from typing import List, Optional
+import requests
 
 
 def load_makefile_var(var_name: str) -> Optional[List[str]]:
@@ -24,6 +25,7 @@ def get_quay_extensions(dir: str, org: str) -> Optional[List[str]]:
     """
     org_extension_pattern = {"sclorg": "Dockerfile.c",
                              "centos7": "Dockerfile.centos7"}
+    
     pattern = org_extension_pattern.get(org, "")
     if pattern == "":
         return None
@@ -48,3 +50,20 @@ def load_readme(dir: str) -> Optional[str]:
                 return "".join(output_lines)
     return None
 
+
+def update_description(username: str, token: str, org_name: str,
+                       version: str, cont_name: str, readme: str) -> int:
+    # Remove dot from version
+    if "." in version:
+        version = version.replace(".", "")
+    
+    version_dir = f"../{version}"
+
+    extension = get_quay_extensions(version_dir)
+    repo_path = f"https://quay.io/api/v1/{org_name}/{cont_name}-{version}-{extension}"
+
+    headers = {"content-type": "application/json", 
+               "Authorization": f"{username} {token}"}
+    data = {"description": readme}
+    r = requests.put(repo_path, headers=headers, data=data)
+    return r.status_code()
