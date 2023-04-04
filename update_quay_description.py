@@ -1,8 +1,7 @@
-import sys
 import re
 import os
 
-from typing import List
+from typing import List, Optional
 
 def get_versions() -> List[str]:
     """
@@ -19,7 +18,7 @@ def get_versions() -> List[str]:
     return versions
 
 
-def load_readme(dir: str) -> str:
+def load_readme(dir: str) -> Optional[str]:
     """
     Loads repository README starting from (but not including) Description line
     """
@@ -29,4 +28,7 @@ def load_readme(dir: str) -> str:
         lines = readme.readlines()
         for i, line in enumerate(lines):
             if re.match("Description", line):
-                return lines[i + 3:] # Skip seperator line and empty line
+                output_lines = lines[i + 3:]
+                return "".join(output_lines)  # Skip seperator line and empty line
+    return None
+
