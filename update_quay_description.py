@@ -1,7 +1,8 @@
 import re
 import os
-from typing import List, Optional
 import requests
+import sys
+from typing import List, Optional
 
 
 def load_makefile_var(var_name: str) -> Optional[List[str]]:
@@ -18,10 +19,10 @@ def load_makefile_var(var_name: str) -> Optional[List[str]]:
     return None
 
 
-def get_quay_extensions(dir: str, org: str) -> Optional[List[str]]:
+def get_quay_extensions(version_dir: str, org: str) -> Optional[List[str]]:
     """
-    Return list of extensions for which given container is available in given
-    quay organization (so far supports sclorg and centos7)
+    Return list of extensions for which given version of container is available 
+    in given quay organization (so far supports sclorg and centos7)
     """
     org_extension_pattern = {"sclorg": "Dockerfile.c",
                              "centos7": "Dockerfile.centos7"}
@@ -30,7 +31,7 @@ def get_quay_extensions(dir: str, org: str) -> Optional[List[str]]:
     if pattern == "":
         return None
     
-    files = os.listdir(dir)
+    files = os.listdir(version_dir)
     sclorg_files = filter(lambda file_name: re.match(pattern, file_name), files)
     quay_versions = list(map(lambda file_name: file_name.split(".")[1], sclorg_files))
     return quay_versions
@@ -51,7 +52,7 @@ def load_readme(dir: str) -> Optional[str]:
     return None
 
 
-def update_description(username: str, token: str, org_name: str,
+def update_description(username: str, token: str, org_name: str, extension: str,
                        version: str, cont_name: str, readme: str) -> int:
     # Remove dot from version
     if "." in version:
@@ -59,7 +60,6 @@ def update_description(username: str, token: str, org_name: str,
     
     version_dir = f"../{version}"
 
-    extension = get_quay_extensions(version_dir)
     repo_path = f"https://quay.io/api/v1/{org_name}/{cont_name}-{version}-{extension}"
 
     headers = {"content-type": "application/json", 
