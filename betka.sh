@@ -5,7 +5,7 @@
 # The result directory will contain generated sources from upstream directories
 #
 
-set -eEx
+set -eE
 
 trap 'echo "errexit on line $LINENO, $0" >&2' ERR
 
