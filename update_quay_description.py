@@ -47,6 +47,8 @@ def load_readme(dir: str) -> Optional[str]:
         lines = readme.readlines()
         for i, line in enumerate(lines):
             if re.match("Description", line):
+                if i + 3 >= len(lines):
+                    break
                 output_lines = lines[i + 3:]  # Skip seperator line and empty line
                 return "".join(output_lines)
     return None
@@ -78,6 +80,9 @@ def main(org_name, username, token) -> int:
     for version in versions:
         version_dir = f"..{version}"
         readme = load_readme(version_dir)
+        if readme is None:
+            print("Invalid README format", file=sys.stderr)
+
         extensions = get_quay_extensions(version_dir, org_name)
         for extension in extensions:
             update_description(username, token, org_name, extension,
