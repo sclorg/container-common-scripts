@@ -79,6 +79,9 @@ if __name__ == "__main__":
     org_name = sys.argv[1]
     username = sys.argv[2]
     token = sys.argv[3]
+
+    if org_name not in {"sclorg", "centos7"}:
+        print("Invalid organization name", file=sys.stderr)
     
     versions = load_makefile_var("VERSIONS")
     cont_name = load_makefile_var("BASE_IMAGE_NAME")
