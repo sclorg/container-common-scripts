@@ -62,7 +62,6 @@ def update_description(username: str, token: str, org_name: str, extension: str,
     if "." in version:
         version = version.replace(".", "")
     
-    version_dir = f"../{version}"
     api_request_path = f"https://quay.io/api/v1/{repo_path}"
 
     headers = {"content-type": "application/json", 
