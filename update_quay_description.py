@@ -57,6 +57,7 @@ def load_readme(dir: str) -> Optional[str]:
 def update_description(username: str, token: str, org_name: str, extension: str,
                        version: str, cont_name: str, readme: str) -> int:
     # Remove dot from version
+    print(f"Now updating description of {org_name}/{cont_name}-{version}-{extension}")
     if "." in version:
         version = version.replace(".", "")
     
