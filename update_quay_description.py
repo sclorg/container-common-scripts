@@ -71,15 +71,24 @@ def update_description(username: str, token: str, org_name: str, extension: str,
     return r.status_code()
 
 
-def main(org_name, username, token) -> int:
+if __name__ == "__main__":
+    if len(sys.argv != 4):
+        print("Organization name, username and token are required as arguments", file=sys.stderr)
+        sys.exit(1)
+
+    org_name = sys.argv[1]
+    username = sys.argv[2]
+    token = sys.argv[3]
+    
     versions = load_makefile_var("VERSIONS")
     cont_name = load_makefile_var("BASE_IMAGE_NAME")
     if versions is None or cont_name is None:
-        print(f"{sys.argv[0]}: Makefile has invalid format", file=sys.stderr)
+        print("Makefile has invalid format", file=sys.stderr)
+        sys.exit(1)
 
     cont_name = cont_name[0]
     for version in versions:
-        version_dir = f"..{version}"
+        version_dir = f"../{version}"
         readme = load_readme(version_dir)
         if readme is None:
             print("Invalid README format", file=sys.stderr)
