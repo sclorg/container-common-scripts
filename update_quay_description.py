@@ -95,8 +95,11 @@ if __name__ == "__main__":
         readme = load_readme(version_dir)
         if readme is None:
             print("Invalid README format", file=sys.stderr)
+            sys.exit(1)
 
         extensions = get_quay_extensions(version_dir, org_name)
         for extension in extensions:
             update_description(username, token, org_name, extension,
-                               version, cont_name, readme)
+                               version, cont_name, readme)                
+    
+    sys.exit(0)
