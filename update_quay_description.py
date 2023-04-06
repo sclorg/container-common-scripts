@@ -59,7 +59,6 @@ def update_description(username: str, token: str, org_name: str, extension: str,
         version = version.replace(".", "")
     
     version_dir = f"../{version}"
-
     repo_path = f"https://quay.io/api/v1/{org_name}/{cont_name}-{version}-{extension}"
 
     headers = {"content-type": "application/json", 
@@ -71,8 +70,11 @@ def update_description(username: str, token: str, org_name: str, extension: str,
 
 def main(org_name, username, token) -> int:
     versions = load_makefile_var("VERSIONS")
-    cont_name = load_makefile_var("BASE_IMAGE_NAME")[0]
+    cont_name = load_makefile_var("BASE_IMAGE_NAME")
+    if versions is None or cont_name is None:
+        print(f"{sys.argv[0]}: Makefile has invalid format", file=sys.stderr)
 
+    cont_name = cont_name[0]
     for version in versions:
         version_dir = f"..{version}"
         readme = load_readme(version_dir)
