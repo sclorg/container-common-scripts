@@ -56,18 +56,19 @@ def load_readme(dir: str) -> Optional[str]:
 
 def update_description(username: str, token: str, org_name: str, extension: str,
                        version: str, cont_name: str, readme: str) -> int:
+    repo_path = f"{org_name}/{cont_name}-{version}-{extension}"
+    print(f"Now updating description of {repo_path}")
     # Remove dot from version
-    print(f"Now updating description of {org_name}/{cont_name}-{version}-{extension}")
     if "." in version:
         version = version.replace(".", "")
     
     version_dir = f"../{version}"
-    repo_path = f"https://quay.io/api/v1/{org_name}/{cont_name}-{version}-{extension}"
+    api_request_path = f"https://quay.io/api/v1/{repo_path}"
 
     headers = {"content-type": "application/json", 
                "Authorization": f"{username} {token}"}
     data = {"description": readme}
-    r = requests.put(repo_path, headers=headers, data=data)
+    r = requests.put(api_request_path, headers=headers, data=data)
     return r.status_code()
 
 
