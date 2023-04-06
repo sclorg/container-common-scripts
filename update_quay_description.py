@@ -24,10 +24,10 @@ def get_quay_extensions(version_dir: str, org: str) -> Optional[List[str]]:
     Return list of extensions for which given version of container is available 
     in given quay organization (so far supports sclorg and centos7)
     """
-    org_extension_pattern = {"sclorg": "Dockerfile.c",
-                             "centos7": "Dockerfile.centos7"}
+    org_dockerfile_patterns = {"sclorg": "Dockerfile.c[89]s",
+                               "centos7": "Dockerfile.centos7"}
     
-    pattern = org_extension_pattern.get(org, "")
+    pattern = org_dockerfile_patterns.get(org, "")
     if pattern == "":
         return None
     
