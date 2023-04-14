@@ -71,7 +71,7 @@ def update_description(username: str, token: str, org_name: str, extension: str,
 
 
 if __name__ == "__main__":
-    if len(sys.argv != 4):
+    if len(sys.argv) != 4:
         print("Organization name, username and token are required as arguments", file=sys.stderr)
         sys.exit(1)
 
