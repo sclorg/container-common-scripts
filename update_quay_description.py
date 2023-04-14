@@ -32,8 +32,8 @@ def get_quay_extensions(version_dir: str, org: str) -> Optional[List[str]]:
         return None
     
     files = os.listdir(version_dir)
-    sclorg_files = filter(lambda file_name: re.match(pattern, file_name), files)
-    quay_versions = list(map(lambda file_name: file_name.split(".")[1], sclorg_files))
+    org_dockerfiles = filter(lambda file_name: re.match(pattern, file_name), files)
+    quay_versions = list(map(lambda file_name: file_name.split(".")[1], org_dockerfiles))
     return quay_versions
 
 
@@ -41,7 +41,7 @@ def load_readme(dir: str) -> Optional[str]:
     """
     Loads repository README starting from (but not including) Description line
     """
-    
+
     readme_path = os.path.join(dir, "README.md")
     with open(readme_path) as readme:
         lines = readme.readlines()
@@ -58,7 +58,6 @@ def update_description(username: str, token: str, org_name: str, extension: str,
                        version: str, cont_name: str, readme: str) -> int:
     repo_path = f"{org_name}/{cont_name}-{version}-{extension}"
     print(f"Now updating description of {repo_path}")
-    # Remove dot from version
     if "." in version:
         version = version.replace(".", "")
     
@@ -76,9 +75,7 @@ if __name__ == "__main__":
         print("Organization name, username and token are required as arguments", file=sys.stderr)
         sys.exit(1)
 
-    org_name = sys.argv[1]
-    username = sys.argv[2]
-    token = sys.argv[3]
+    org_name, username, token = sys.argv[1:]
     
     versions = load_makefile_var("VERSIONS")
     cont_name = load_makefile_var("BASE_IMAGE_NAME")
