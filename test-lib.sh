@@ -227,7 +227,7 @@ function ct_trap_on_exit() {
   # if any is added in the future.
   echo "Tests finished with EXIT=$exit_code"
   [ $exit_code -eq 0 ] && exit_code="${TESTSUITE_RESULT:-0}"
-  ct_show_resources
+  [ -n "${DEBUG:-}" ] || ct_show_resources
   ct_cleanup
   ct_show_results
   exit "$exit_code"
