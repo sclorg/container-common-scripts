@@ -122,6 +122,7 @@ function docker_build_with_version {
   local exclude=.exclude-${OS}
   local devel_repo_file=.devel-repo-${OS}
   local devel_repo_var="DEVEL_REPO_$OS"
+  local build_args_file=.build-args-${OS}
   local is_podman
   if [ -e "$exclude" ]; then
     echo "-> $exclude file exists for version $dir, skipping build."
@@ -170,6 +171,15 @@ function docker_build_with_version {
     else
       echo "ERROR: file type not known: $CUSTOM_REPO" >&2
     fi
+  fi
+
+  # If a specific Dockerfile requires some specific build options (like capabilities),
+  # let them be included in the build command.
+  # The content of the .build-opts-<OS> will be used as part of the docker build command.
+  if [ -f "$build_args_file" ] ; then
+      build_opts_from_file="$(cat "$build_args_file")"
+      echo '⚠️ Be aware, using additional build arguments: ' "${build_opts_from_file}"
+      BUILD_OPTIONS+=" ${build_opts_from_file}"
   fi
 
   pull_image "$dockerfile"
