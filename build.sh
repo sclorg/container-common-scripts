@@ -4,6 +4,7 @@
 #
 # OS - Specifies distribution - "rhel7", "rhel8", "rhel9", "centos7", "c8s", "c9s" or "fedora"
 # VERSION - Specifies the image version - (must match with subdirectory in repo)
+# SINGLE_VERSION - Specifies the image version - (must match with subdirectory in repo)
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
 
 set -eE
@@ -200,6 +201,14 @@ function docker_build_with_version {
 # Versions are stored in subdirectories. You can specify VERSION variable
 # to build just one single version. By default we build all versions
 dirs=${VERSION:-$VERSIONS}
+if [ -n "${SINGLE_VERSION:-}" ]; then
+  if [ "$SINGLE_VERSION" != "$VERSION" ]; then
+    echo "Skipping build for $VERSION. SINGLE_VERSION is defined $SINGLE_VERSION and does not equal to $VERSION."
+    exit 0
+  fi
+  dirs=$SINGLE_VERSION
+fi
+echo "Built versions are: $dirs"
 
 for dir in ${dirs}; do
   pushd "${dir}" > /dev/null
