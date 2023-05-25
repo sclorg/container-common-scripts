@@ -12,6 +12,12 @@ set -eE
 trap 'echo "errexit on line $LINENO, $0" >&2' ERR
 
 [ -n "${DEBUG:-}" ] && set -x
+# This adds backwards compatibility if only single version needs to be tagged
+# In CI we would like to test single version but VERSIONS= means, that nothing is tested
+# make tag TARGET=<OS> VERSIONS=<something> ... checks single version for CLI
+# make tag TARGET=<OS> SINGLE_VERSION=<something> ... checks single version from Testing Farm
+VERSIONS=${SINGLE_VERSION:-$VERSIONS}
+echo "Tagged versions are: $VERSIONS"
 
 for dir in ${VERSIONS}; do
   [ ! -e "${dir}/.image-id" ] && echo "-> Image for version $dir not built, skipping tag." && continue
