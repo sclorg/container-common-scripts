@@ -37,7 +37,10 @@ def run_distgen(
     try:
         check_output(cmd)
     except CalledProcessError as e:
-        print("[ERROR] distgen failed:", e)
+        # Exit code 2 is a special code for non existing matrix combinations
+        # It's not an actual error, hence don't print out its error message
+        if e.returncode != 2:
+            print("[ERROR] distgen failed:", e)
 
 
 def get_version_distro_mapping(
