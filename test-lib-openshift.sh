@@ -1340,6 +1340,7 @@ function ct_os_test_image_stream_s2i() {
   result=$?
 
   # shellcheck disable=SC2119
+  CT_SKIP_NEW_PROJECT=false
   ct_os_delete_project
 
   return $result
@@ -1414,6 +1415,7 @@ function ct_os_test_image_stream_quickstart() {
   result=$?
 
   # shellcheck disable=SC2119
+  CT_SKIP_NEW_PROJECT=false
   ct_os_delete_project
 
   return $result
