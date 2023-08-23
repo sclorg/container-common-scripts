@@ -407,7 +407,7 @@ function ct_os_delete_project() {
 # Deletes all objects within the project.
 # Handy when we have one project and want to run more tests.
 function ct_delete_all_objects() {
-  local objects="bc builds dc is isimage istag po pvc rc routes svc"
+  local objects="bc builds dc is isimage istag po rc routes svc"
   if [ "${CVP:-0}" -eq "1" ]; then
     echo "Testing in CVP environment. No need to delete isimage and istag in OpenShift project. This is done by CVP pipeline"
     objects="bc builds dc po pvc rc routes"
@@ -1340,6 +1340,7 @@ function ct_os_test_image_stream_s2i() {
   result=$?
 
   # shellcheck disable=SC2119
+  CT_SKIP_NEW_PROJECT=false
   ct_os_delete_project
 
   return $result
@@ -1414,6 +1415,7 @@ function ct_os_test_image_stream_quickstart() {
   result=$?
 
   # shellcheck disable=SC2119
+  CT_SKIP_NEW_PROJECT=false
   ct_os_delete_project
 
   return $result
