@@ -207,6 +207,14 @@ if [ -n "${SINGLE_VERSION:-}" ]; then
     exit 0
   fi
   dirs=$SINGLE_VERSION
+  if [[ "${SINGLE_VERSION}" == *"minimal"* ]]; then
+    echo "Adding ${SINGLE_VERSION//-minimal/} because it might be needed for testing $SINGLE_VERSION."
+    dirs="$dirs ${SINGLE_VERSION//-minimal/}"
+  fi
+  if [[ "${SINGLE_VERSION}" == *"micro"* ]]; then
+    echo "Adding ${SINGLE_VERSION//-micro/} because it might be needed for testing $SINGLE_VERSION."
+    dirs="$dirs ${SINGLE_VERSION//-micro/}"
+  fi
 fi
 echo "Built versions are: $dirs"
 
