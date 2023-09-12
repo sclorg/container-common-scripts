@@ -212,22 +212,10 @@ echo "Built versions are: $dirs"
 
 for dir in ${dirs}; do
   pushd "${dir}" > /dev/null
-  if [ "$OS" == "rhel8" ] || [ "$OS" == "rhel8-candidate" ]; then
-    docker_build_with_version Dockerfile.rhel8
-  elif [ "$OS" == "rhel9" ] || [ "$OS" == "rhel9-candidate" ]; then
-    docker_build_with_version Dockerfile.rhel9
-  elif [ "$OS" == "rhel7" ] || [ "$OS" == "rhel7-candidate" ]; then
-    docker_build_with_version Dockerfile.rhel7
-  elif [ "$OS" == "fedora" ] || [ "$OS" == "fedora-candidate" ]; then
-    docker_build_with_version Dockerfile.fedora
-  elif [ "$OS" == "centos6" ] || [ "$OS" == "centos6-candidate" ]; then
-    docker_build_with_version Dockerfile.centos6
-  elif [ "$OS" == "c8s" ] || [ "$OS" == "c8s-candidate" ]; then
-    docker_build_with_version Dockerfile.c8s
-  elif [ "$OS" == "c9s" ] || [ "$OS" == "c9s-candidate" ]; then
-    docker_build_with_version Dockerfile.c9s
-  else
+  if [ "$OS" == "centos7" ] || [ "$OS" == "centos7-candidate" ]; then
     docker_build_with_version Dockerfile
+  else
+    docker_build_with_version Dockerfile."$OS"
   fi
 
   popd > /dev/null
