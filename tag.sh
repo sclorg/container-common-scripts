@@ -17,6 +17,14 @@ trap 'echo "errexit on line $LINENO, $0" >&2' ERR
 # make tag TARGET=<OS> VERSIONS=<something> ... checks single version for CLI
 # make tag TARGET=<OS> SINGLE_VERSION=<something> ... checks single version from Testing Farm
 VERSIONS=${SINGLE_VERSION:-$VERSIONS}
+if [[ "${SINGLE_VERSION}" == *"minimal"* ]]; then
+  echo "Adding ${SINGLE_VERSION//-minimal/} because it might be needed for testing $SINGLE_VERSION."
+  VERSIONS="$VERSIONS ${SINGLE_VERSION//-minimal/}"
+fi
+if [[ "${SINGLE_VERSION}" == *"micro"* ]]; then
+  echo "Adding ${SINGLE_VERSION//-micro/} because it might be needed for testing $SINGLE_VERSION."
+  VERSIONS="$VERSIONS ${SINGLE_VERSION//-micro/}"
+fi
 echo "Tagged versions are: $VERSIONS"
 
 for dir in ${VERSIONS}; do
