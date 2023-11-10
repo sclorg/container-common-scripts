@@ -67,5 +67,12 @@ for dir in ${VERSIONS}; do
     fi
   fi
 
+  if [ -n "${TEST_UPSTREAM}" ]; then
+    if [[ -x test/run-upstream ]]; then
+      VERSION=$dir test/run-upstream
+    else
+      echo "-> Upstream tests are not present, skipping"
+    fi
+  fi
   popd > /dev/null
 done
