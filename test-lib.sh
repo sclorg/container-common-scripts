@@ -908,7 +908,7 @@ ct_s2i_build_as_df()
     # Run the entire thing inside a subshell so that we do not leak shell options outside of the function
     (
     # Error out if any part of the build fails
-    set -e
+    set -ex
 
     # Use /tmp to not pollute cwd
     tmpdir=$(mktemp -d)
