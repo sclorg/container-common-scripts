@@ -925,7 +925,7 @@ ct_s2i_build_as_df()
         return 1
     fi
 
-    echo "$s2i_args" | grep -q "\-\-incremental" && incremental=true
+    echo "$s2i_args" | grep -q "\--incremental" && incremental=true
     if $incremental; then
         inc_tmp=$(mktemp -d --tmpdir incremental.XXXX)
         setfacl -m "u:$user_id:rwx" "$inc_tmp"
