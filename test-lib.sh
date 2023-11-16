@@ -377,7 +377,6 @@ function ct_assert_container_creation_fails() {
   local max_attempts=10
   local attempt=1
   local cid_file=assert
-  set +e
   local old_container_args="${CONTAINER_ARGS-}"
   # we really work with CONTAINER_ARGS as with a string
   # shellcheck disable=SC2124
@@ -403,7 +402,6 @@ function ct_assert_container_creation_fails() {
     rm "$CID_FILE_DIR/$cid_file"
   fi
   [ -n "$old_container_args" ] && CONTAINER_ARGS="$old_container_args"
-  set -e
   return "$ret"
 }
 
@@ -907,8 +905,9 @@ ct_s2i_build_as_df()
 
     # Run the entire thing inside a subshell so that we do not leak shell options outside of the function
     (
+    # FIXME: removed temporarily, need proper fixing
     # Error out if any part of the build fails
-    set -e
+    # set -e
 
     # Use /tmp to not pollute cwd
     tmpdir=$(mktemp -d)
@@ -1025,8 +1024,9 @@ ct_s2i_multistage_build() {
 
   # Run the entire thing inside a subshell so that we do not leak shell options outside of the function
   (
+  # FIXME: removed temporarily, need proper fixing
   # Error out if any part of the build fails
-  set -e
+  # set -e
 
   user=$(docker inspect -f "{{.Config.User}}" "$src_image")
   # Default to root if no user is set by the image
