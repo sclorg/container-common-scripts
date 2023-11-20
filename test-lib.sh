@@ -220,7 +220,7 @@ function ct_enable_cleanup() {
 # --------------------
 function ct_trap_on_exit() {
   local exit_code=$?
-  [ $exit_code -eq 130 ] && return # we do not want to catch SIGINT here
+  [ "$exit_code" -eq 130 ] && return # we do not want to catch SIGINT here
   # We should not really care about what the script returns
   # as the tests are constructed the way they never exit the shell.
   # The check is added just to be sure that we catch some not expected behavior
@@ -230,7 +230,7 @@ function ct_trap_on_exit() {
   ct_show_resources
   ct_cleanup
   ct_show_results
-  exit $exit_code
+  exit "$exit_code"
 }
 
 # ct_trap_on_sigint
@@ -912,7 +912,7 @@ ct_s2i_build_as_df()
     # Use /tmp to not pollute cwd
     tmpdir=$(mktemp -d)
     df_name=$(mktemp -p "$tmpdir" Dockerfile.XXXX)
-    cd "$tmpdir"
+    cd "$tmpdir" || return 1
     # Check if the image is available locally and try to pull it if it is not
     docker images "$src_image" &>/dev/null || echo "$s2i_args" | grep -q "pull-policy=never" || docker pull "$src_image"
     user=$(docker inspect -f "{{.Config.User}}" "$src_image")
@@ -1040,7 +1040,7 @@ ct_s2i_multistage_build() {
   # Use /tmp to not pollute cwd
   tmpdir=$(mktemp -d)
   df_name=$(mktemp -p "$tmpdir" Dockerfile.XXXX)
-  cd "$tmpdir"
+  cd "$tmpdir" || return 1
 
   # If the path exists on the local host, copy it into the directory for the build
   # Otherwise handle it as a link to a git repository
@@ -1234,7 +1234,7 @@ ct_test_app_dockerfile() {
   local dockerfile_abs
   dockerfile_abs=$(readlink -f "${dockerfile}")
   tmpdir=$(mktemp -d)
-  pushd "$tmpdir" >/dev/null
+  pushd "$tmpdir" >/dev/null || return 1
   cp "${dockerfile_abs}" Dockerfile
 
   # Rewrite the source image to what we test
@@ -1284,7 +1284,7 @@ ct_test_app_dockerfile() {
   docker kill "$(ct_get_cid "${cname}")"
   sleep 2
   docker rmi "${app_image_name}"
-  popd >/dev/null
+  popd >/dev/null || return 1
   rm -rf "${tmpdir}"
   rm -f "${CID_FILE_DIR}/${cname}"
   return $ret

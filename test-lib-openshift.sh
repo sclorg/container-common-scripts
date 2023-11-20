@@ -22,7 +22,7 @@ OS_CLUSTER_STARTED_BY_TEST=0
 function ct_os_cleanup() {
   local exit_code=$?
   echo "${TEST_SUMMARY:-}"
-  if [ $TESTSUITE_RESULT -ne 0 ] || [ $exit_code -ne 0 ]; then
+  if [ "$TESTSUITE_RESULT" -ne 0 ] || [ "$exit_code" -ne 0 ]; then
     # shellcheck disable=SC2153
     echo "OpenShift tests for ${IMAGE_NAME} failed."
     exit 1
@@ -595,7 +595,7 @@ function ct_os_cluster_up() {
 # --------------------
 # Shuts down the local OpenShift cluster using 'oc cluster down'
 function ct_os_cluster_down() {
-  if [ ${OS_CLUSTER_STARTED_BY_TEST:-0} -eq 1 ] ; then
+  if [ "${OS_CLUSTER_STARTED_BY_TEST:-0}" -eq 1 ] ; then
     echo "Switching user to system:admin before cluster is going down."
     oc login -u system:admin
     echo "Cluster started by the test, shutting down."
