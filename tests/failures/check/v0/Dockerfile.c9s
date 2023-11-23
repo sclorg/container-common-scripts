@@ -1,0 +1,2 @@
+FROM quay.io/sclorg/s2i-core-c9s
+LABEL name=test-image
