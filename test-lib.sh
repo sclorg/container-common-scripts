@@ -1255,7 +1255,7 @@ ct_test_app_dockerfile() {
   fi
   [ -n "$5" ] && docker_args=" $5"
   echo "Building '${app_image_name}' image using docker build"
-  if ! ct_build_image_and_parse_id "" "-t ${app_image_name} ." "$docker_args"; then
+  if ! ct_build_image_and_parse_id "" "-t ${app_image_name} ." "$build_args"; then
     echo "ERROR: The image cannot be built from ${dockerfile} and application ${app_url}."
     echo "Terminating the Dockerfile build."
     return 1
