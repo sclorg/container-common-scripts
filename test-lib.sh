@@ -1213,7 +1213,7 @@ ct_test_app_dockerfile() {
   local app_url=$2
   local expected_text=$3
   local app_dir=$4 # this is a directory that must match with the name in the Dockerfile
-  local docker_args
+  local build_args=${5:-""}
   local port=8080
   local app_image_name=myapp
   local ret
