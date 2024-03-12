@@ -1207,7 +1207,7 @@ ct_get_uid_from_image()
 # Argument: app_url - git or local URI with a testing application, supports "@" to indicate a different branch
 # Argument: body_regexp - PCRE regular expression that must match the response body
 # Argument: app_dir - name of the application directory that is used in the Dockerfile
-# Argument: port - Optional port number (default: 8080)
+# Argument: build_args - build args that will be used for building an image
 ct_test_app_dockerfile() {
   local dockerfile=$1
   local app_url=$2
