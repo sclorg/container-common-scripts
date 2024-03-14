@@ -1207,13 +1207,14 @@ ct_get_uid_from_image()
 # Argument: app_url - git or local URI with a testing application, supports "@" to indicate a different branch
 # Argument: body_regexp - PCRE regular expression that must match the response body
 # Argument: app_dir - name of the application directory that is used in the Dockerfile
-# Argument: port - Optional port number (default: 8080)
+# Argument: build_args - build args that will be used for building an image
 ct_test_app_dockerfile() {
   local dockerfile=$1
   local app_url=$2
   local expected_text=$3
   local app_dir=$4 # this is a directory that must match with the name in the Dockerfile
-  local port=${5:-8080}
+  local build_args=${5:-""}
+  local port=8080
   local app_image_name=myapp
   local ret
   local cname=app_dockerfile
@@ -1252,9 +1253,8 @@ ct_test_app_dockerfile() {
       return 1
     fi
   fi
-
   echo "Building '${app_image_name}' image using docker build"
-  if ! ct_build_image_and_parse_id "" "-t ${app_image_name} ." ; then
+  if ! ct_build_image_and_parse_id "" "-t ${app_image_name} ." "$build_args"; then
     echo "ERROR: The image cannot be built from ${dockerfile} and application ${app_url}."
     echo "Terminating the Dockerfile build."
     return 1
