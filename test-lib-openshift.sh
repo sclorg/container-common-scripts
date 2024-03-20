@@ -423,23 +423,6 @@ function ct_delete_all_objects() {
   sleep 10
 }
 
-# ct_os_docker_login_v3
-# --------------------
-# Logs in into docker daemon
-# Uses global REGISRTY_ADDRESS environment variable for arbitrary registry address.
-# Does not do anything if REGISTRY_ADDRESS is set.
-function ct_os_docker_login_v3() {
-  [ -n "${REGISTRY_ADDRESS:-}" ] && echo "REGISTRY_ADDRESS set, not trying to docker login." && return 0
-  # docker login fails with "404 page not found" error sometimes, just try it more times
-  # shellcheck disable=SC2034
-  for i in $(seq 12) ; do
-    # shellcheck disable=SC2015
-    docker login -u developer -p "$(oc whoami -t)" "${REGISRTY_ADDRESS:-172.30.1.1:5000}" && return 0 || :
-    sleep 5
-  done
-  return 1
-}
-
 # ct_os_docker_login_v4
 # --------------------
 # Logs in into docker daemon
@@ -468,34 +451,18 @@ function ct_os_docker_login_v4() {
 #                          In the format of name:tag ($image_name:latest by default)
 # Uses global REGISRTY_ADDRESS environment variable for arbitrary registry address.
 function ct_os_upload_image() {
-  local os_version="${1}" ; shift
   local input_name="${1}" ; shift
   local image_name=${1}
   local output_name
   local source_name
 
-  if [ "${os_version}" != "v3" ] && [ "${os_version}" != "v4" ]; then
-    echo "You have to specify OpenShift version to upload an image."
-    echo "Either 'v3' or 'v4' is allowed"
+  source_name="${input_name}"
+  # Variable OCP4_REGISTER is set in function ct_os_docker_login_v4
+  if ! ct_os_docker_login_v4; then
     return 1
   fi
+  output_name="$OCP4_REGISTER/$namespace/$image_name"
 
-  source_name="${input_name}"
-  if [ "${os_version}" == "v3" ]; then
-    output_name="${REGISRTY_ADDRESS:-172.30.1.1:5000}/$(oc project -q)/$image_name"
-
-    if ! ct_os_docker_login_v3; then
-      return 1
-    fi
-
-  fi
-  if [ "${os_version}" == "v4" ]; then
-    # Variable OCP4_REGISTER is set in function ct_os_docker_login_v4
-    if ! ct_os_docker_login_v4; then
-      return 1
-    fi
-    output_name="$OCP4_REGISTER/$namespace/$image_name"
-  fi
   docker tag "${source_name}" "${output_name}"
   docker push "${output_name}"
 }
@@ -520,91 +487,6 @@ function ct_os_template_exists() {
   oc get templates -n openshift | grep -q "^${t_name}\s"
 }
 
-# ct_os_install_in_centos
-# --------------------
-# Installs os cluster in CentOS
-function ct_os_install_in_centos() {
-  yum install -y centos-release-openshift-origin
-  yum install -y wget git net-tools bind-utils iptables-services bridge-utils\
-                 bash-completion origin-clients docker origin-clients
-}
-
-
-# ct_os_cluster_up [DIR, IS_PUBLIC, CLUSTER_VERSION]
-# --------------------
-# Runs the local OpenShift cluster using 'oc cluster up' and logs in as developer.
-# Arguments: dir - directory to keep configuration data in, random if omitted
-# Arguments: is_public - sets either private or public hostname for web-UI,
-#                        use "true" for allow remote access to the web-UI,
-#                        "false" is default
-# Arguments: cluster_version - version of the OpenShift cluster to use, empty
-#                              means default version of `oc`; example value: 3.7;
-#                              also can be specified outside by OC_CLUSTER_VERSION
-function ct_os_cluster_up() {
-  ct_os_cluster_running && echo "Cluster already running. Nothing is done." && return 0
-  ct_os_logged_in && echo "Already logged in to a cluster. Nothing is done." && return 0
-
-  mkdir -p /var/tmp/openshift
-  local dir="${1:-$(mktemp -d /var/tmp/openshift/os-data-XXXXXX)}" ; shift || :
-  local is_public="${1:-'false'}" ; shift || :
-  local default_cluster_version=${OC_CLUSTER_VERSION:-}
-  local cluster_version=${1:-${default_cluster_version}} ; shift || :
-  if ! grep -qe '--insecure-registry.*172\.30\.0\.0' /etc/sysconfig/docker ; then
-    sed -i "s|OPTIONS='|OPTIONS='--insecure-registry 172.30.0.0/16 |" /etc/sysconfig/docker
-  fi
-
-  systemctl stop firewalld || :
-  setenforce 0
-  iptables -F
-
-  systemctl restart docker
-  local cluster_ip="127.0.0.1"
-  [ "${is_public}" == "true" ] && cluster_ip=$(ct_get_public_ip)
-
-  if [ -n "${cluster_version}" ] ; then
-    # if $cluster_version is not set, we simply use oc that is available
-    ct_os_set_path_oc "${cluster_version}"
-  fi
-
-  mkdir -p "${dir}"/{config,data,pv}
-  case $(oc version| head -n 1) in
-    "oc v3.1"?.*)
-      oc cluster up --base-dir="${dir}/data" --public-hostname="${cluster_ip}"
-      ;;
-    "oc v3."*)
-      oc cluster up --host-data-dir="${dir}/data" --host-config-dir="${dir}/config" \
-                    --host-pv-dir="${dir}/pv" --use-existing-config --public-hostname="${cluster_ip}"
-      ;;
-    *)
-      echo "ERROR: Unexpected oc version." >&2
-      return 1
-      ;;
-  esac
-  oc version
-  oc login -u system:admin
-  oc project default
-  ct_os_wait_rc_ready docker-registry 180
-  ct_os_wait_rc_ready router 30
-  oc login -u developer -p developer
-  OS_CLUSTER_STARTED_BY_TEST=1
-  # let openshift cluster to sync to avoid some race condition errors
-  sleep 3
-}
-
-# ct_os_cluster_down
-# --------------------
-# Shuts down the local OpenShift cluster using 'oc cluster down'
-function ct_os_cluster_down() {
-  if [ "${OS_CLUSTER_STARTED_BY_TEST:-0}" -eq 1 ] ; then
-    echo "Switching user to system:admin before cluster is going down."
-    oc login -u system:admin
-    echo "Cluster started by the test, shutting down."
-    oc cluster down
-  else
-    echo "Cluster not started by the test, shutting down skipped."
-  fi
-}
-
 # ct_os_cluster_running
 # --------------------
 # Returns 0 if oc cluster is running
@@ -618,91 +500,6 @@ function ct_os_cluster_running() {
 function ct_os_logged_in() {
   oc whoami >/dev/null
 }
-
-# ct_os_set_path_oc OC_VERSION
-# --------------------
-# This is a trick that helps using correct version of the `oc`:
-# The input is version of the openshift in format v3.6.0 etc.
-# If the currently available version of oc is not of this version,
-# it first takes a look into /usr/local/oc-<ver>/bin directory,
-# and if not found there it downloads the community release from github.
-# In the end the PATH variable is changed, so the other tests can still use just 'oc'.
-# Arguments: oc_version - X.Y part of the version of OSE (e.g. 3.9)
-function ct_os_set_path_oc() {
-  local oc_version
-  local oc_path
-
-  oc_version=$(ct_os_get_latest_ver "$1")
-
-  if oc version | grep -q "oc ${oc_version%.*}." ; then
-    echo "Binary oc found already available in version ${oc_version}: $(command -v oc) Doing noting."
-    return 0
-  fi
-
-  # first check whether we already have oc available in /usr/local
-  local installed_oc_path="/usr/local/oc-${oc_version%.*}/bin"
-
-  if [ -x "${installed_oc_path}/oc" ] ; then
-    oc_path="${installed_oc_path}"
-    echo "Binary oc found in ${installed_oc_path}" >&2
-  else
-    # oc not available in /usr/local, try to download it from github (community release)
-    oc_path="/tmp/oc-${oc_version}-bin"
-    ct_os_download_upstream_oc "${oc_version}" "${oc_path}"
-  fi
-  if [ -z "${oc_path}" ] ; then
-    echo "ERROR: oc not found installed, nor downloaded" >&1
-    return 1
-  fi
-  export PATH="${oc_path}:${PATH}"
-  if ! oc version | grep -q "oc ${oc_version%.*}." ; then
-    echo "ERROR: something went wrong, oc located at ${oc_path}, but oc of version ${oc_version} not found in PATH ($PATH)" >&1
-    return 1
-  else
-    echo "PATH set correctly, binary oc found in version ${oc_version}: $(command -v oc)"
-  fi
-}
-
-# ct_os_get_latest_ver VERSION_PART_X
-# --------------------
-# Returns full version (vX.Y.Z) from part of the version (X.Y)
-# Arguments: vxy - X.Y part of the version
-# Returns vX.Y.Z variant of the version
-function ct_os_get_latest_ver(){
-  local vxy="v$1"
-  for vz in {3..0} ; do
-    curl -sif "https://github.com/openshift/origin/releases/tag/${vxy}.${vz}" >/dev/null && echo "${vxy}.${vz}" && return 0
-  done
-  echo "ERROR: version ${vxy} not found in https://github.com/openshift/origin/tags" >&2
-  return 1
-}
-
-# ct_os_download_upstream_oc OC_VERSION OUTPUT_DIR
-# --------------------
-# Downloads a particular version of openshift-origin-client-tools from
-# github into specified output directory
-# Arguments: oc_version - version of OSE (e.g. v3.7.2)
-# Arguments: output_dir - output directory
-function ct_os_download_upstream_oc() {
-  local oc_version=$1
-  local output_dir=$2
-
-  # check whether we already have the binary in place
-  [ -x "${output_dir}/oc" ] && return 0
-
-  mkdir -p "${output_dir}"
-  # using html output instead of https://api.github.com/repos/openshift/origin/releases/tags/${oc_version},
-  # because API is limited for number of queries if not authenticated
-  tarball=$(curl -si "https://github.com/openshift/origin/releases/tag/${oc_version}" | grep -o -e "openshift-origin-client-tools-${oc_version}-[a-f0-9]*-linux-64bit.tar.gz" | head -n 1)
-
-  # download, unpack the binaries and then put them into output directory
-  echo "Downloading https://github.com/openshift/origin/releases/download/${oc_version}/${tarball} into ${output_dir}/" >&2
-  curl -sL https://github.com/openshift/origin/releases/download/"${oc_version}"/"${tarball}" | tar -C "${output_dir}" -xz
-  mv -f "${output_dir}"/"${tarball%.tar.gz}"/* "${output_dir}/"
-
-  rmdir "${output_dir}"/"${tarball%.tar.gz}"
-}
-
 
 # ct_os_test_s2i_app_func IMAGE APP CONTEXT_DIR CHECK_CMD [OC_ARGS]
 # --------------------
@@ -740,7 +537,7 @@ function ct_os_test_s2i_app_func() {
   if [ "${CVP:-0}" -eq "0" ]; then
     if [ "${CT_OCP4_TEST:-false}" == 'true' ] ; then
       echo "Uploading image ${image_name} as ${image_tagged} into OpenShift internal registry."
-      ct_os_upload_image "v4" "${image_name}" "${image_tagged}"
+      ct_os_upload_image "${image_name}" "${image_tagged}"
     else
       # Create a specific imagestream tag for the image so that oc cannot use anything else
       if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
@@ -751,7 +548,7 @@ function ct_os_test_s2i_app_func() {
         ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
       else
         echo "Uploading image ${image_name} as ${image_tagged}"
-        ct_os_upload_image "v3" "${image_name}" "${image_tagged}"
+        ct_os_upload_image "${image_name}" "${image_tagged}"
       fi
     fi
   else
@@ -885,7 +682,7 @@ function ct_os_test_template_app_func() {
     # Create a specific imagestream tag for the image so that oc cannot use anything else
     if [ "${CT_OCP4_TEST:-false}" == 'true' ] ; then
       echo "Uploading image ${image_name} as ${image_tagged} into OpenShift internal registry."
-      ct_os_upload_image "v4" "${image_name}" "${image_tagged}"
+      ct_os_upload_image "${image_name}" "${image_tagged}"
     else
       if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
         echo "Importing image ${image_name} as ${image_tagged}"
@@ -895,7 +692,7 @@ function ct_os_test_template_app_func() {
         ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
       else
         echo "Uploading image ${image_name} as ${image_tagged}"
-        ct_os_upload_image "v3" "${image_name}" "${image_tagged}"
+        ct_os_upload_image "${image_name}" "${image_tagged}"
       fi
     fi
   else
@@ -921,9 +718,7 @@ function ct_os_test_template_app_func() {
 
           if [ "${CT_OCP4_TEST:-false}" == 'true' ] ; then
             echo "Uploading image ${image_tag_a[0]} as ${image_tag_a[1]} into OpenShift internal registry."
-            ct_os_upload_image "v4" "${image_tag_a[0]}" "${image_tag_a[1]}"
-          else
-            ct_os_upload_image "v3" "${image_tag_a[0]}" "${image_tag_a[1]}"
+            ct_os_upload_image "${image_tag_a[0]}" "${image_tag_a[1]}"
           fi
         done
     fi
@@ -1039,7 +834,7 @@ ct_os_test_image_update() {
 
   # Get current image from repository and create an imagestream
   docker pull "$old_image:latest" 2>/dev/null
-  ct_os_upload_image "v3" "$old_image" "$istag"
+  ct_os_upload_image "$old_image" "$istag"
 
   # Setup example application with curent image
   oc new-app "$@" --name "$service_name"
@@ -1051,7 +846,7 @@ ct_os_test_image_update() {
   ct_assert_cmd_success "$check_command_exp"
 
   # Tag built image into the imagestream and wait for rebuild
-  ct_os_upload_image "v3" "$image_name" "$istag"
+  ct_os_upload_image "$image_name" "$istag"
   ct_os_wait_pod_ready "${service_name}-2" 60
 
   # Check application output
