@@ -17,7 +17,6 @@ source "$(dirname "${BASH_SOURCE[0]}")"/test-lib.sh
 # And the following trap must be set, in the beginning of the test script:
 #   trap ct_os_cleanup EXIT SIGINT
 TESTSUITE_RESULT=0
-OS_CLUSTER_STARTED_BY_TEST=0
 
 function ct_os_cleanup() {
   local exit_code=$?
@@ -535,22 +534,8 @@ function ct_os_test_s2i_app_func() {
   local image_tagged="${image_name_no_namespace%:*}:${VERSION}"
 
   if [ "${CVP:-0}" -eq "0" ]; then
-    if [ "${CT_OCP4_TEST:-false}" == 'true' ] ; then
-      echo "Uploading image ${image_name} as ${image_tagged} into OpenShift internal registry."
-      ct_os_upload_image "${image_name}" "${image_tagged}"
-    else
-      # Create a specific imagestream tag for the image so that oc cannot use anything else
-      if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
-        echo "Importing image ${image_name} as ${namespace}/${image_tagged}"
-        # Use --reference-policy=local to pull remote image content to the cluster
-        # Works around the issue of builder pods not having access to registry.redhat.io
-        oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
-        ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
-      else
-        echo "Uploading image ${image_name} as ${image_tagged}"
-        ct_os_upload_image "${image_name}" "${image_tagged}"
-      fi
-    fi
+    echo "Uploading image ${image_name} as ${image_tagged} into OpenShift internal registry."
+    ct_os_upload_image "${image_name}" "${image_tagged}"
   else
     echo "Testing image ${image_name} in CVP pipeline."
   fi
@@ -680,48 +665,31 @@ function ct_os_test_template_app_func() {
   # Upload main image is already done by CVP pipeline. No need to do it twice.
   if [ "${CVP:-0}" -eq "0" ]; then
     # Create a specific imagestream tag for the image so that oc cannot use anything else
-    if [ "${CT_OCP4_TEST:-false}" == 'true' ] ; then
-      echo "Uploading image ${image_name} as ${image_tagged} into OpenShift internal registry."
-      ct_os_upload_image "${image_name}" "${image_tagged}"
-    else
-      if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'true' ] ; then
-        echo "Importing image ${image_name} as ${image_tagged}"
-        # Use --reference-policy=local to pull remote image content to the cluster
-        # Works around the issue of builder pods not having access to registry.redhat.io
-        oc tag --source=docker "${image_name}" "${namespace}/${image_tagged}" --insecure=true --reference-policy=local
-        ct_os_wait_stream_ready "${image_tagged}" "${namespace}"
-      else
-        echo "Uploading image ${image_name} as ${image_tagged}"
-        ct_os_upload_image "${image_name}" "${image_tagged}"
-      fi
-    fi
+    echo "Uploading image ${image_name} as ${image_tagged} into OpenShift internal registry."
+    ct_os_upload_image "${image_name}" "${image_tagged}"
   else
     echo "Import is already done by CVP pipeline."
   fi
   # Upload main image is already done by CVP pipeline. No need to do it twice.
   if [ "${CVP:-0}" -eq "0" ]; then
     # Other images are not uploaded by CVP pipeline. We need to do it.
-    if [ "${CT_SKIP_UPLOAD_IMAGE:-false}" == 'false' ] ; then
-        # upload also other images, that template might need (list of pairs in the format <image>|<tag>
-        local image_tag_a
-        local i_t
-        for i_t in ${other_images} ; do
-          echo "${i_t}"
-          IFS='|' read -ra image_tag_a <<< "${i_t}"
-          if [[ "$(docker images -q "$image_name" 2>/dev/null)" == "" ]]; then
-            echo "ERROR: Image $image_name is not pulled yet."
-            docker images
-            echo "Add to the beginning of scripts run-openshift-remote-cluster and run-openshift row"
-            echo "'ct_pull_image $image_name true'."
-            exit 1
-          fi
+    # upload also other images, that template might need (list of pairs in the format <image>|<tag>
+    local image_tag_a
+    local i_t
+    for i_t in ${other_images} ; do
+      echo "${i_t}"
+      IFS='|' read -ra image_tag_a <<< "${i_t}"
+      if [[ "$(docker images -q "$image_name" 2>/dev/null)" == "" ]]; then
+        echo "ERROR: Image $image_name is not pulled yet."
+        docker images
+        echo "Add to the beginning of scripts run-openshift-remote-cluster and run-openshift row"
+        echo "'ct_pull_image $image_name true'."
+        exit 1
+      fi
 
-          if [ "${CT_OCP4_TEST:-false}" == 'true' ] ; then
-            echo "Uploading image ${image_tag_a[0]} as ${image_tag_a[1]} into OpenShift internal registry."
-            ct_os_upload_image "${image_tag_a[0]}" "${image_tag_a[1]}"
-          fi
-        done
-    fi
+        echo "Uploading image ${image_tag_a[0]} as ${image_tag_a[1]} into OpenShift internal registry."
+        ct_os_upload_image "${image_tag_a[0]}" "${image_tag_a[1]}"
+    done
   fi
 
   # get the template file from remote or local location; if not found, it is
