@@ -902,6 +902,7 @@ ct_s2i_build_as_df()
     local incremental=false
     local mount_options=()
     local id_file
+    local build_args=""
 
     # Run the entire thing inside a subshell so that we do not leak shell options outside of the function
     (
@@ -988,8 +989,9 @@ EOF
     # Check if -v parameter is present in s2i_args and add it into docker build command
     read -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
+    echo "$s2i_args" | grep -q '\--ulimit' && build_args=$(echo "$s2i_args" | grep -o -e '\--ulimit[[:space:]]\S*\w=*')
     # Run the build and tag the result
-    ct_build_image_and_parse_id "$df_name" "${mount_options[*]+${mount_options[*]}} -t $dst_image ."
+    ct_build_image_and_parse_id "$df_name" "${mount_options[*]+${mount_options[*]}} -t $dst_image . $build_args"
     #shellcheck disable=SC2181
     if [ "$?" -ne 0 ]; then
       echo "  ERROR: Failed to to build $df_name" >&2
