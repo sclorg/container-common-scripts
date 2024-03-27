@@ -116,7 +116,7 @@ function ct_os_import_image_ocp4() {
   local imagestream=${1:-$image_name:latest}
 
   echo "Uploading image ${image_name} as ${imagestream} into OpenShift internal registry."
-  ct_os_upload_image "v4" "${image_name}" "${imagestream}"
+  ct_os_upload_image "${image_name}" "${imagestream}"
 
 }
 

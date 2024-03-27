@@ -101,7 +101,19 @@ test -e "$TESTED_IMAGE" && die "directory '$TESTED_IMAGE' exists"
     rm -rf common && mkdir common
     info "Replacing common with PR's version"
     tar xvf $common_archive --directory=./common/ > /dev/null
-
+    # Check if the current version is already GA
+    # This directory is cloned from TMT plan repo 'sclorg-tmt-plans'
+    devel_file="/root/sclorg-tmt-plans/devel_images"
+    VERSIONS=$(grep "^VERSIONS" Makefile | cut -d'=' -f 2)
+    echo "VERSIONS are: ${VERSIONS}"
+    for dir in ${VERSIONS}; do
+      if [ -f "${devel_file}" ]; then
+        if grep -q "^${OS}=${TESTED_IMAGE}=${dir}" "$devel_file" ; then
+          echo "Adding .devel-repo-${OS} for container ${TESTED_IMAGE}"
+          touch "${dir}/.devel-repo-${OS}"
+        fi
+      fi
+    done
     # TODO: The PS4 hack doesn't work if we run the testsuite as UID=0.
     PS4="+ [$TESTED_IMAGE] " make TARGET="$OS" $TESTED_SCENARIO
     result=$?

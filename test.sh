@@ -53,20 +53,6 @@ for dir in ${VERSIONS}; do
 
   fi
 
-  if [ -n "${TEST_OPENSHIFT_MODE}" ]; then
-    # In case only imagestream is deprecated
-    # and the other tests should be working
-    if [ -e ".exclude-openshift" ]; then
-      echo "-> .exclude-openshift file exists for version $dir, skipping OpenShift tests."
-    else
-      if [[ -x test/run-openshift ]]; then
-        VERSION=$dir test/run-openshift
-      else
-        echo "-> OpenShift 3 tests are not present, skipping"
-      fi
-    fi
-  fi
-
   if [ -n "${TEST_UPSTREAM}" ]; then
     if [[ -x test/run-upstream ]]; then
       VERSION=$dir test/run-upstream
