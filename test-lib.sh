@@ -989,6 +989,8 @@ EOF
     # Check if -v parameter is present in s2i_args and add it into docker build command
     read -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
+    # Check if s2i_args contains --ulimit
+    # if so, add it into docker build command. The format is like --ulimit nofile=4096:4096
     echo "$s2i_args" | grep -q '\--ulimit' && build_args=$(echo "$s2i_args" | grep -o -e '\--ulimit[[:space:]]\S*\w=*')
     # Run the build and tag the result
     ct_build_image_and_parse_id "$df_name" "${mount_options[*]+${mount_options[*]}} -t $dst_image . $build_args"
