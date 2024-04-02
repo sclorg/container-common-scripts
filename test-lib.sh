@@ -883,6 +883,9 @@ ct_s2i_usage()
 # ct_s2i_build_as_df APP_PATH SRC_IMAGE DST_IMAGE [S2I_ARGS]
 # ----------------------------
 # Create a new s2i app image from local sources in a similar way as source-to-image would have used.
+# This function is wrapper for ct_s2i_build_as_df_build_args in case user do not want to add build args
+# This function is used in all https://github.com/sclorg/*-container test cases and we do not
+# want to break functionality
 # Argument: APP_PATH - local path to the app sources to be used in the test
 # Argument: SRC_IMAGE - image to be used as a base for the s2i build
 # Argument: DST_IMAGE - image name to be used during the tagging of the s2i build result
@@ -898,7 +901,7 @@ ct_s2i_build_as_df()
     ct_s2i_build_as_df_build_args "$app_path" "$src_image" "$dst_image" "" "$s2i_args"
 }
 
-# ct_s2i_build_as_df_build_args APP_PATH SRC_IMAGE DST_IMAGE [S2I_ARGS]
+# ct_s2i_build_as_df_build_args APP_PATH SRC_IMAGE DST_IMAGE BUILD_ARGS [S2I_ARGS]
 # ----------------------------
 # Create a new s2i app image from local sources in a similar way as source-to-image would have used.
 # Argument: APP_PATH - local path to the app sources to be used in the test
