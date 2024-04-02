@@ -894,6 +894,26 @@ ct_s2i_build_as_df()
     local src_image=$1; shift
     local dst_image=$1; shift
     local s2i_args="$*";
+
+    ct_s2i_build_as_df_build_args "$app_path" "$src_image" "$dst_image" "" "$s2i_args"
+}
+
+# ct_s2i_build_as_df_build_args APP_PATH SRC_IMAGE DST_IMAGE [S2I_ARGS]
+# ----------------------------
+# Create a new s2i app image from local sources in a similar way as source-to-image would have used.
+# Argument: APP_PATH - local path to the app sources to be used in the test
+# Argument: SRC_IMAGE - image to be used as a base for the s2i build
+# Argument: DST_IMAGE - image name to be used during the tagging of the s2i build result
+# Argument: BUILD_ARGS - Build arguments to be used in the s2i build
+# Argument: S2I_ARGS - Additional list of source-to-image arguments.
+#                      Only used to check for pull-policy=never and environment variable definitions.
+ct_s2i_build_as_df_build_args()
+{
+    local app_path=$1; shift
+    local src_image=$1; shift
+    local dst_image=$1; shift
+    local build_args=$1; shift
+    local s2i_args="$*";
     local local_app=upload/src/
     local local_scripts=upload/scripts/
     local user_id=
@@ -902,7 +922,6 @@ ct_s2i_build_as_df()
     local incremental=false
     local mount_options=()
     local id_file
-    local build_args=""
 
     # Run the entire thing inside a subshell so that we do not leak shell options outside of the function
     (
@@ -989,9 +1008,6 @@ EOF
     # Check if -v parameter is present in s2i_args and add it into docker build command
     read -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
-    # Check if s2i_args contains --ulimit
-    # if so, add it into docker build command. The format is like --ulimit nofile=4096:4096
-    echo "$s2i_args" | grep -q '\--ulimit' && build_args=$(echo "$s2i_args" | grep -o -e '\--ulimit[[:space:]]\S*\w=*')
     # Run the build and tag the result
     ct_build_image_and_parse_id "$df_name" "${mount_options[*]+${mount_options[*]}} -t $dst_image . $build_args"
     #shellcheck disable=SC2181
