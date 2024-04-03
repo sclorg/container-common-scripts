@@ -813,7 +813,7 @@ ct_get_public_image_name() {
   elif [ "$os" == "rhel9" ]; then
     public_image_name=$registry/rhel9/$base_image_name-${version//./}
   elif [ "$os" == "centos7" ]; then
-    public_image_name=$registry/centos7/$base_image_name-${version//./}-centos7
+    public_image_name=$registry/centos7/$base_image_name-${version//./}-centos7:centos7
   elif [ "$os" == "c8s" ]; then
     public_image_name=$registry/sclorg/$base_image_name-${version//./}-c8s
   elif [ "$os" == "c9s" ]; then
@@ -883,6 +883,9 @@ ct_s2i_usage()
 # ct_s2i_build_as_df APP_PATH SRC_IMAGE DST_IMAGE [S2I_ARGS]
 # ----------------------------
 # Create a new s2i app image from local sources in a similar way as source-to-image would have used.
+# This function is wrapper for ct_s2i_build_as_df_build_args in case user do not want to add build args
+# This function is used in all https://github.com/sclorg/*-container test cases and we do not
+# want to break functionality
 # Argument: APP_PATH - local path to the app sources to be used in the test
 # Argument: SRC_IMAGE - image to be used as a base for the s2i build
 # Argument: DST_IMAGE - image name to be used during the tagging of the s2i build result
@@ -893,6 +896,26 @@ ct_s2i_build_as_df()
     local app_path=$1; shift
     local src_image=$1; shift
     local dst_image=$1; shift
+    local s2i_args="$*";
+
+    ct_s2i_build_as_df_build_args "$app_path" "$src_image" "$dst_image" "" "$s2i_args"
+}
+
+# ct_s2i_build_as_df_build_args APP_PATH SRC_IMAGE DST_IMAGE BUILD_ARGS [S2I_ARGS]
+# ----------------------------
+# Create a new s2i app image from local sources in a similar way as source-to-image would have used.
+# Argument: APP_PATH - local path to the app sources to be used in the test
+# Argument: SRC_IMAGE - image to be used as a base for the s2i build
+# Argument: DST_IMAGE - image name to be used during the tagging of the s2i build result
+# Argument: BUILD_ARGS - Build arguments to be used in the s2i build
+# Argument: S2I_ARGS - Additional list of source-to-image arguments.
+#                      Only used to check for pull-policy=never and environment variable definitions.
+ct_s2i_build_as_df_build_args()
+{
+    local app_path=$1; shift
+    local src_image=$1; shift
+    local dst_image=$1; shift
+    local build_args=$1; shift
     local s2i_args="$*";
     local local_app=upload/src/
     local local_scripts=upload/scripts/
@@ -989,7 +1012,7 @@ EOF
     read -ra mount_options <<< "$(echo "$s2i_args" | grep -o -e '\(-v\)[[:space:]]\.*\S*' || true)"
 
     # Run the build and tag the result
-    ct_build_image_and_parse_id "$df_name" "${mount_options[*]+${mount_options[*]}} -t $dst_image ."
+    ct_build_image_and_parse_id "$df_name" "${mount_options[*]+${mount_options[*]}} -t $dst_image . $build_args"
     #shellcheck disable=SC2181
     if [ "$?" -ne 0 ]; then
       echo "  ERROR: Failed to to build $df_name" >&2
