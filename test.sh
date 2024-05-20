@@ -6,8 +6,6 @@
 # TEST_OPENSHIFT_MODE - If set, run OpenShift tests (if present)
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
 
-set -E
-
 trap 'echo "errexit on line $LINENO, $0" >&2' ERR
 
 [ -n "${DEBUG:-}" ] && set -x
@@ -37,7 +35,7 @@ echo "Tested versions are: $VERSIONS"
 
 for dir in ${VERSIONS}; do
   [ ! -e "${dir}/.image-id" ] && echo "-> Image for version $dir not built, skipping tests." && continue
-  pushd "${dir}" > /dev/null
+  pushd "${dir}" > /dev/null || exit 1
   IMAGE_ID=$(cat .image-id)
   export IMAGE_ID
   IMAGE_VERSION=$(docker inspect -f "{{.Config.Labels.version}}" "$IMAGE_ID")
@@ -79,11 +77,12 @@ for dir in ${VERSIONS}; do
       echo "-> Upstream tests are not present, skipping"
     fi
   fi
-  popd > /dev/null
+  popd > /dev/null || exit 1
 done
 
 if [[ -n "$FAILED_VERSIONS" ]]; then
     echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     echo "Test for image ${IMAGE_NAME} FAILED in these versions ${FAILED_VERSIONS}."
     echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    exit 1
 fi
