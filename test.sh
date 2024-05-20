@@ -82,7 +82,7 @@ for dir in ${VERSIONS}; do
   popd > /dev/null
 done
 
-if [[ "$FAILED_VERSIONS" != "" ]]; then
+if [[ -n "$FAILED_VERSIONS" ]]; then
     echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     echo "Test for image ${IMAGE_NAME} FAILED in these versions ${FAILED_VERSIONS}."
     echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
