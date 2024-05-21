@@ -6,8 +6,6 @@
 # TEST_OPENSHIFT_MODE - If set, run OpenShift tests (if present)
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
 
-trap 'echo "errexit on line $LINENO, $0" >&2' ERR
-
 [ -n "${DEBUG:-}" ] && set -x
 
 FAILED_VERSIONS=""
