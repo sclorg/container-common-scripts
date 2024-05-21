@@ -6,11 +6,23 @@
 # TEST_OPENSHIFT_MODE - If set, run OpenShift tests (if present)
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
 
-set -eE
-
-trap 'echo "errexit on line $LINENO, $0" >&2' ERR
-
 [ -n "${DEBUG:-}" ] && set -x
+
+FAILED_VERSIONS=""
+
+# failed_version
+# -----------------------------
+# Check if testcase ended in error and update FAILED_VERSIONS variable
+# Argument: result - testcase result value
+#           version - version that failed
+failed_version() {
+  local result="$1"
+  local version="$2"
+  if [[ "$result" != "0" ]]; then
+    FAILED_VERSIONS="${FAILED_VERSIONS} ${version}"
+  fi
+  return "$result"
+}
 
 # This adds backwards compatibility if only single version needs to be testing
 # In CI we would like to test single version but VERSIONS= means, that nothing is tested
@@ -21,7 +33,7 @@ echo "Tested versions are: $VERSIONS"
 
 for dir in ${VERSIONS}; do
   [ ! -e "${dir}/.image-id" ] && echo "-> Image for version $dir not built, skipping tests." && continue
-  pushd "${dir}" > /dev/null
+  pushd "${dir}" > /dev/null || exit 1
   IMAGE_ID=$(cat .image-id)
   export IMAGE_ID
   IMAGE_VERSION=$(docker inspect -f "{{.Config.Labels.version}}" "$IMAGE_ID")
@@ -36,6 +48,7 @@ for dir in ${VERSIONS}; do
 
   if [ -n "${TEST_MODE}" ]; then
     VERSION=$dir test/run
+    failed_version "$?" "$dir"
   fi
 
   if [ -n "${TEST_OPENSHIFT_4}" ]; then
@@ -46,6 +59,7 @@ for dir in ${VERSIONS}; do
     else
       if [[ -x test/run-openshift-remote-cluster ]]; then
         VERSION=$dir test/run-openshift-remote-cluster
+        failed_version "$?" "$dir"
       else
         echo "-> Tests for OpenShift 4 are not present. Add run-openshift-remote-cluster script, skipping"
       fi
@@ -56,9 +70,17 @@ for dir in ${VERSIONS}; do
   if [ -n "${TEST_UPSTREAM}" ]; then
     if [[ -x test/run-upstream ]]; then
       VERSION=$dir test/run-upstream
+      failed_version "$?" "$dir"
     else
       echo "-> Upstream tests are not present, skipping"
     fi
   fi
-  popd > /dev/null
+  popd > /dev/null || exit 1
 done
+
+if [[ -n "$FAILED_VERSIONS" ]]; then
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo "Test for image ${IMAGE_NAME} FAILED in these versions ${FAILED_VERSIONS}."
+    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    exit 1
+fi
