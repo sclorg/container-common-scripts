@@ -1126,6 +1126,7 @@ ct_check_image_availability() {
   fi
 }
 
+
 # ct_check_latest_imagestreams
 # -----------------------------
 # Check if the latest version present in Makefile in the variable VERSIONS
@@ -1147,9 +1148,11 @@ ct_check_latest_imagestreams() {
     [ -f "$latest_version/.exclude-$OS" ] && latest_version=$(grep '^VERSIONS' Makefile | rev | cut -d ' ' -f 2 | rev )
     # Only test the imagestream once, when the version matches
     # ignore the SC warning, $VERSION is always available
+
+    test_lib_dir=$(dirname "$(readlink -f "$0")")
+    python3 "${test_lib_dir}/show_all_imagestreams.py"
     # shellcheck disable=SC2153
     if [ "$latest_version" == "$VERSION" ]; then
-      test_lib_dir=$(dirname "$(readlink -f "$0")")
       python3 "${test_lib_dir}/check_imagestreams.py" "$latest_version"
     else
       echo "Image version $VERSION is not latest, skipping ct_check_latest_imagestreams"
