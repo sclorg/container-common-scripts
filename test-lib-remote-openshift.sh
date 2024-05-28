@@ -115,7 +115,7 @@ function ct_os_login_external_registry() {
   OCP4_REGISTER="$INTERNAL_IMAGE_REGISTRY"
   # shellcheck disable=SC2034
   for i in $(seq 12) ; do
-    # shellcheck disable=SC2015
+    # shellcheck disable=SC2153
     robot_token=$(cat "${ROBOT_TOKEN}")
     robot_username=$(cat "${ROBOT_NAME}")
     # shellcheck disable=SC2015

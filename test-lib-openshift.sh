@@ -119,14 +119,21 @@ function ct_os_run_in_pod() {
 # Arguments: service_name - name of the service
 function ct_os_get_service_ip() {
   local service_name="${1}" ; shift
-  local ocp_docker_address="172\.30\.[0-9\.]*"
-  if [ "${CVP:-0}" -eq "1" ]; then
+  if [ "${SHARED_CLUSTER:-false}" == 'true' ]; then
     # shellcheck disable=SC2034
-    ocp_docker_address="172\.27\.[0-9\.]*"
+    oc get "svc/${service_name}" -o yaml | grep "clusterIP:" | \
+       cut -d':' -f2 | grep -oe "172\.[0-9\.]*"
+  else
+    local ocp_docker_address="172\.30\.[0-9\.]*"
+    if [ "${CVP:-0}" -eq "1" ]; then
+      # shellcheck disable=SC2034
+      ocp_docker_address="172\.27\.[0-9\.]*"
+    fi
+    # shellcheck disable=SC2016
+    oc get "svc/${service_name}" -o yaml | grep clusterIP | \
+       cut -d':' -f2 | grep -oe "$ocp_docker_address"
   fi
-  # shellcheck disable=SC2016
-  oc get "svc/${service_name}" -o yaml | grep clusterIP | \
-     cut -d':' -f2 | grep -oe "$ocp_docker_address"
+
 }
 
 
@@ -249,6 +256,8 @@ function ct_os_wait_pod_ready() {
     echo " DONE"
   fi
   SECONDS=0
+  # Let's wait couple more seconds
+  sleep 3
   echo -n "Waiting for ${pod_prefix} pod becoming ready ..."
   while ! ct_os_check_pod_readiness "${pod_prefix}" "true" ; do
     echo -n "."
@@ -662,8 +671,8 @@ function ct_os_test_s2i_app_func() {
   local check_command_exp
   local image_id
 
-  # get image ID from the deployment config
-  image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
+  # get image ID from the deployment
+  image_id=$(oc get "deployment.apps/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
 
   ip=$(ct_os_get_service_ip "${service_name}")
   # shellcheck disable=SC2001
@@ -812,8 +821,8 @@ function ct_os_test_template_app_func() {
   local check_command_exp
   local image_id
 
-  # get image ID from the deployment config
-  image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
+  # get image ID from the deployment
+  image_id=$(oc get "deployment.apps/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
 
   ip=$(ct_os_get_service_ip "${service_name}")
   # shellcheck disable=SC2001
@@ -1129,7 +1138,7 @@ function ct_os_test_image_stream_template() {
   if ! ct_os_deploy_template_image "${local_template_file}" -p NAMESPACE="${CT_NAMESPACE:-$(oc project -q)}" ${template_params} ; then
     echo "ERROR: ${template_file} could not be loaded"
     return 1
-    # Deliberately not runnig ct_os_delete_project here because user either
+    # Deliberately not running ct_os_delete_project here because user either
     # might want to investigate or the cleanup is done with the cleanup trap.
     # Most functions depend on the set -e anyway at this point.
   fi
@@ -1307,18 +1316,18 @@ function ct_os_test_image_stream_quickstart() {
 # ct_os_service_image_info SERVICE_NAME
 # --------------------
 # Shows information about the image used by a specified service.
-# Argument: service_name - Service name (uesd for deployment config)
+# Argument: service_name - Service name (used for deployment)
 function ct_os_service_image_info() {
   local service_name=$1
   local image_id
   local namespace
 
-  # get image ID from the deployment config
-  image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
+  # get image ID from the deployment
+  image_id=$(oc get "deployment.apps/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
   namespace=${CT_NAMESPACE:-"$(oc project -q)"}
 
   echo "  Information about the image we work with:"
-  oc get deploymentconfig.apps.openshift.io/"${service_name}" -o yaml | grep lastTriggeredImage
+  oc get deployment.apps/"${service_name}" -o yaml | grep lastTriggeredImage
   # for s2i builds, the resulting image is actually in the current namespace,
   # so if the specified namespace does not succeed, try the current namespace
   oc get isimage -n "${namespace}" "${image_id##*/}" -o yaml || oc get isimage "${image_id##*/}" -o yaml
