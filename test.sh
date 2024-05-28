@@ -75,6 +75,12 @@ for dir in ${VERSIONS}; do
       echo "-> Upstream tests are not present, skipping"
     fi
   fi
+
+  if [ -n "${TEST_PYTEST}" ]; then
+    VERSION=$dir python3 -m pytest -vv --showlocals test/test_*.py
+    failed_version "$?" "$dir"
+  fi
+
   popd > /dev/null || exit 1
 done
 
