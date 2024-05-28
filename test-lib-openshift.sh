@@ -344,7 +344,7 @@ function _ct_os_get_uniq_project_name() {
   local r
   while true ; do
     r=${RANDOM}
-    mkdir /var/tmp/sclorg-test-${r} &>/dev/null && echo sclorg-test-${r} && break
+    mkdir /var/tmp/sclorg-${r} &>/dev/null && echo sclorg-${r} && break
   done
 }
 
@@ -368,17 +368,97 @@ function ct_os_new_project() {
     return
   fi
   local project_name="${1:-$(_ct_os_get_uniq_project_name)}" ; shift || :
-  oc new-project "${project_name}"
-  # let openshift cluster to sync to avoid some race condition errors
-  sleep 3
-  if test -n "${OPENSHIFT_CLUSTER_PULLSECRET_PATH:-}" -a -e "${OPENSHIFT_CLUSTER_PULLSECRET_PATH:-}"; then
-    oc create -f "$OPENSHIFT_CLUSTER_PULLSECRET_PATH"
-    # add registry pullsecret to the serviceaccount if provided
-    secret_name=$(grep '^\s*name:' "$OPENSHIFT_CLUSTER_PULLSECRET_PATH" | awk '{ print $2 }')
-    oc secrets link --for=pull default "$secret_name"
+  if [ "${SHARED_CLUSTER:-false}" == 'true' ]; then
+    oc create -f - <<EOF
+apiVersion: tenant.paas.redhat.com/v1alpha1
+kind: TenantNamespace
+metadata:
+  name: ${project_name}
+  namespace: core-services-ocp--config
+spec:
+  type: runtime
+  roles:
+    - namespace-admin
+    - tenant-egress-admin
+  network:
+    security-zone: internal
+EOF
+    sleep 3
+    oc apply -f - <<EOF
+apiVersion: tenant.paas.redhat.com/v1alpha1
+kind: TenantEgress
+metadata:
+    name: default
+    namespace: core-services-ocp--${project_name}
+spec:
+  egress:
+  - to:
+      dnsName: github.com
+    type: Allow
+  - to:
+      cidrSelector: 172.0.0.0/8
+    type: Allow
+  - to:
+      cidrSelector: 10.0.0.0/9
+    type: Allow
+  - to:
+      cidrSelector: 52.218.128.0/17
+    type: Allow
+  - to:
+      cidrSelector: 52.92.128.0/17
+    type: Allow
+  - to:
+      cidrSelector: 52.216.0.0/15
+    type: Allow
+EOF
+    export PROJECT_NAME="$project_name"
+    oc project "core-services-ocp--$PROJECT_NAME"
+    if test -n "${OPENSHIFT_CLUSTER_PULLSECRET_PATH:-}" -a -e "${OPENSHIFT_CLUSTER_PULLSECRET_PATH:-}"; then
+      oc create -f "$OPENSHIFT_CLUSTER_PULLSECRET_PATH"
+      # add registry pullsecret to the serviceaccount if provided
+      secret_name=$(grep '^\s*name:' "$OPENSHIFT_CLUSTER_PULLSECRET_PATH" | awk '{ print $2 }')
+      oc secrets link --for=pull default "$secret_name"
+    fi
+  else
+    oc new-project "${project_name}"
+    # let openshift cluster to sync to avoid some race condition errors
+    if test -n "${OPENSHIFT_CLUSTER_PULLSECRET_PATH:-}" -a -e "${OPENSHIFT_CLUSTER_PULLSECRET_PATH:-}"; then
+      oc create -f "$OPENSHIFT_CLUSTER_PULLSECRET_PATH"
+      # add registry pullsecret to the serviceaccount if provided
+      secret_name=$(grep '^\s*name:' "$OPENSHIFT_CLUSTER_PULLSECRET_PATH" | awk '{ print $2 }')
+      oc secrets link --for=pull default "$secret_name"
+    fi
+    sleep 3
   fi
+
 }
 
+# ct_os_delete_tenant_namespace [PROJECT]
+# --------------------
+# Deletes the specified TenantNamespace in the openshfit
+# Arguments: project - project name, uses the current project if omitted
+# shellcheck disable=SC2120
+function ct_os_delete_tenant_namespace() {
+  local project_name="${1:-$(oc project -q)}" ; shift || :
+  if [[ "$project_name" == "core-services-ocp--config" ]]; then
+    echo "Deleting project in tenant 'core-services-ocp--config' is not allowed."
+    return
+  fi
+  if [ "${CT_SKIP_NEW_PROJECT:-false}" == 'true' ] || [ "${CVP:-0}" -eq "1" ]; then
+    echo "Deleting project skipped, cleaning objects only."
+    # when not having enough privileges (remote cluster), it might fail and
+    # it is not a big problem, so ignore failure in this case
+    ct_delete_all_objects || :
+    return
+  fi
+  oc project "core-services-ocp--config"
+  if oc delete tenantnamespace "${PROJECT_NAME}" ; then
+    echo "TenantNamespace ${PROJECT_NAME} was deleted properly"
+  else
+    echo "!!!!! TenantNamespace ${PROJECT_NAME} was not delete properly. But it does not block CI.!!!!"
+  fi
+
+}
 # ct_os_delete_project [PROJECT]
 # --------------------
 # Deletes the specified project in the openshfit
@@ -393,6 +473,10 @@ function ct_os_delete_project() {
     return
   fi
   local project_name="${1:-$(oc project -q)}" ; shift || :
+  if [[ "$project_name" == "core-services-ocp--config" ]]; then
+    echo "Deleting project tenant 'core-services-ocp--config' is not allowed."
+    return
+  fi
   if oc delete project "${project_name}" ; then
     echo "Project ${project_name} was deleted properly"
   else
@@ -457,13 +541,25 @@ function ct_os_upload_image() {
 
   source_name="${input_name}"
   # Variable OCP4_REGISTER is set in function ct_os_docker_login_v4
-  if ! ct_os_docker_login_v4; then
-    return 1
+  if [ "${SHARED_CLUSTER:-false}" == 'true' ]; then
+    if ! ct_os_login_external_registry; then
+      return 1
+    fi
+    output_name="$OCP4_REGISTER/core-services-ocp/$image_name"
+  else
+    if ! ct_os_docker_login_v4; then
+      return 1
+    fi
+    output_name="$OCP4_REGISTER/$namespace/$image_name"
   fi
-  output_name="$OCP4_REGISTER/$namespace/$image_name"
 
   docker tag "${source_name}" "${output_name}"
   docker push "${output_name}"
+  if [ "${SHARED_CLUSTER:-false}" == 'true' ]; then
+    if ! oc import-image "$image_name" --from="$output_name" --confirm; then
+      return 1
+    fi
+  fi
 }
 
 # ct_os_is_tag_exists IS_NAME TAG
@@ -586,7 +682,11 @@ function ct_os_test_s2i_app_func() {
   fi
 
   # shellcheck disable=SC2119
-  ct_os_delete_project
+  if [ "${SHARED_CLUSTER:-false}" == 'true' ]; then
+    ct_os_delete_tenant_namespace
+  else
+    ct_os_delete_project
+  fi
   return $result
 }
 
@@ -732,7 +832,11 @@ function ct_os_test_template_app_func() {
   fi
 
   # shellcheck disable=SC2119
-  ct_os_delete_project
+  if [ "${SHARED_CLUSTER:-false}" == 'true' ]; then
+    ct_os_delete_tenant_namespace
+  else
+    ct_os_delete_project
+  fi
   return $result
 }
 
@@ -823,7 +927,11 @@ ct_os_test_image_update() {
   ct_assert_cmd_success "$check_command_exp"
 
   # shellcheck disable=SC2119
-  ct_os_delete_project
+  if [ "${SHARED_CLUSTER:-false}" == 'true' ]; then
+    ct_os_delete_tenant_namespace
+  else
+    ct_os_delete_project
+  fi
 }
 
 # ct_os_deploy_cmd_image IMAGE_NAME
@@ -1029,7 +1137,11 @@ function ct_os_test_image_stream_template() {
   result=$?
 
   # shellcheck disable=SC2119
-  ct_os_delete_project
+  if [ "${SHARED_CLUSTER:-false}" == 'true' ]; then
+    ct_os_delete_tenant_namespace
+  else
+    ct_os_delete_project
+  fi
   return $result
 }
 
@@ -1104,7 +1216,11 @@ function ct_os_test_image_stream_s2i() {
 
   # shellcheck disable=SC2119
   CT_SKIP_NEW_PROJECT=false
-  ct_os_delete_project
+  if [ "${SHARED_CLUSTER:-false}" == 'true' ]; then
+    ct_os_delete_tenant_namespace
+  else
+    ct_os_delete_project
+  fi
 
   return $result
 }
@@ -1179,7 +1295,11 @@ function ct_os_test_image_stream_quickstart() {
 
   # shellcheck disable=SC2119
   CT_SKIP_NEW_PROJECT=false
-  ct_os_delete_project
+  if [ "${SHARED_CLUSTER:-false}" == 'true' ]; then
+    ct_os_delete_tenant_namespace
+  else
+    ct_os_delete_project
+  fi
 
   return $result
 }

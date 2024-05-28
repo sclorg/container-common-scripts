@@ -56,22 +56,33 @@ function ct_os_set_ocp4() {
     return
   fi
   local login
+  local token
+  local server
   OS_OC_CLIENT_VERSION=${OS_OC_CLIENT_VERSION:-4}
   ct_os_set_path_oc_4 "${OS_OC_CLIENT_VERSION}"
 
-  login=$(cat "$KUBEPASSWORD")
-  oc login -u kubeadmin -p "$login"
-  oc version
-  if ! oc version | grep -q "Client Version: ${OS_OC_CLIENT_VERSION}." ; then
-    echo "ERROR: something went wrong, oc located at ${oc_path}, but oc of version ${OS_OC_CLIENT_VERSION} not found in PATH ($PATH)" >&1
-    return 1
+  if [ "${SHARED_CLUSTER:-false}" == 'true' ]; then
+    token=$(cat "${SHARED_CLUSTER_TOKEN}")
+    server=$(cat "${SHARED_CLUSTER_URL}")
+    oc login --token="$token" --server="$server"
+    oc version
+    oc project "core-services-ocp--config"
   else
-    echo "PATH set correctly, binary oc found in version ${OS_OC_CLIENT_VERSION}: $(command -v oc)"
+    login=$(cat "$KUBEPASSWORD")
+    oc login -u kubeadmin -p "$login"
+    oc version
+    if ! oc version | grep -q "Client Version: ${OS_OC_CLIENT_VERSION}." ; then
+      echo "ERROR: something went wrong, oc located at ${oc_path}, but oc of version ${OS_OC_CLIENT_VERSION} not found in PATH ($PATH)" >&1
+      return 1
+    else
+      echo "PATH set correctly, binary oc found in version ${OS_OC_CLIENT_VERSION}: $(command -v oc)"
+    fi
+    # Switch to default project as soon as we are logged to cluster
+    oc project default
+    echo "Login to OpenShift ${OS_OC_CLIENT_VERSION} is DONE"
+    # let openshift cluster to sync to avoid some race condition errors
   fi
-  # Switch to default project as soon as we are logged to cluster
-  oc project default
-  echo "Login to OpenShift ${OS_OC_CLIENT_VERSION} is DONE"
-  # let openshift cluster to sync to avoid some race condition errors
+
   sleep 3
 }
 
@@ -94,16 +105,37 @@ function ct_os_tag_image_for_cvp() {
   fi
   oc tag "${tag_image_name}:${VERSION}" "${tag_image_name}:${VERSION}${tag}"
 }
+function ct_os_login_external_registry() {
+  local robot_token
+  local robot_username
+  # docker login fails with "404 page not found" error sometimes, just try it more times
+  # shellcheck disable=SC2034
+  echo "loging into external registry"
+  [ -z "${INTERNAL_IMAGE_REGISTRY:-}" ] && "INTERNAL_IMAGE_REGISTRY has to be set for working with Internal registry" && return 1
+  OCP4_REGISTER="$INTERNAL_IMAGE_REGISTRY"
+  # shellcheck disable=SC2034
+  for i in $(seq 12) ; do
+    # shellcheck disable=SC2015
+    robot_token=$(cat "${ROBOT_TOKEN}")
+    robot_username=$(cat "${ROBOT_NAME}")
+    # shellcheck disable=SC2015
+    docker login -u "${robot_username}" -p "${robot_token}" "${OCP4_REGISTER}" && return 0 || :
+    sleep 5
+  done
+  return 1
+}
 
 function ct_os_upload_image_external_registry() {
   local input_name="${1}" ; shift
   local image_name=${input_name##*/}
-  local imagestream=${1:-$image_name:latest}
+  local imagestream=${1:-$image_name:latest} ; shift
+  local project_name="${1}"
+  local
   local output_name
 
   ct_os_login_external_registry
 
-  output_name="${INTERNAL_DOCKER_REGISTRY}/rhscl-ci-testing/$imagestream"
+  output_name="${INTERNAL_IMAGE_REGISTRY}/${project_name}/$imagestream"
 
   docker images
   docker tag "${input_name}" "${output_name}"
