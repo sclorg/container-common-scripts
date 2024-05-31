@@ -24,6 +24,7 @@
 
 import json
 import os
+import sys
 
 from pathlib import Path
 from typing import Dict, Any
@@ -32,18 +33,13 @@ IMAGESTREAMS_DIR: str = "imagestreams"
 
 
 class ShowAllImageStreams(object):
-    version: str = ""
-
-    def __init__(self):
-        pass
-
     def load_json_file(self, filename: Path) -> Any:
         with open(str(filename)) as f:
             data = json.load(f)
             isinstance(data, Dict)
             return data
 
-    def show_all_imagestreams(self):
+    def show_all_imagestreams(self) -> int:
         p = Path(".")
         json_files = p.glob(f"{IMAGESTREAMS_DIR}/*.json")
         if not json_files:
@@ -57,8 +53,9 @@ class ShowAllImageStreams(object):
             print(f"Tags in the image stream {f}:")
             for tag in json_dict["spec"]["tags"]:
                 print(f"- {tag['name']} -> {tag['from']['name']}")
+        return 0
 
 
 if __name__ == "__main__":
     isc = ShowAllImageStreams()
-    isc.show_all_imagestreams()
+    sys.exit(isc.show_all_imagestreams())
