@@ -110,8 +110,8 @@ test-openshift: script_env += TEST_OPENSHIFT_MODE=true
 test-openshift: tag
 	VERSIONS="$(VERSIONS)" BASE_IMAGE_NAME="$(BASE_IMAGE_NAME)" $(script_env) $(test)
 
-.PHONY: test-pytest
-test-pytest: script_env += TEST_PYTEST=true
+.PHONY: test-openshift-pytest
+test-pytest: script_env += TEST_OPENSHIFT_PYTEST=true
 test-pytest: tag
 	VERSIONS="$(VERSIONS)" BASE_IMAGE_NAME="$(BASE_IMAGE_NAME)" $(script_env) $(test)
 

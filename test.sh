@@ -76,9 +76,13 @@ for dir in ${VERSIONS}; do
     fi
   fi
 
-  if [ -n "${TEST_PYTEST}" ]; then
-    VERSION=$dir python3 -m pytest -vv --showlocals test/test_*.py
-    failed_version "$?" "$dir"
+  if [ -n "${TEST_OPENSHIFT_PYTEST}" ]; then
+    if [[ -x test/run-openshift-pytest ]]; then
+      VERSION=$dir test/run-openshift-pytest
+      failed_version "$?" "$dir"
+    else
+      echo "-> PyTest tests are not present, skipping"
+    fi
   fi
 
   popd > /dev/null || exit 1
