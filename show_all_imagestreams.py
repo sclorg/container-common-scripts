@@ -58,4 +58,4 @@ class ShowAllImageStreams(object):
 
 if __name__ == "__main__":
     isc = ShowAllImageStreams()
-    sys.exit(isc.show_all_imagestreams())
+    isc.show_all_imagestreams()
