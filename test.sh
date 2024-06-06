@@ -57,7 +57,7 @@ for dir in ${VERSIONS}; do
     if [ -e ".exclude-openshift" ]; then
       echo "-> .exclude-openshift file exists for version $dir, skipping OpenShift-4 tests."
     else
-      if [[ -x test/run-openshift-remote-cluster ]]; then
+      if [ -x test/run-openshift-remote-cluster ]; then
         VERSION=$dir test/run-openshift-remote-cluster
         failed_version "$?" "$dir"
       else
@@ -68,7 +68,7 @@ for dir in ${VERSIONS}; do
   fi
 
   if [ -n "${TEST_UPSTREAM}" ]; then
-    if [[ -x test/run-upstream ]]; then
+    if [ -x test/run-upstream ]; then
       VERSION=$dir test/run-upstream
       failed_version "$?" "$dir"
     else
@@ -77,7 +77,7 @@ for dir in ${VERSIONS}; do
   fi
 
   if [ -n "${TEST_OPENSHIFT_PYTEST}" ]; then
-    if [[ -x test/run-openshift-pytest ]]; then
+    if [ -x test/run-openshift-pytest ]; then
       VERSION=$dir test/run-openshift-pytest
       failed_version "$?" "$dir"
     else
