@@ -85,7 +85,7 @@ Dockerfile for the scripts to know which versions to build.
 
 `OS`
 OS version you want to build the images for. Currently the scripts are able to build for
-centos (default), centos6, c9s, rhel7, rhel8, rhel9, and fedora.
+centos (default), c9s, c10s, rhel7, rhel8, rhel9, and fedora.
 
 `SKIP_SQUASH`
 When set to 1 the build script will skip the squash phase of the build.
@@ -122,7 +122,7 @@ how scripts in this repo work:
 
 `.exclude-<OS>`
 If this file exists, the tooling will not run the build and tests for the specific Dockerfile.
-For example, if `.exclude-rhel7` file exists, the `Dockerfile.rhel7` will not be expected
+For example, if `.exclude-rhel8` file exists, the `Dockerfile.rhel8` will not be expected
 in the same directory, build and tests will be skipped.
 Content of the file is not important at this point.
 

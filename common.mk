@@ -53,6 +53,10 @@ else ifeq ($(TARGET),c9s)
 	OS := c9s
 	DOCKERFILE ?= Dockerfile.c9s
 	REGISTRY := quay.io/
+else ifeq ($(TARGET),c10s)
+	OS := c10s
+	DOCKERFILE ?= Dockerfile.c10s
+	REGISTRY := quay.io/
 else
 	OS := centos7
 	DOCKERFILE ?= Dockerfile

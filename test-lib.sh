@@ -816,6 +816,8 @@ ct_get_public_image_name() {
     public_image_name=$registry/centos7/$base_image_name-${version//./}-centos7:centos7
   elif [ "$os" == "c9s" ]; then
     public_image_name=$registry/sclorg/$base_image_name-${version//./}-c9s
+  elif [ "$os" == "c10s" ]; then
+    public_image_name=$registry/sclorg/$base_image_name-${version//./}-c10s
   fi
 
   echo "$public_image_name"

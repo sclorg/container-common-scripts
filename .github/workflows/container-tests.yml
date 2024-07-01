@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         container-to-test: ["postgresql-container", "nginx-container", "s2i-perl-container", "s2i-python-container", "s2i-base-container" ]
-        os: ["fedora", "c9s", "rhel7", "rhel8", "rhel9"]
+        os: ["fedora", "c9s", "rhel7", "rhel8", "rhel9", "c10s"]
 
     if: |
       github.event.issue.pull_request
@@ -32,7 +32,7 @@ jobs:
           branch="master"
           tf_scope="private"
           tmt_repo="https://gitlab.cee.redhat.com/platform-eng-core-services/sclorg-tmt-plans"
-          if [ "${{ matrix.os }}" == "fedora" ] || [ "${{ matrix.os }}" == "c9s" ]; then
+          if [ "${{ matrix.os }}" == "fedora" ] || [ "${{ matrix.os }}" == "c9s" ] || [ "${{ matrix.os }}" == "c10s" ]; then
             api_key=${{ secrets.TF_PUBLIC_API_KEY }}
             branch="main"
             tf_scope="public"
@@ -42,9 +42,15 @@ jobs:
               context="Fedora"
               tmt_plan="fedora"
             else
-              compose="CentOS-Stream-9"
-              context="CentOS Stream 9"
-              tmt_plan="c9s"
+              if [ "${{ matrix.os }}" == "c9s" ]; then
+                compose="CentOS-Stream-9"
+                context="CentOS Stream 9"
+                tmt_plan="c9s"
+              else
+                compose="CentOS-Stream-10"
+                context="CentOS Stream 10"
+                tmt_plan="c10s"
+              fi
             fi
           else
             if [ "${{ matrix.os }}" == "rhel7" ]; then

@@ -2,7 +2,7 @@
 
 # This script is used to build the OpenShift Docker images.
 #
-# OS - Specifies distribution - "rhel7", "rhel8", "rhel9", "centos7", "c9s" or "fedora"
+# OS - Specifies distribution - "rhel7", "rhel8", "rhel9", "centos7", "c9s", "c10s" or "fedora"
 # VERSION - Specifies the image version - (must match with subdirectory in repo)
 # SINGLE_VERSION - Specifies the image version - (must match with subdirectory in repo)
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
