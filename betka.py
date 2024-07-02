@@ -116,14 +116,6 @@ class BetkaGenerator(object):
         self.ups_sources = ""
 
     def check_requirements(self) -> bool:
-        if self.os_env == "centos7":
-            msg = """
-'centos7' target is not supported.
-Target has to be e.g. rhel7, rhel8, rhel9 or fedora.
-e.g. make betka TARGET=fedora VERSIONS=XY
-            """
-            logging.info(msg)
-            return False
         if not self.cwt_docker_image:
             msg = """
 Docker image for generating dist-git sources for RHEL has to be specified.
@@ -196,9 +188,7 @@ git config --global user.name <your name>
     def convert_branch_to_cwt_tool(self) -> bool:
         assert isinstance(self.downstream_branch, str)
         fields = self.downstream_branch.split("-")
-        if self.os_env == "rhel7":
-            self.cwt_config = f"rhel7.yaml:{fields[0]}{fields[1].replace('.','')}0"
-        elif self.os_env == "rhel8":
+        if self.os_env == "rhel8":
             release_fields = fields[1].split(".")
             self.cwt_config = (
                 f"rhel8.yaml:{fields[0]}{release_fields[0]}.{release_fields[1]}"
@@ -210,7 +200,7 @@ git config --global user.name <your name>
             )
         else:
             logging.info(
-                f"No proper OS target was selected {self.os_env}. Possible are 'rhel7, rhel8, and rhel9."
+                f"No proper OS target was selected {self.os_env}. Possible are 'rhel8, and rhel9."
             )
             return False
         return True

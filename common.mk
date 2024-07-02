@@ -38,28 +38,17 @@ ifeq ($(TARGET),rhel8)
 else ifeq ($(TARGET),rhel9)
 	OS := rhel9
 	DOCKERFILE ?= Dockerfile.rhel9
-else ifeq ($(TARGET),rhel7)
-	SKIP_SQUASH ?= 0
-	OS := rhel7
-	DOCKERFILE ?= Dockerfile.rhel7
 else ifeq ($(TARGET),fedora)
 	OS := fedora
 	DOCKERFILE ?= Dockerfile.fedora
 	REGISTRY := quay.io/
-else ifeq ($(TARGET),centos6)
-	OS := centos6
-	DOCKERFILE ?= Dockerfile.centos6
 else ifeq ($(TARGET),c9s)
 	OS := c9s
 	DOCKERFILE ?= Dockerfile.c9s
 	REGISTRY := quay.io/
-else ifeq ($(TARGET),c10s)
+else
 	OS := c10s
 	DOCKERFILE ?= Dockerfile.c10s
-	REGISTRY := quay.io/
-else
-	OS := centos7
-	DOCKERFILE ?= Dockerfile
 	REGISTRY := quay.io/
 endif
 
