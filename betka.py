@@ -141,8 +141,8 @@ like 'make betka TARGET=fedora DOWNSTREAM_BRANCH=f32'
                 msg = """
 DOWNSTREAM_BRANCH is not specified.
 Examples:
-rhel-8.3.0 for RHEL8
-rhscl-3.6-rhel7 for RHEL7
+rhel-9.4.0 for RHEL9
+rhel-8.8.0 for RHEL8
 For more details ask pkubat@redhat.com or phracek@redhat.com
                 """
                 logging.info(msg)
