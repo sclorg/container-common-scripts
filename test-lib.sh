@@ -806,14 +806,10 @@ ct_get_public_image_name() {
   local registry
 
   registry=$(ct_registry_from_os "$os")
-  if [ "$os" == "rhel7" ]; then
-    public_image_name=$registry/rhscl/$base_image_name-${version//./}-rhel7
-  elif [ "$os" == "rhel8" ]; then
+  if [ "$os" == "rhel8" ]; then
     public_image_name=$registry/rhel8/$base_image_name-${version//./}
   elif [ "$os" == "rhel9" ]; then
     public_image_name=$registry/rhel9/$base_image_name-${version//./}
-  elif [ "$os" == "centos7" ]; then
-    public_image_name=$registry/centos7/$base_image_name-${version//./}-centos7:centos7
   elif [ "$os" == "c9s" ]; then
     public_image_name=$registry/sclorg/$base_image_name-${version//./}-c9s
   elif [ "$os" == "c10s" ]; then

@@ -37,7 +37,7 @@ function ct_os_cleanup() {
 # Check the compulsory variables:
 # * IMAGE_NAME specifies a name of the candidate image used for testing.
 # * VERSION specifies the major version of the MariaDB in format of X.Y
-# * OS specifies RHEL version (e.g. OS=rhel7)
+# * OS specifies RHEL version (e.g. OS=rhel8)
 function ct_os_check_compulsory_vars() {
   # shellcheck disable=SC2016
   test -n "${IMAGE_NAME-}" || ( echo 'make sure $IMAGE_NAME is defined' >&2 ; exit 1)
@@ -325,8 +325,8 @@ function ct_os_deploy_s2i_image() {
 # Arguments: template - prefix or whole ID of the pod to run the cmd in
 # Arguments: env_params - environment variables parameters for the template.
 # Example usage: ct_os_deploy_template_image mariadb-ephemeral-template.yaml \
-#                                            DATABASE_SERVICE_NAME=mysql-57-centos7 \
-#                                            DATABASE_IMAGE=mysql-57-centos7 \
+#                                            DATABASE_SERVICE_NAME=mysql-80-c9s \
+#                                            DATABASE_IMAGE=mysql-80-c9s \
 #                                            MYSQL_USER=testu \
 #                                            MYSQL_PASSWORD=testp \
 #                                            MYSQL_DATABASE=testdb

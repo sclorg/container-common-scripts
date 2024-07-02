@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         container-to-test: ["postgresql-container", "nginx-container", "s2i-perl-container", "s2i-python-container", "s2i-base-container" ]
-        os: ["fedora", "c9s", "rhel7", "rhel8", "rhel9", "c10s"]
+        os: ["fedora", "c9s", "rhel8", "rhel9", "c10s"]
 
     if: |
       github.event.issue.pull_request
@@ -53,16 +53,12 @@ jobs:
               fi
             fi
           else
-            if [ "${{ matrix.os }}" == "rhel7" ]; then
-              compose="RHEL-7.9-Released"
-              context="RHEL7"
-              tmt_plan="rhel7-docker"
-            elif [ "${{ matrix.os }}" == "rhel8" ]; then
-              compose="RHEL-8.6.0-Nightly"
+            if [ "${{ matrix.os }}" == "rhel8" ]; then
+              compose="RHEL-8.10.0-Nightly"
               context="RHEL8"
               tmt_plan="rhel8-docker"
             else
-              compose="RHEL-9.1.0-Nightly"
+              compose="RHEL-9.4.0-Nightly"
               context="RHEL9"
               tmt_plan="rhel9-docker"
             fi

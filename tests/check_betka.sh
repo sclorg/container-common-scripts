@@ -17,13 +17,13 @@ OS=fedora DOWNSTREAM_BRANCH=f32 bash $betka
 test $? -eq 1
 
 # DOCKER_IMAGE is missing
-bash $betka OS=rhel7
+bash $betka OS=rhel8
 test $? -eq 1
 
 # DOWNSTREAM_NAME is missing
-bash $betka OS=rhel7 DOCKER_IMAGE="quay.io/rhscl/dummy"
+bash $betka OS=rhel8 DOCKER_IMAGE="quay.io/rhscl/dummy"
 test $? -eq 1
 
 # DOWNSTREAM_BRANCH is missing
-bash $betka OS=rhel7 DOCKER_IMAGE="quay.io/rhscl/dummy" DOWNSTREAM_NAME="foo_test"
+bash $betka OS=rhel8 DOCKER_IMAGE="quay.io/rhscl/dummy" DOWNSTREAM_NAME="foo_test"
 test $? -eq 1

@@ -35,13 +35,13 @@ This rule will run the testsuite scripts contained in the container source repos
 It expects the test to be available at `$gitroot/$version/test/run`
 Depends on `tag` as some tests might need to have the images tagged (s2i).
 
-`make test-openshift`
-Similar to `make test` but runs testsuite for Openshift 3, expected to be found at
-`$gitroot/$version/test/run-openshift`
-
 `make test-openshift-4`
 Similar to `make test` but runs testsuite for Openshift 4, expected to be found at
 `$gitroot/$version/test/run-openshift-remote-cluster`
+
+`make test-openshift-pytest`
+Similar to `make test` but runs PyTest test suite `https://github.com/sclorg/container-ci-suite` for Openshift 4,
+expected to be found at `$gitroot/$version/test/run-openshift-pytest`
 
 `make betka`
 Runs script betka.sh that generates sources for the dist-git repo. Only Fedora,
@@ -53,7 +53,7 @@ for RHEL world please ask pkubat@redhat.com, phracek@redhat.com, or hhorak@redha
 
 E.g. command for the source generation into Fedora dist-repo
 `https://src.fedoraproject.org/container/nodejs` into main branch is:
-`make betka TARGET=fedora VERSIONS=12`
+`make betka TARGET=fedora VERSIONS=20`
 
 The sources are not generated directly into dist-git repository,
 but into created `results` directory.
@@ -85,7 +85,7 @@ Dockerfile for the scripts to know which versions to build.
 
 `OS`
 OS version you want to build the images for. Currently the scripts are able to build for
-centos (default), c9s, c10s, rhel7, rhel8, rhel9, and fedora.
+centos (default), c9s, c10s, rhel8, rhel9, and fedora.
 
 `SKIP_SQUASH`
 When set to 1 the build script will skip the squash phase of the build.
