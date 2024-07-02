@@ -46,9 +46,6 @@ class ShowAllImageStreams(object):
             print(f"No json files present in {IMAGESTREAMS_DIR}.")
             return 0
         for f in json_files:
-            if os.environ.get("TARGET") in ("rhel7", "centos7") and "aarch64" in str(f):
-                print("Imagestream aarch64 is not supported on rhel7")
-                continue
             json_dict = self.load_json_file(f)
             print(f"Tags in the image stream {f}:")
             for tag in json_dict["spec"]["tags"]:

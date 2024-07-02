@@ -82,9 +82,7 @@ function ct_os_tag_image_for_cvp() {
   fi
   local tag_image_name="$1"
   local tag=""
-  if [ "${OS}" == "rhel7" ]; then
-    tag="-el7"
-  elif [ "${OS}" == "rhel8" ]; then
+  if [ "${OS}" == "rhel8" ]; then
     tag="-el8"
   elif [ "${OS}" == "rhel9" ]; then
     tag="-el9"

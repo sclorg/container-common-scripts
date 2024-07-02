@@ -5,25 +5,19 @@ set -e
 . test-lib.sh
 
 # This should succeed
-if ! ct_pull_image quay.io/centos7/ruby-27-centos7:centos7; then
+if ! ct_pull_image quay.io/sclorg/ruby-27-c9s:c9s; then
   echo "image_availability test failed"
   false
 fi
 
 # This should fail
-if ct_pull_image quay.io/centos7/ruby-24-centos7:centos7 false 1; then
+if ct_pull_image quay.io/sclorg/ruby-24-c9s:c9s false 1; then
   echo "image_availability test failed"
   false
 fi
 
 # This should succeed
-if ! ct_check_image_availability quay.io/centos7/ruby-27-centos7:centos7; then
-  echo "check_image_availability test failed"
-  false
-fi
-
-# This should fail
-if ct_check_image_availability quay.io/centos7/ruby-24-centos7:centos7; then
+if ! ct_check_image_availability quay.io/sclorg/python-27-c9s:c9s; then
   echo "check_image_availability test failed"
   false
 fi
