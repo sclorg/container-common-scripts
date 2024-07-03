@@ -5,21 +5,37 @@ set -e
 . test-lib.sh
 
 # This should succeed
-if ! ct_pull_image quay.io/sclorg/ruby-27-c9s:c9s; then
+if ! ct_pull_image quay.io/sclorg/mysql-80-c9s:c9s; then
   echo "image_availability test failed"
   false
+else
+  echo "image_availability test passed for 'ct_pull_image quay.io/sclorg/mysql-80-c9s:c9s'"
 fi
 
 # This should fail
-if ct_pull_image quay.io/sclorg/ruby-24-c9s:c9s false 1; then
+if ct_pull_image quay.io/sclorg/postgresql-96-c9s:c9s false 1; then
   echo "image_availability test failed"
   false
+else
+  echo "image_availability test passed for 'ct_pull_image quay.io/sclorg/postgresql-96-c9s:c9s false 1'"
 fi
 
 # This should succeed
-if ! ct_check_image_availability quay.io/sclorg/python-27-c9s:c9s; then
+if ! ct_check_image_availability quay.io/sclorg/postgresql-15-c9s:c9s; then
   echo "check_image_availability test failed"
   false
+else
+  echo "check_image_availability test passed for 'ct_check_image_availability quay.io/sclorg/postgresql-15-c9s:c9s'"
 fi
+
+# This should fail
+if ct_check_image_availability quay.io/sclorg/python-27-c9s:c9s; then
+  echo "check_image_availability test failed"
+  false
+else
+  echo "check_image_availability test passed for 'ct_check_image_availability quay.io/sclorg/python-27-c9s:c9s'"
+fi
+
+
 
 echo "image_availability test completed successfully."
