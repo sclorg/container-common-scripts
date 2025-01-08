@@ -85,7 +85,7 @@ Dockerfile for the scripts to know which versions to build.
 
 `OS`
 OS version you want to build the images for. Currently the scripts are able to build for
-centos (default), c9s, c10s, rhel8, rhel9, and fedora.
+centos (default), c9s, c10s, rhel8, rhel9, rhel10, and fedora.
 
 `SKIP_SQUASH`
 When set to 1 the build script will skip the squash phase of the build.
