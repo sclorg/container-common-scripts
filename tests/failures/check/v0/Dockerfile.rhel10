@@ -1,0 +1,3 @@
+FROM ubi9/s2i-core
+## ubi10/s2i-core does not exist let's use ubi9/s2i-core
+LABEL name=test-image

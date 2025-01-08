@@ -794,6 +794,8 @@ ct_get_public_image_name() {
     public_image_name=$registry/rhel8/$base_image_name-${version//./}
   elif [ "$os" == "rhel9" ]; then
     public_image_name=$registry/rhel9/$base_image_name-${version//./}
+  elif [ "$os" == "rhel10" ]; then
+    public_image_name=$registry/rhel10/$base_image_name-${version//./}
   elif [ "$os" == "c9s" ]; then
     public_image_name=$registry/sclorg/$base_image_name-${version//./}-c9s
   elif [ "$os" == "c10s" ]; then
