@@ -81,14 +81,15 @@ jobs:
       # https://github.com/sclorg/testing-farm-as-github-action
       - name: Schedule tests on external Testing Farm by Testing-Farm-as-github-action
         id: github_action
-        uses: sclorg/testing-farm-as-github-action@v1
+        uses: sclorg/testing-farm-as-github-action@main
         with:
           api_key: ${{ steps.vars.outputs.api_key }}
           git_url: ${{ steps.vars.outputs.tmt_repo }}
           git_ref: ${{ steps.vars.outputs.branch }}
           tf_scope: ${{ steps.vars.outputs.tf_scope }}
           tmt_plan_regex: ${{ steps.vars.outputs.tmt_plan }}
-          create_issue_comment: "true"
+          update_pull_request_status: true
+          create_issue_comment: true
           pull_request_status_name: "${{ steps.vars.outputs.context }} - ${{ matrix.container-to-test }}"
           variables: "REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY;REPO_NAME=$GITHUB_REPOSITORY;PR_NUMBER=${{ github.event.issue.number }};OS=${{ matrix.os }};TEST_NAME=test;TESTED_IMAGE=${{ matrix.container-to-test }}"
           compose: ${{ steps.vars.outputs.compose }}
