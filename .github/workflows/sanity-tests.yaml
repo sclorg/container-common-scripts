@@ -37,7 +37,7 @@ jobs:
           pip3 install pre-commit
 
       - name: Set status to pending
-        uses: myrotvorets/set-commit-status-action@1.1.5
+        uses: myrotvorets/set-commit-status-action@v2.0.1
         with:
           context: "Sanity check"
           sha: ${{ steps.sha.outputs.sha }}
@@ -59,7 +59,7 @@ jobs:
           echo "result=$result" >> $GITHUB_OUTPUT
 
       - name: Set status to final state
-        uses: myrotvorets/set-commit-status-action@1.1.5
+        uses: myrotvorets/set-commit-status-action@v2.0.1
         with:
           context: "Sanity check"
           status: ${{ steps.pre_commit_tests.outputs.result }}
