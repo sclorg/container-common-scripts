@@ -91,5 +91,5 @@ jobs:
           update_pull_request_status: true
           create_issue_comment: true
           pull_request_status_name: "${{ steps.vars.outputs.context }} - ${{ matrix.container-to-test }}"
-          variables: "REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY;REPO_NAME=$GITHUB_REPOSITORY;PR_NUMBER=${{ github.event.issue.number }};OS=${{ matrix.os }};TEST_NAME=test;TESTED_IMAGE=${{ matrix.container-to-test }}"
+          variables: "REPO_URL=${{ github.server_url }}/${{ github.repository }};REPO_NAME=${{ github.repository }};PR_NUMBER=${{ github.event.issue.number }};OS=${{ matrix.os }};TEST_NAME=test;TESTED_IMAGE=${{ matrix.container-to-test }}"
           compose: ${{ steps.vars.outputs.compose }}
