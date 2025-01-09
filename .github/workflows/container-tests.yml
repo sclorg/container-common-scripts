@@ -40,16 +40,16 @@ jobs:
             if [ "${{ matrix.os }}" == "fedora" ]; then
               compose="Fedora-latest"
               context="Fedora"
-              tmt_plan="fedora$"
+              tmt_plan="fedora"
             else
               if [ "${{ matrix.os }}" == "c9s" ]; then
                 compose="CentOS-Stream-9"
                 context="CentOS Stream 9"
-                tmt_plan="c9s$"
+                tmt_plan="c9s"
               else
                 compose="CentOS-Stream-10"
                 context="CentOS Stream 10"
-                tmt_plan="c10s$"
+                tmt_plan="c10s"
               fi
             fi
           else
