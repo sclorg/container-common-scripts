@@ -566,12 +566,9 @@ function ct_os_test_s2i_app_func() {
   local check_command_exp
   local image_id
 
-  # get image ID from the deployment config
-  image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
-
   ip=$(ct_os_get_service_ip "${service_name}")
   # shellcheck disable=SC2001
-  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g" -e "s|<SAME_IMAGE>|${image_id}|g")
+  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
 
   echo "  Checking APP using $check_command_exp ..."
   local result=0
@@ -712,12 +709,9 @@ function ct_os_test_template_app_func() {
   local check_command_exp
   local image_id
 
-  # get image ID from the deployment config
-  image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
-
   ip=$(ct_os_get_service_ip "${service_name}")
   # shellcheck disable=SC2001
-  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g" -e "s|<SAME_IMAGE>|${image_id}|g")
+  check_command_exp=$(echo "$check_command" | sed -e "s/<IP>/$ip/g")
 
   echo "  Checking APP using $check_command_exp ..."
   local result=0
