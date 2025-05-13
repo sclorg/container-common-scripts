@@ -564,7 +564,6 @@ function ct_os_test_s2i_app_func() {
 
   local ip
   local check_command_exp
-  local image_id
 
   ip=$(ct_os_get_service_ip "${service_name}")
   # shellcheck disable=SC2001
@@ -707,7 +706,7 @@ function ct_os_test_template_app_func() {
 
   local ip
   local check_command_exp
-  local image_id
+
 
   ip=$(ct_os_get_service_ip "${service_name}")
   # shellcheck disable=SC2001
@@ -1178,23 +1177,4 @@ function ct_os_test_image_stream_quickstart() {
   return $result
 }
 
-# ct_os_service_image_info SERVICE_NAME
-# --------------------
-# Shows information about the image used by a specified service.
-# Argument: service_name - Service name (uesd for deployment config)
-function ct_os_service_image_info() {
-  local service_name=$1
-  local image_id
-  local namespace
-
-  # get image ID from the deployment config
-  image_id=$(oc get "deploymentconfig.apps.openshift.io/${service_name}" -o custom-columns=IMAGE:.spec.template.spec.containers[*].image | tail -n 1)
-  namespace=${CT_NAMESPACE:-"$(oc project -q)"}
-
-  echo "  Information about the image we work with:"
-  oc get deploymentconfig.apps.openshift.io/"${service_name}" -o yaml | grep lastTriggeredImage
-  # for s2i builds, the resulting image is actually in the current namespace,
-  # so if the specified namespace does not succeed, try the current namespace
-  oc get isimage -n "${namespace}" "${image_id##*/}" -o yaml || oc get isimage "${image_id##*/}" -o yaml
-}
 # vim: set tabstop=2:shiftwidth=2:expandtab:
