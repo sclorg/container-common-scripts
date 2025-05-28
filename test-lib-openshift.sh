@@ -573,8 +573,6 @@ function ct_os_test_s2i_app_func() {
   local result=0
   eval "$check_command_exp" || result=1
 
-  ct_os_service_image_info "${service_name}"
-
   if [ $result -eq 0 ] ; then
     echo "  Check passed."
   else
@@ -715,8 +713,6 @@ function ct_os_test_template_app_func() {
   echo "  Checking APP using $check_command_exp ..."
   local result=0
   eval "$check_command_exp" || result=1
-
-  ct_os_service_image_info "${service_name}"
 
   if [ $result -eq 0 ] ; then
     echo "  Check passed."
