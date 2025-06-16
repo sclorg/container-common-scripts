@@ -24,6 +24,31 @@ failed_version() {
   return "$result"
 }
 
+analyze_logs_by_logdetective() {
+  local log_file_name="$1"
+  echo "Sending failed log by fpaste command to paste bin."
+  paste_bin_link=$(fpaste "$log_file_name")
+  # shellcheck disable=SC2181
+  if [[ $? -ne 0 ]]; then
+    echo "ERROR: Failed to send log file to private bin: ${log_file_name}"
+    return
+  fi
+  # pastebin link is "https://paste.centos.org/view/ee98ba05"
+  # We need a raw link that is "https://paste.centos.org/view/raw/ee98ba05"
+  raw_paste_bin_link="${paste_bin_link//view/view\/raw}"
+  echo "Sending log file to logdetective server: ${raw_paste_bin_link}"
+  echo "-------- LOGDETECTIVE TEST LOG ANALYSIS START --------"
+  # shellcheck disable=SC2181
+  if ! curl -k --insecure --header "Content-Type: application/json" --request POST --data "{\"url\":\"${raw_paste_bin_link}\"}" "$LOGDETECTIVE_SERVER/analyze" > /tmp/logdetective_test_output.txt; then
+    echo "ERROR: Failed to analyze log file by logdetective server."
+    cat "/tmp/logdetective_test_output.txt"
+    echo "-------- LOGDETECTIVE TEST LOG ANALYSIS FAILED --------"
+    return
+  fi
+  jq -rC '.explanation.text' < "/tmp/logdetective_test_output.txt"
+  echo "-------- LOGDETECTIVE TEST LOG ANALYSIS FINISHED --------"
+}
+
 # This adds backwards compatibility if only single version needs to be testing
 # In CI we would like to test single version but VERSIONS= means, that nothing is tested
 # make test TARGET=<OS> VERSIONS=<something> ... checks single version for CLI
@@ -47,8 +72,12 @@ for dir in ${VERSIONS}; do
   fi
 
   if [ -n "${TEST_MODE}" ]; then
-    VERSION=$dir test/run
-    failed_version "$?" "$dir"
+    tmp_file=$(mktemp "/tmp/${IMAGE_NAME}-${OS}-${dir}.XXXXXX")
+    VERSION=$dir test/run 2>&1 | tee "$tmp_file"
+    ret_code=$?
+    analyze_logs_by_logdetective "$tmp_file"
+    failed_version "$ret_code" "$dir"
+    rm -f "$tmp_file"
   fi
 
   if [ -n "${TEST_OPENSHIFT_4}" ]; then
