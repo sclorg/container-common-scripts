@@ -65,6 +65,31 @@ parse_output ()
   (exit $rc)
 }
 
+analyze_logs_by_logdetective() {
+  local log_file_name="$1"
+  echo "Sending failed log by fpaste command to paste bin."
+  paste_bin_link=$(fpaste "$log_file_name")
+  # shellcheck disable=SC2181
+  if [[ $? -ne 0 ]]; then
+    echo "ERROR: Failed to send log file to private bin: ${log_file_name}"
+    return
+  fi
+  # pastebin link is "https://paste.centos.org/view/ee98ba05"
+  # We need a raw link that is "https://paste.centos.org/view/raw/ee98ba05"
+  raw_paste_bin_link="${paste_bin_link//view/view\/raw}"
+  echo "Sending log file to logdetective server: ${raw_paste_bin_link}"
+  echo "-------- LOGDETECTIVE BUILD LOG ANALYSIS START --------"
+  # shellcheck disable=SC2181
+  if ! curl -k --insecure --header "Content-Type: application/json" --request POST --data "{\"url\":\"${raw_paste_bin_link}\"}" "$LOGDETECTIVE_SERVER/analyze" > /tmp/logdetective_output.txt; then
+    echo "ERROR: Failed to analyze log file by logdetective server."
+    cat "/tmp/logdetective_output.txt"
+    echo "-------- LOGDETECTIVE BUILD LOG ANALYSIS FAILED --------"
+    return
+  fi
+  jq -rC '.explanation.text' < "/tmp/logdetective_output.txt"
+  echo "-------- LOGDETECTIVE BUILD LOG ANALYSIS FINISHED --------"
+}
+
 # "best-effort" cleanup of image
 function clean_image {
   for id_file in .image-id .image-id-from; do
@@ -191,10 +216,37 @@ function docker_build_with_version {
   if [[ "$SKIP_SQUASH" -eq 0 ]] && [[ "$is_podman" -eq 1 ]]; then
     BUILD_OPTIONS+=" --squash"
   fi
+
+  command="docker build ${BUILD_OPTIONS} -f $dockerfile ${DOCKER_BUILD_CONTEXT}"
+  echo "-> building using $command"
+
+  tmp_file=$(mktemp "/tmp/${dir}-${OS}.XXXXXX")
+  $command 2>&1 | tee "$tmp_file"
+  cat "$tmp_file"
+  last_row=$(< "$tmp_file" tail -n 1)
+  commit_message=$(< "$tmp_file" tail -n 3)
+  # Structure of log build is as follows:
+  # COMMIT
+  # --> e191d12b5928
+  # e191d12b5928360dd6024fe80d31e08f994d42577f76b9b143e014749afc8ab4
   # shellcheck disable=SC2016
-  parse_output 'docker build '"$BUILD_OPTIONS"' -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}"' \
-               "tail -n 1 | awk '/Successfully built|(^--> )?(Using cache )?[a-fA-F0-9]+$/{print \$NF}'" \
-               IMAGE_ID
+  if [[ "$commit_message" == *"COMMIT"* ]] && [[ "$last_row" =~ (^-->)?(Using cache )?[a-fA-F0-9]+$ ]]; then
+    IMAGE_ID="$last_row"
+  else
+    # Do not fail in case of sending log to pastebin or logdetective fails.
+    echo "Analyse logs by logdetective, why it failed."
+    analyze_logs_by_logdetective "${tmp_file}"
+    exit 1
+  fi
+
+  rm -f "$tmp_file"
+
+  # shellcheck disable=SC2016
+
+#  parse_output 'docker build '"$BUILD_OPTIONS"' -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}"' \
+#               "tail -n 1 | awk '/Successfully built|(^--> )?(Using cache )?[a-fA-F0-9]+$/{print \$NF}'" \
+#               IMAGE_ID
+#  analyze_logs_by_logdetective "$?" "${tmp_file}"
   echo "$IMAGE_ID" > .image-id
 }
 
