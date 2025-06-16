@@ -65,6 +65,17 @@ parse_output ()
   (exit $rc)
 }
 
+analyze_logs_by_logdetective() {
+  local result="$1"
+  local log_file_name="$2"
+  if [[ "$result" != "0" ]]; then
+    echo "Sending log file to logdetective server: ${log_file_name}"
+    echo "-------- LOGDETECTIVE BUILD LOG ANALYSIS START --------"
+    logdetective "${log_file_name}"
+    echo "-------- LOGDETECTIVE BUILD LOG ANALYSIS FINISHED --------"
+  fi
+}
+
 # "best-effort" cleanup of image
 function clean_image {
   for id_file in .image-id .image-id-from; do
@@ -191,10 +202,35 @@ function docker_build_with_version {
   if [[ "$SKIP_SQUASH" -eq 0 ]] && [[ "$is_podman" -eq 1 ]]; then
     BUILD_OPTIONS+=" --squash"
   fi
+
+  command="docker build ${BUILD_OPTIONS} -f $dockerfile ${DOCKER_BUILD_CONTEXT}"
+  echo "-> building using $command"
+
+  tmp_file=$(mktemp "/tmp/${dir}-${OS}.XXXXXX")
+  $command 2>&1 | tee "$tmp_file" #> $tmp_file 2>&1
+  cat "$tmp_file"
+  last_row=$(cat "$tmp_file" | tail -n 1)
+  # Structure of log build is following:
+  # COMMIT
+  # --> e191d12b5928
+  # e191d12b5928360dd6024fe80d31e08f994d42577f76b9b143e014749afc8ab4
   # shellcheck disable=SC2016
-  parse_output 'docker build '"$BUILD_OPTIONS"' -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}"' \
-               "tail -n 1 | awk '/Successfully built|(^--> )?(Using cache )?[a-fA-F0-9]+$/{print \$NF}'" \
-               IMAGE_ID
+  if [[ "$(cat "$tmp_file" | tail -n 3)" == *"COMMIT"* ]] && [[ "$last_row" =~ (^-->)?(Using cache )?[a-fA-F0-9]+$ ]]; then
+    IMAGE_ID="$last_row"
+  else
+    echo "Analyse logs by logdetective, why it failed."
+    analyze_logs_by_logdetective "1" "${tmp_file}"
+    exit 1
+  fi
+
+  rm -f "$tmp_file"
+
+  # shellcheck disable=SC2016
+
+#  parse_output 'docker build '"$BUILD_OPTIONS"' -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}"' \
+#               "tail -n 1 | awk '/Successfully built|(^--> )?(Using cache )?[a-fA-F0-9]+$/{print \$NF}'" \
+#               IMAGE_ID
+#  analyze_logs_by_logdetective "$?" "${tmp_file}"
   echo "$IMAGE_ID" > .image-id
 }
 

@@ -24,6 +24,17 @@ failed_version() {
   return "$result"
 }
 
+analyze_logs_by_logdetective() {
+  local result="$1"
+  local log_file_name="$2"
+  if [[ "$result" != "0" ]]; then
+    echo "Sending log file to logdetective server: ${log_file_name}"
+    echo "-------- LOGDETECTIVE TEST LOG ANALYSIS START --------"
+    logdetective "${log_file_name}"
+    echo "-------- LOGDETECTIVE TEST LOG ANALYSIS FINISHED --------"
+  fi
+}
+
 # This adds backwards compatibility if only single version needs to be testing
 # In CI we would like to test single version but VERSIONS= means, that nothing is tested
 # make test TARGET=<OS> VERSIONS=<something> ... checks single version for CLI
@@ -47,8 +58,12 @@ for dir in ${VERSIONS}; do
   fi
 
   if [ -n "${TEST_MODE}" ]; then
-    VERSION=$dir test/run
-    failed_version "$?" "$dir"
+    tmp_file=$(mktemp "/tmp/${IMAGE_NAME}-${OS}-${dir}.XXXXXX")
+    VERSION=$dir test/run 2>&1 | tee "$tmp_file"
+    ret_code=$?
+    analyze_logs_by_logdetective "$ret_code" "$tmp_file"
+    failed_version "$ret_code" "$dir"
+    rm -f "$tmp_file"
   fi
 
   if [ -n "${TEST_OPENSHIFT_4}" ]; then
