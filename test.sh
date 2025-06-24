@@ -48,6 +48,7 @@ analyze_logs_by_logdetective() {
     return
   fi
   jq -rC '.explanation.text' < "/tmp/logdetective_test_output.txt"
+  set -e
   echo "-------- LOGDETECTIVE TEST LOG ANALYSIS FINISHED --------"
 }
 
@@ -74,9 +75,12 @@ for dir in ${VERSIONS}; do
   fi
 
   if [ -n "${TEST_MODE}" ]; then
-    tmp_file=$(mktemp "/tmp/${IMAGE_NAME}-${OS}-${dir}.XXXXXX")
+    set -o pipefail
+    tmp_file=$(mktemp "/tmp/${OS}-${dir}.XXXXXX")
     VERSION=$dir test/run 2>&1 | tee "$tmp_file"
     ret_code=$?
+    set +o pipefail
+    cat "${tmp_file}"
     if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
       analyze_logs_by_logdetective "$tmp_file"
     fi
