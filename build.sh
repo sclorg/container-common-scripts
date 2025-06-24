@@ -219,23 +219,23 @@ function docker_build_with_version {
 
   command="docker build ${BUILD_OPTIONS} -f $dockerfile ${DOCKER_BUILD_CONTEXT}"
   echo "-> building using $command"
-
   tmp_file=$(mktemp "/tmp/${dir}-${OS}.XXXXXX")
   $command 2>&1 | tee "$tmp_file"
   cat "$tmp_file"
   last_row=$(< "$tmp_file" tail -n 1)
-  commit_message=$(< "$tmp_file" tail -n 3)
   # Structure of log build is as follows:
   # COMMIT
   # --> e191d12b5928
   # e191d12b5928360dd6024fe80d31e08f994d42577f76b9b143e014749afc8ab4
   # shellcheck disable=SC2016
-  if [[ "$commit_message" == *"COMMIT"* ]] && [[ "$last_row" =~ (^-->)?(Using cache )?[a-fA-F0-9]+$ ]]; then
+  if [[ "$last_row" =~ (^-->)?(Using cache )?[a-fA-F0-9]+$ ]]; then
     IMAGE_ID="$last_row"
   else
-    # Do not fail in case of sending log to pastebin or logdetective fails.
-    echo "Analyse logs by logdetective, why it failed."
-    analyze_logs_by_logdetective "${tmp_file}"
+    if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
+      # Do not fail in case of sending log to pastebin or logdetective fails.
+      echo "Analyse logs by logdetective, why it failed."
+      analyze_logs_by_logdetective "${tmp_file}"
+    fi
     exit 1
   fi
 

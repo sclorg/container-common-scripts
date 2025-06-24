@@ -25,6 +25,7 @@ failed_version() {
 }
 
 analyze_logs_by_logdetective() {
+  set +e
   local log_file_name="$1"
   echo "Sending failed log by fpaste command to paste bin."
   paste_bin_link=$(fpaste "$log_file_name")
@@ -43,6 +44,7 @@ analyze_logs_by_logdetective() {
     echo "ERROR: Failed to analyze log file by logdetective server."
     cat "/tmp/logdetective_test_output.txt"
     echo "-------- LOGDETECTIVE TEST LOG ANALYSIS FAILED --------"
+    set -e
     return
   fi
   jq -rC '.explanation.text' < "/tmp/logdetective_test_output.txt"
@@ -75,7 +77,9 @@ for dir in ${VERSIONS}; do
     tmp_file=$(mktemp "/tmp/${IMAGE_NAME}-${OS}-${dir}.XXXXXX")
     VERSION=$dir test/run 2>&1 | tee "$tmp_file"
     ret_code=$?
-    analyze_logs_by_logdetective "$tmp_file"
+    if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
+      analyze_logs_by_logdetective "$tmp_file"
+    fi
     failed_version "$ret_code" "$dir"
     rm -f "$tmp_file"
   fi
