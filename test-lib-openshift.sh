@@ -461,9 +461,15 @@ function ct_os_upload_image() {
     return 1
   fi
   output_name="$OCP4_REGISTER/$namespace/$image_name"
-
-  docker tag "${source_name}" "${output_name}"
-  docker push "${output_name}"
+  COUNTER=0
+  while [ $COUNTER -lt 3 ]; do
+    docker tag "${source_name}" "${output_name}"
+    if docker push "${output_name}" -eq 0; then
+      return 0
+    fi
+    COUNTER=$((COUNTER+1))
+  done
+  return 1
 }
 
 # ct_os_is_tag_exists IS_NAME TAG
