@@ -464,9 +464,12 @@ function ct_os_upload_image() {
   COUNTER=0
   while [ $COUNTER -lt 3 ]; do
     docker tag "${source_name}" "${output_name}"
-    if docker push "${output_name}" -eq 0; then
+    if docker push "${output_name}"; then
+      echo "docker push ${output_name} succeeded"
       return 0
     fi
+    echo "docker push ${output_name} failed, retrying..."
+    sleep 3
     COUNTER=$((COUNTER+1))
   done
   return 1
