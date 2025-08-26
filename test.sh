@@ -92,8 +92,10 @@ for dir in ${VERSIONS}; do
     ret_code=$?
     set +o pipefail
     cat "${tmp_file}"
-    if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
-      analyze_logs_by_logdetective "$tmp_file"
+    if [[ "$result" != "0" ]]; then
+      if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
+        analyze_logs_by_logdetective "$tmp_file"
+      fi
     fi
     failed_version "$ret_code" "$dir"
     rm -f "$tmp_file"
@@ -117,8 +119,19 @@ for dir in ${VERSIONS}; do
 
   if [ -n "${TEST_UPSTREAM}" ]; then
     if [ -x test/run-upstream ]; then
-      VERSION=$dir test/run-upstream
-      failed_version "$?" "$dir"
+      set -o pipefail
+      tmp_file=$(mktemp "/tmp/${OS}-${dir}.XXXXXX")
+      VERSION=$dir test/run-upstream 2>&1 | tee "$tmp_file"
+      ret_code=$?
+      set +o pipefail
+      cat "${tmp_file}"
+      if [[ "$result" != "0" ]]; then
+        if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
+          analyze_logs_by_logdetective "$tmp_file"
+        fi
+      fi
+      failed_version "$ret_code" "$dir"
+      rm -f "$tmp_file"
     else
       echo "-> Upstream tests are not present, skipping"
     fi
@@ -127,6 +140,15 @@ for dir in ${VERSIONS}; do
   if [ -n "${TEST_OPENSHIFT_PYTEST}" ]; then
     if [ -x test/run-openshift-pytest ]; then
       VERSION=$dir test/run-openshift-pytest
+      failed_version "$?" "$dir"
+    else
+      echo "-> OpenShift PyTest tests are not present, skipping"
+    fi
+  fi
+
+  if [ -n "${TEST_PYTEST}" ]; then
+    if [ -x test/run-pytest ]; then
+      VERSION=$dir test/run-pytest
       failed_version "$?" "$dir"
     else
       echo "-> PyTest tests are not present, skipping"
