@@ -21,7 +21,7 @@ jobs:
           echo "PR_NR=${PR_URL##*/}" >> $GITHUB_OUTPUT
 
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: "refs/pull/${{ steps.pr_nr.outputs.PR_NR }}/head"
 
