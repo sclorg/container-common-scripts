@@ -92,7 +92,7 @@ for dir in ${VERSIONS}; do
     ret_code=$?
     set +o pipefail
     cat "${tmp_file}"
-    if [[ "$result" != "0" ]]; then
+    if [[ "$ret_code" != "0" ]]; then
       if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
         analyze_logs_by_logdetective "$tmp_file"
       fi
@@ -125,7 +125,7 @@ for dir in ${VERSIONS}; do
       ret_code=$?
       set +o pipefail
       cat "${tmp_file}"
-      if [[ "$result" != "0" ]]; then
+      if [[ "$ret_code" != "0" ]]; then
         if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
           analyze_logs_by_logdetective "$tmp_file"
         fi
