@@ -17,7 +17,7 @@ set -ex
 # but might be used if we need to change this behaviour.
 # Once we realize there are real use cases for using those variables, we should
 # document them properly.
-DEFAULT_REPOS=${DEFAULT_REPOS:-"rhel-7-server-rpms rhel-7-server-optional-rpms"}
+DEFAULT_REPOS=${DEFAULT_REPOS:-"rhel-10-server-baseos-rpms rhel-10-server-appstream-rpms"}
 SKIP_REPOS_ENABLE=${SKIP_REPOS_ENABLE:-false}
 SKIP_REPOS_DISABLE=${SKIP_REPOS_DISABLE:-false}
 

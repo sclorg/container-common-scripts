@@ -900,7 +900,7 @@ ct_os_test_response_internal() {
   local status
   local response_code
   local response_file
-  local util_image_name='registry.access.redhat.com/ubi7/ubi'
+  local util_image_name='registry.access.redhat.com/ubi10/ubi'
 
   response_file=$(mktemp /tmp/ct_test_response_XXXXXX)
   ct_os_deploy_cmd_image "${util_image_name}"
