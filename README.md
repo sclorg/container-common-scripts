@@ -35,6 +35,11 @@ This rule will run the testsuite scripts contained in the container source repos
 It expects the test to be available at `$gitroot/$version/test/run`
 Depends on `tag` as some tests might need to have the images tagged (s2i).
 
+`make test-pytest`
+Similar to `make test` but runs testsuite for container by PyTest, expected to be found at
+`$gitroot/$version/test/run-pytest`
+
+
 `make test-openshift-4`
 Similar to `make test` but runs testsuite for Openshift 4, expected to be found at
 `$gitroot/$version/test/run-openshift-remote-cluster`
@@ -53,7 +58,7 @@ for RHEL world please ask pkubat@redhat.com, phracek@redhat.com, or hhorak@redha
 
 E.g. command for the source generation into Fedora dist-repo
 `https://src.fedoraproject.org/container/nodejs` into main branch is:
-`make betka TARGET=fedora VERSIONS=20`
+`make betka TARGET=fedora VERSIONS=24`
 
 The sources are not generated directly into dist-git repository,
 but into created `results` directory.
