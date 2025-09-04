@@ -67,7 +67,6 @@ parse_output ()
 
 analyze_logs_by_logdetective() {
   # logdetective should not break the build functionality
-  set +e
   local log_file_name="$1"
   echo "Sending failed log by fpaste command to paste bin."
   paste_bin_link=$(fpaste "$log_file_name")
@@ -87,10 +86,8 @@ analyze_logs_by_logdetective() {
     echo "ERROR: Failed to analyze log file by logdetective server."
     cat "${logdetective_build_file}"
     echo "-------- LOGDETECTIVE BUILD LOG ANALYSIS FAILED --------"
-    set -e
     return
   fi
-  set -e
   jq -rC '.explanation.text' < "${logdetective_build_file}"
   # This part of code is from https://github.com/teemtee/tmt/blob/main/tmt/steps/scripts/tmt-file-submit
   if [ -z "$TMT_TEST_PIDFILE" ]; then
@@ -247,8 +244,10 @@ function docker_build_with_version {
   else
     if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
       # Do not fail in case of sending log to pastebin or logdetective fails.
+      set +e
       echo "Analyse logs by logdetective, why it failed."
       analyze_logs_by_logdetective "${tmp_file}"
+      set -e
     fi
     exit 1
   fi
