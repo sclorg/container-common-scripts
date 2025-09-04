@@ -46,7 +46,7 @@
         "referencePolicy": {
           "type": "Local"
         },
-        "name": "2.4-el8"
+        "name": "2.4-el10"
       }
     ]
   }
