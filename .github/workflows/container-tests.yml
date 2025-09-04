@@ -59,7 +59,7 @@ jobs:
               tmt_plan="rhel8-docker$"
             else
               if [ "${{ matrix.os }}" == "rhel9" ]; then
-                compose="RHEL-9.4.0-Nightly"
+                compose="RHEL-9.6.0-Nightly"
                 context="RHEL9"
                 tmt_plan="rhel9-docker$"
               else

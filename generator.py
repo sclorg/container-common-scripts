@@ -50,12 +50,11 @@ def get_version_distro_mapping(
 
     [{"distro": "rhel-8-x86_64.yaml", "version": "3.9"},
      {"distro": "rhel-8-x86_64.yaml", "version": "3.8"},
-     {"distro": "centos-7-x86_64.yaml", "version": "3.8"},
      {"distro": "centos-stream-9-x86_64.yaml", "version": "3.9"}]
 
     and transfer them to:
 
-    {"3.8": ["rhel-8-x86_64.yaml", "centos-7-x86_64.yaml"],
+    {"3.8": ["rhel-8-x86_64.yaml", "centos-stream-10-x86_64.yaml"],
      "3.9": ["rhel-8-x86_64.yaml", "centos-stream-9-x86_64.yaml"]}
     """
     multispec_yaml = yaml.load(multispec_file.read(), Loader=yaml.SafeLoader)
@@ -74,7 +73,6 @@ def filename_to_distro_config(
     This is usually needed only for dockerfiles.
     - Dockerfile.rhelXX → rhel-XX-x86_64.yaml
     - Dockerfile.cXXs → centos-stream-XX-x86_64.yaml
-    - Dockerfile.centosX → centos-X-x86_64.yaml
     - Dockerfile.fedora → the newest fedora-XX-x86_64.yaml
 
     If not found, empty string is returned indicating that the
@@ -83,14 +81,11 @@ def filename_to_distro_config(
     """
     rhel_match = re.match(r".*\.rhel(\d+)$", filename)
     centos_stream_match = re.match(r".*\.c(\d+)s$", filename)
-    centos_match = re.match(r".*\.centos(\d+)$", filename)
 
     if rhel_match:
         config = f"rhel-{rhel_match.group(1)}-x86_64.yaml"
     elif centos_stream_match:
         config = f"centos-stream-{centos_stream_match.group(1)}-x86_64.yaml"
-    elif centos_match:
-        config = f"centos-{centos_match.group(1)}-x86_64.yaml"
     elif filename.endswith(".fedora"):
         sorted_configs = sorted(c for c in mapping[version] if c.startswith("fedora"))
         if len(sorted_configs) > 1:
@@ -103,7 +98,7 @@ def filename_to_distro_config(
             config = ""
     else:
         raise RuntimeError(
-            f"File {filename} does not match any of the known suffixes: .rhelXX, .cXs, .centosX or .fedora"
+            f"File {filename} does not match any of the known suffixes: .rhelXX, .cXs, or .fedora"
         )
 
     return config
@@ -163,10 +158,6 @@ def main() -> None:
             elif section == "SYMLINK_RULES":
                 print(f"LN\t{spec['src']} → {spec['dest']}")
                 symlink(spec["src"], spec["dest"])
-                # Remove dead symlinks
-                # This is needed for backward-compatible symlink Dockerfile → Dockerfile.centos7
-                # because we want to delete it when Dockerfile.centos7 does not exist.
-                # When we drop Centos 7, we can stop doing this.
                 # In the meantime, if you need to create a dead symlink on purpose,
                 # use check_symlink: false in manifest.yml config file.
                 # It's easier to remove dead symlinks than checking

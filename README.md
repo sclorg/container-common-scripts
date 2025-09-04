@@ -35,6 +35,11 @@ This rule will run the testsuite scripts contained in the container source repos
 It expects the test to be available at `$gitroot/$version/test/run`
 Depends on `tag` as some tests might need to have the images tagged (s2i).
 
+`make test-pytest`
+Similar to `make test` but runs testsuite for container by PyTest, expected to be found at
+`$gitroot/$version/test/run-pytest`
+
+
 `make test-openshift-4`
 Similar to `make test` but runs testsuite for Openshift 4, expected to be found at
 `$gitroot/$version/test/run-openshift-remote-cluster`
@@ -53,7 +58,7 @@ for RHEL world please ask pkubat@redhat.com, phracek@redhat.com, or hhorak@redha
 
 E.g. command for the source generation into Fedora dist-repo
 `https://src.fedoraproject.org/container/nodejs` into main branch is:
-`make betka TARGET=fedora VERSIONS=20`
+`make betka TARGET=fedora VERSIONS=24`
 
 The sources are not generated directly into dist-git repository,
 but into created `results` directory.
@@ -84,8 +89,8 @@ Names of the directories in which the Dockerfiles are contained. Needs to be def
 Dockerfile for the scripts to know which versions to build.
 
 `OS`
-OS version you want to build the images for. Currently the scripts are able to build for
-centos (default), c9s, c10s, rhel8, rhel9, rhel10, and fedora.
+OS version you want to build the images for. Currently, the scripts are able to build for
+c9s, c10s, rhel8, rhel9, rhel10, and fedora.
 
 `SKIP_SQUASH`
 When set to 1 the build script will skip the squash phase of the build.
@@ -122,7 +127,7 @@ how scripts in this repo work:
 
 `.exclude-<OS>`
 If this file exists, the tooling will not run the build and tests for the specific Dockerfile.
-For example, if `.exclude-rhel8` file exists, the `Dockerfile.rhel8` will not be expected
+For example, if `.exclude-rhel10` file exists, the `Dockerfile.rhel10` will not be expected
 in the same directory, build and tests will be skipped.
 Content of the file is not important at this point.
 
@@ -130,9 +135,9 @@ Content of the file is not important at this point.
 This file is useful if we need to work with RPMs that are not available publically yet.
 Content of the file is not important at this point.
 If such a file exists in the repository, then the building scripts will take a look
-at a correspondent variable, e.g.  DEVEL_REPO_rhel8, and will use the repository file
+at a correspondent variable, e.g.  DEVEL_REPO_rhel10, and will use the repository file
 defined by that variable.
-That means that definition of the DEVEL_REPO_rhel8 variable is a responsibility of
+That means that definition of the DEVEL_REPO_rhel10 variable is a responsibility of
 the test/CI environment.
 
 `.build-args-<OS>`
