@@ -575,64 +575,6 @@ EOF
   echo "$APP_IMAGE_ID" > "$id_file"
 }
 
-# ct_check_exec_env_vars [env_filter]
-# --------------------
-# Checks if all relevant environment variables from `docker run`
-# can be found in `docker exec` as well.
-# Argument: env_filter - optional string passed to grep used for
-#   choosing which variables to check in the test case.
-#   Defaults to X_SCLS and variables containing /opt/app-root, /opt/rh
-# Uses: $CID_FILE_DIR - path to directory containing cid_files
-# Uses: $IMAGE_NAME - name of the image being tested
-function ct_check_exec_env_vars() {
-  local tmpdir exec_envs cid old_IFS env_filter
-  local var_name stripped filtered_envs run_envs
-  env_filter=${1:-"^X_SCLS=\|/opt/rh\|/opt/app-root"}
-  tmpdir=$(mktemp -d)
-  CID_FILE_DIR=${CID_FILE_DIR:-$(mktemp -d)}
-  # Get environment variables from `docker run`
-  run_envs=$(docker run --rm "$IMAGE_NAME" /bin/bash -c "env")
-  # Get environment variables from `docker exec`
-  ct_create_container "test_exec_envs" bash -c "sleep 1000" >/dev/null
-  cid=$(ct_get_cid "test_exec_envs")
-  exec_envs=$(docker exec "$cid" env)
-  # Filter out variables we are not interested in
-  # Always check X_SCLS, ignore PWD
-  # Check variables from `docker run` that have alternative paths inside (/opt/rh, /opt/app-root)
-  ct_check_envs_set "$env_filter" "$exec_envs" "$run_envs" "*VALUE*" || return 1
-  echo " All values present in \`docker exec\`"
-  return 0
-}
-
-# ct_check_scl_enable_vars [env_filter]
-# --------------------
-# Checks if all relevant environment variables from `docker run`
-# are set twice after a second call of `scl enable $SCLS`.
-# Argument: env_filter - optional string passed to grep used for
-#   choosing which variables to check in the test case.
-#   Defaults to paths containing enabled SCLS in the image
-# Uses: $IMAGE_NAME - name of the image being tested
-function ct_check_scl_enable_vars() {
-  local tmpdir exec_envs cid old_IFS env_filter enabled_scls
-  local var_name stripped filtered_envs loop_envs
-  env_filter=$1
-  tmpdir=$(mktemp -d)
-  enabled_scls=$(docker run --rm "$IMAGE_NAME" /bin/bash -c "echo \$X_SCLS")
-  if [ -z "$env_filter" ]; then
-    for scl in $enabled_scls; do
-      [ -z "$env_filter" ] && env_filter="/$scl" && continue
-      # env_filter not empty, append to the existing list
-      env_filter="$env_filter|/$scl"
-    done
-  fi
-  # Get environment variables from `docker run`
-  loop_envs=$(docker run --rm "$IMAGE_NAME" /bin/bash -c "env")
-  run_envs=$(docker run  --rm "$IMAGE_NAME" /bin/bash -c "X_SCLS= scl enable $enabled_scls env")
-  # Check if the values are set twice in the second set of envs
-  ct_check_envs_set "$env_filter" "$run_envs" "$loop_envs" "*VALUE*VALUE*" || return 1
-  echo " All scl_enable values present"
-  return 0
-}
 
 # ct_path_append PATH_VARNAME DIRECTORY
 # -------------------------------------
