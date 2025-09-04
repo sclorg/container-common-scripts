@@ -27,7 +27,6 @@ failed_version() {
 analyze_logs_by_logdetective() {
   # logdetective should not break the test functionality
   # Therefore `set +e` is setup
-  set +e
   local log_file_name="$1"
   echo "Sending failed log by fpaste command to paste bin."
   paste_bin_link=$(fpaste "$log_file_name")
@@ -47,16 +46,12 @@ analyze_logs_by_logdetective() {
     echo "ERROR: Failed to analyze log file by logdetective server."
     cat "${logdetective_test_file}"
     echo "-------- LOGDETECTIVE TEST LOG ANALYSIS FAILED --------"
-    # Let's switch it back
-    set -e
     return
   fi
   jq -rC '.explanation.text' < "${logdetective_test_file}"
   # This part of code is from https://github.com/teemtee/tmt/blob/main/tmt/steps/scripts/tmt-file-submit
   if [ -z "$TMT_TEST_PIDFILE" ]; then
     echo "File submit to data dir can be used only in the context of a running test."
-    # Let's switch it back
-    set -e
     return
   fi
   # This variable is set by tmt
@@ -64,8 +59,6 @@ analyze_logs_by_logdetective() {
   cp -f "${logdetective_test_file}" "$TMT_TEST_DATA"
   echo "File '${logdetective_test_file}' stored to '$TMT_TEST_DATA'."
   echo "-------- LOGDETECTIVE TEST LOG ANALYSIS FINISHED --------"
-  # Let's switch it back
-  set -e
 }
 
 # This adds backwards compatibility if only single version needs to be testing
@@ -99,7 +92,10 @@ for dir in ${VERSIONS}; do
     cat "${tmp_file}"
     if [[ "$ret_code" != "0" ]]; then
       if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
+        set +e
         analyze_logs_by_logdetective "$tmp_file"
+        # Let's switch it back
+        set -e
       fi
     fi
     failed_version "$ret_code" "$dir"
@@ -132,7 +128,10 @@ for dir in ${VERSIONS}; do
       cat "${tmp_file}"
       if [[ "$ret_code" != "0" ]]; then
         if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
+          set +e
           analyze_logs_by_logdetective "$tmp_file"
+          # Let's switch it back
+          set -e
         fi
       fi
       failed_version "$ret_code" "$dir"
