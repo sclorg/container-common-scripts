@@ -73,9 +73,8 @@ for dir in ${VERSIONS}; do
   pushd "${dir}" > /dev/null || exit 1
   IMAGE_ID=$(cat .image-id)
   export IMAGE_ID
-  IMAGE_VERSION=$(docker inspect -f "{{.Config.Labels.version}}" "$IMAGE_ID")
   # Kept also IMAGE_NAME as some tests might still use that.
-  IMAGE_NAME="$(docker inspect -f "{{.Config.Labels.name}}" "$IMAGE_ID"):$IMAGE_VERSION"
+  IMAGE_NAME="$(docker inspect -f "{{.Config.Labels.name}}" "$IMAGE_ID"):$dir"
     # shellcheck disable=SC2268
   if [ "${OS}" == "c9s" ] || [ "${OS}" == "c10s" ] || [ "${OS}" == "fedora" ]; then
     export IMAGE_NAME="$REGISTRY$IMAGE_NAME"

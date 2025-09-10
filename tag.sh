@@ -32,7 +32,6 @@ for dir in ${VERSIONS}; do
   pushd "${dir}" > /dev/null
   IMAGE_ID=$(cat .image-id)
   name=$(docker inspect -f "{{.Config.Labels.name}}" "$IMAGE_ID")
-  version=$(docker inspect -f "{{.Config.Labels.version}}" "$IMAGE_ID")
   # We need to check '.git' dir in root directory
   if [ -d "../.git" ] ; then
     commit_date=$(git show -s HEAD --format=%cd --date=short | sed 's/-//g')
@@ -42,10 +41,10 @@ for dir in ${VERSIONS}; do
   fi
 
   full_reg_name="$REGISTRY$name"
-  echo "-> Tagging image '$IMAGE_ID' as '$full_reg_name:$version' and '$full_reg_name:latest' and '$full_reg_name:$OS' and '$full_reg_name:$date_and_hash'"
+  echo "-> Tagging image '$IMAGE_ID' as '$full_reg_name:$dir' and '$full_reg_name:latest' and '$full_reg_name:$OS' and '$full_reg_name:$date_and_hash'"
 
   docker tag "$IMAGE_ID" "$full_reg_name:$OS"
-  docker tag "$IMAGE_ID" "$full_reg_name:$version"
+  docker tag "$IMAGE_ID" "$full_reg_name:$dir"
   docker tag "$IMAGE_ID" "$full_reg_name:latest"
   docker tag "$IMAGE_ID" "$full_reg_name:$date_and_hash"
 
