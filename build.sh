@@ -161,6 +161,7 @@ function docker_build_with_version {
   local devel_repo_var="DEVEL_REPO_$OS"
   local build_args_file=.build-args-${OS}
   local is_podman
+  local ret_code
   if [ -e "$exclude" ]; then
     echo "-> $exclude file exists for version $dir, skipping build."
     clean_image
@@ -230,18 +231,15 @@ function docker_build_with_version {
 
   command="docker build ${BUILD_OPTIONS} -f $dockerfile ${DOCKER_BUILD_CONTEXT}"
   echo "-> building using $command"
+  set +x -o pipefail
   tmp_file=$(mktemp "/tmp/${dir}-${OS}.XXXXXX")
   $command 2>&1 | tee "$tmp_file"
-  cat "$tmp_file"
+  ret_code=$?
+  set -x +o pipefail
+  echo "Return code from docker build is '$ret_code'."
   last_row=$(< "$tmp_file" tail -n 1)
-  # Structure of log build is as follows:
-  # COMMIT
-  # --> e191d12b5928
-  # e191d12b5928360dd6024fe80d31e08f994d42577f76b9b143e014749afc8ab4
-  # shellcheck disable=SC2016
-  if [[ "$last_row" =~ (^-->)?(Using cache )?[a-fA-F0-9]+$ ]]; then
-    IMAGE_ID="$last_row"
-  else
+  if [[ $ret_code != "0" ]]; then
+    echo "Analyse logs by logdetective, why it failed."
     if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
       # Do not fail in case of sending log to pastebin or logdetective fails.
       set +e
@@ -249,7 +247,15 @@ function docker_build_with_version {
       analyze_logs_by_logdetective "${tmp_file}"
       set -e
     fi
-    exit 1
+  else
+    # Structure of log build is as follows:
+    # COMMIT
+    # --> e191d12b5928
+    # e191d12b5928360dd6024fe80d31e08f994d42577f76b9b143e014749afc8ab4
+    # shellcheck disable=SC2016
+    if [[ "$last_row" =~ (^-->)?(Using cache )?[a-fA-F0-9]+$ ]]; then
+      IMAGE_ID="$last_row"
+    fi
   fi
 
   rm -f "$tmp_file"
