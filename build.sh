@@ -10,6 +10,10 @@
 set -eE
 [ -n "${DEBUG:-}" ] && set -x
 
+# shellcheck shell=bash
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")"/common.sh
+
 OS=${1-$OS}
 VERSION=${2-$VERSION}
 
@@ -63,42 +67,6 @@ parse_output ()
   rc=$?
   eval "$var=\$raw_output"
   (exit $rc)
-}
-
-analyze_logs_by_logdetective() {
-  # logdetective should not break the build functionality
-  local log_file_name="$1"
-  echo "Sending failed log by fpaste command to paste bin."
-  paste_bin_link=$(fpaste "$log_file_name")
-  # shellcheck disable=SC2181
-  if [[ $? -ne 0 ]]; then
-    echo "ERROR: Failed to send log file to private bin: ${log_file_name}"
-    return
-  fi
-  # pastebin link is "https://paste.centos.org/view/ee98ba05"
-  # We need a raw link that is "https://paste.centos.org/view/raw/ee98ba05"
-  raw_paste_bin_link="${paste_bin_link//view/view\/raw}"
-  echo "Sending log file to logdetective server: ${raw_paste_bin_link}"
-  echo "-------- LOGDETECTIVE BUILD LOG ANALYSIS START --------"
-  logdetective_build_file=$(mktemp "/tmp/logdetective_build.XXXXXX")
-  # shellcheck disable=SC2181
-  if ! curl -k --insecure --header "Content-Type: application/json" --request POST --data "{\"url\":\"${raw_paste_bin_link}\"}" "$LOGDETECTIVE_SERVER/analyze" >> "${logdetective_build_file}"; then
-    echo "ERROR: Failed to analyze log file by logdetective server."
-    cat "${logdetective_build_file}"
-    echo "-------- LOGDETECTIVE BUILD LOG ANALYSIS FAILED --------"
-    return
-  fi
-  jq -rC '.explanation.text' < "${logdetective_build_file}"
-  # This part of code is from https://github.com/teemtee/tmt/blob/main/tmt/steps/scripts/tmt-file-submit
-  if [ -z "$TMT_TEST_PIDFILE" ]; then
-    echo "File submit to data dir can be used only in the context of a running test."
-    return
-  fi
-  # This variable is set by tmt
-  [ -d "$TMT_TEST_DATA" ] || mkdir -p "$TMT_TEST_DATA"
-  cp -f "${logdetective_build_file}" "$TMT_TEST_DATA"
-  echo "File '${logdetective_build_file}' stored to '$TMT_TEST_DATA'."
-  echo "-------- LOGDETECTIVE BUILD LOG ANALYSIS FINISHED --------"
 }
 
 # "best-effort" cleanup of image
