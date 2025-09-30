@@ -8,6 +8,7 @@ else
 fi
 
 analyze_logs_by_logdetective() {
+  echo "Analyse logs by logdetective, why it failed."
   # logdetective should not break the test functionality
   # Therefore `set +e` is setup
   local log_file_name="$1"
