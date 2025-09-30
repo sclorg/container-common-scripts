@@ -207,11 +207,9 @@ function docker_build_with_version {
   echo "Return code from docker build is '$ret_code'."
   last_row=$(< "$tmp_file" tail -n 1)
   if [[ $ret_code != "0" ]]; then
-    echo "Analyse logs by logdetective, why it failed."
     if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
       # Do not fail in case of sending log to pastebin or logdetective fails.
       set +e
-      echo "Analyse logs by logdetective, why it failed."
       analyze_logs_by_logdetective "${tmp_file}"
       set -e
     fi
