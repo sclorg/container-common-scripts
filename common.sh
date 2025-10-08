@@ -10,7 +10,6 @@ fi
 analyze_logs_by_logdetective() {
   echo "Analyse logs by logdetective, why it failed."
   # logdetective should not break the test functionality
-  # Therefore `set +e` is setup
   local log_file_name="$1"
   echo "Sending failed log by fpaste command to paste bin."
   paste_bin_link=$(fpaste "$log_file_name")
