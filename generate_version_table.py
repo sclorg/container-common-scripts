@@ -18,6 +18,7 @@ exclude_file_regex = re.compile(r"(?<=\.exclude-).+")
 
 table_regex = re.compile(r"(<!--\nTable start\n-->\n).*?(<!--\nTable end\n-->\n)", re.DOTALL)
 
+
 def main(name):
     docker_distros = {}
     all_distros = set()
@@ -25,20 +26,23 @@ def main(name):
     versions = _get_versions()
 
     # goes through all the versions and gets their dockerfile
-    # and exclude- distros
+    # and 'exclude-' distros
     for version in versions:
         files = "\n".join(os.listdir(version))
         available_distros = set(re.findall(docker_file_regex, files))
         exclude_distros = set(re.findall(exclude_file_regex, files))
         unsupported = available_distros - distro_names.keys()
         if len(unsupported) > 0:
-            print(f"WARNING: Distros {list(unsupported)} in version {version} are unsupported and Dockerfiles for them should be deleted")
+            print(
+                f"WARNING: Distros {list(unsupported)} in version {version} are unsupported and Dockerfiles for them should be deleted",
+                file=sys.stderr)
         all_distros |= available_distros
         docker_distros[version] = (available_distros - exclude_distros) & distro_names.keys()
     all_distros &= distro_names.keys()
 
     table = _create_table(natsorted(all_distros), versions, docker_distros, name)
     _replace_in_readme(table)
+
 
 # gets the versions of the container from the Makefile
 def _get_versions():
@@ -52,8 +56,9 @@ def _get_versions():
         print(f"An exception occurred when trying to read the Makefile: {e}", file=sys.stderr)
         exit(1)
 
-    print(f"No VERSIONS variable found in Makefile, please make sure the syntax is correct")
+    print(f"No VERSIONS variable found in Makefile, please make sure the syntax is correct", file=sys.stderr)
     exit(2)
+
 
 # generates the table string
 def _create_table(distros, versions, docker_distros, name):
@@ -74,6 +79,7 @@ def _create_table(distros, versions, docker_distros, name):
         # end the table line
         table += '|\n'
     return table
+
 
 # reads the README.md, finds the Table start and Table end comments
 # replaces any string between them with the table string
@@ -96,10 +102,10 @@ def _replace_in_readme(table):
         print(f"An error occurred while trying to open README.md: {e}", file=sys.stderr)
         exit(1)
 
+
 if __name__ == "__main__":
     args = sys.argv[1:]
     if len(args) != 1:
         print("Usage: ./generate_table.py NAME\nThe NAME of the image is required")
         exit(2)
     main(args[0])
-
