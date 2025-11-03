@@ -41,7 +41,6 @@ run_test_and_analyze_failed_logs() {
   VERSION=$dir $test_run 2>&1 | tee "$tmp_file"
   ret_code=$?
   set +o pipefail
-  cat "${tmp_file}"
   if [[ "$ret_code" != "0" ]]; then
     if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
       set +e
