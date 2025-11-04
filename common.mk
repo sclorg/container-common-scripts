@@ -158,3 +158,6 @@ generate:
 			$(generator) -v $$version -m manifest.yml -s specs/multispec.yml ; \
 		fi \
 	done
+
+version-table:
+	$(common_dir)/generate_version_table.py "$(BASE_IMAGE_NAME)"
