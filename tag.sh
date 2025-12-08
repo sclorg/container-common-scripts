@@ -14,8 +14,8 @@ trap 'echo "errexit on line $LINENO, $0" >&2' ERR
 [ -n "${DEBUG:-}" ] && set -x
 # This adds backwards compatibility if only single version needs to be tagged
 # In CI we would like to test single version but VERSIONS= means, that nothing is tested
-# make tag TARGET=<OS> VERSIONS=<something> ... checks single version for CLI
-# make tag TARGET=<OS> SINGLE_VERSION=<something> ... checks single version from Testing Farm
+# make build TARGET=<OS> VERSIONS=<something> ... checks single version for CLI
+# make build TARGET=<OS> SINGLE_VERSION=<something> ... checks single version from Testing Farm
 VERSIONS=${SINGLE_VERSION:-$VERSIONS}
 if [[ "${SINGLE_VERSION}" == *"minimal"* ]]; then
   echo "Adding ${SINGLE_VERSION//-minimal/} because it might be needed for testing $SINGLE_VERSION."

@@ -72,6 +72,7 @@ script_env = \
 # TODO: switch to 'build: build-all' once parallel builds are relatively safe
 .PHONY: build build-serial build-all
 build: build-serial
+	VERSIONS="$(VERSIONS)" $(script_env) $(tag)
 build-serial:
 	@$(MAKE) -j1 build-all
 
@@ -93,37 +94,33 @@ test: script_env += TEST_MODE=true
 
 # The tests should ideally depend on $IMAGE_ID only, but see PR#19 for more info
 # while we need to depend on 'tag' instead of 'build'.
-test: tag
+test: build
 	VERSIONS="$(VERSIONS)" $(script_env) $(test)
 
 .PHONY: test-openshift-4
 test-openshift-4: script_env += TEST_OPENSHIFT_4=true
-test-openshift-4: tag
+test-openshift-4: build
 	VERSIONS="$(VERSIONS)" BASE_IMAGE_NAME="$(BASE_IMAGE_NAME)" $(script_env) $(test)
 
 .PHONY: test-openshift
 test-openshift: script_env += TEST_OPENSHIFT_MODE=true
-test-openshift: tag
+test-openshift: build
 	VERSIONS="$(VERSIONS)" BASE_IMAGE_NAME="$(BASE_IMAGE_NAME)" $(script_env) $(test)
 
 .PHONY: test-openshift-pytest
 test-openshift-pytest: script_env += TEST_OPENSHIFT_PYTEST=true
-test-openshift-pytest: tag
+test-openshift-pytest: build
 	VERSIONS="$(VERSIONS)" BASE_IMAGE_NAME="$(BASE_IMAGE_NAME)" $(script_env) $(test)
 
 .PHONY: test-pytest
 test-pytest: script_env += TEST_PYTEST=true
-test-pytest: tag
+test-pytest: build
 	VERSIONS="$(VERSIONS)" BASE_IMAGE_NAME="$(BASE_IMAGE_NAME)" $(script_env) $(test)
 
 
 .PHONY: shellcheck
 shellcheck:
 	$(shellcheck) $(SHELLCHECK_FILES)
-
-.PHONY: tag
-tag: build
-	VERSIONS="$(VERSIONS)" $(script_env) $(tag)
 
 .PHOHY: betka
 betka:

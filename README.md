@@ -23,12 +23,8 @@ during the build.
 `make build` will also expect a `README.md` so that it can transform it into
 a man page that gets added to the image so make sure it is available and that
 you have the `go-md2man` tool installed on your host.
-
-
-`make tag`
-Use this rule if you want to tag an image after it is built. It will be tagged with
+The image will be tagged after it is built. It will be tagged with
 two tags - name:latest and name:version.
-Depends on `build`
 
 `make test` or `make check`
 This rule will run the testsuite scripts contained in the container source repositories.
@@ -62,6 +58,21 @@ E.g. command for the source generation into Fedora dist-repo
 
 The sources are not generated directly into dist-git repository,
 but into created `results` directory.
+
+`make version-table`
+Generates a version table in the main `README.md` file that shows which versions of the software
+are provided for each OS as images. In order to generate a table, install `python-natsort`
+(or the `natsort` package from PyPI), then insert the following two
+comments into the `README`:
+```md
+<!--
+Table start
+-->
+<!--
+Table end
+-->
+```
+in **this exact** format, and finally run `make version-table` to generate it.
 
 `make clean`
 Runs scripts that clean-up the working dir. Depends on the `clean-images` rule by default

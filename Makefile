@@ -34,7 +34,7 @@ pre-commit-check:
 	  echo "Note: Install pre-commit hooks by 'pre-commit install' and you'll never have to run this check manually again."
 
 check-failures: check-test-lib
-	cd tests/failures/check && make tag && ! make check && make clean
+	cd tests/failures/check && make build && ! make check && make clean
 	cd tests/failures/check && ./check_skip_squash.sh
 
 check-latest-imagestream:
