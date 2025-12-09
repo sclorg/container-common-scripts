@@ -12,7 +12,6 @@ endif
 build = $(SHELL) $(common_dir)/build.sh
 test =  $(SHELL) $(common_dir)/test.sh
 shellcheck =  $(SHELL) $(common_dir)/run-shellcheck.sh
-tag =   $(SHELL) $(common_dir)/tag.sh
 clean = $(SHELL) $(common_dir)/clean.sh
 betka = $(SHELL) $(common_dir)/betka.sh
 
@@ -72,7 +71,6 @@ script_env = \
 # TODO: switch to 'build: build-all' once parallel builds are relatively safe
 .PHONY: build build-serial build-all
 build: build-serial
-	VERSIONS="$(VERSIONS)" $(script_env) $(tag)
 build-serial:
 	@$(MAKE) -j1 build-all
 
@@ -93,7 +91,6 @@ check: test
 test: script_env += TEST_MODE=true
 
 # The tests should ideally depend on $IMAGE_ID only, but see PR#19 for more info
-# while we need to depend on 'tag' instead of 'build'.
 test: build
 	VERSIONS="$(VERSIONS)" $(script_env) $(test)
 
