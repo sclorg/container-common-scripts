@@ -233,6 +233,26 @@ function docker_build_with_version {
 #               IMAGE_ID
 #  analyze_logs_by_logdetective "$?" "${tmp_file}"
   echo "$IMAGE_ID" > .image-id
+  tag_image
+}
+
+function tag_image {
+  name=$(docker inspect -f "{{.Config.Labels.name}}" "$IMAGE_ID") || (echo "-> No image with this tag found, try re-building." && return)
+  # We need to check '.git' dir in root directory
+  if [ -d "../.git" ] ; then
+    commit_date=$(git show -s HEAD --format=%cd --date=short | sed 's/-//g')
+    date_and_hash="${commit_date}-$(git rev-parse --short HEAD)"
+  else
+    date_and_hash="$(date +%Y%m%d%H%M%S)"
+  fi
+
+  full_reg_name="$REGISTRY$name"
+  echo "-> Tagging image '$IMAGE_ID' as '$full_reg_name:$dir' and '$full_reg_name:latest' and '$full_reg_name:$OS' and '$full_reg_name:$date_and_hash'"
+
+  docker tag "$IMAGE_ID" "$full_reg_name:$OS"
+  docker tag "$IMAGE_ID" "$full_reg_name:$dir"
+  docker tag "$IMAGE_ID" "$full_reg_name:latest"
+  docker tag "$IMAGE_ID" "$full_reg_name:$date_and_hash"
 }
 
 # Versions are stored in subdirectories. You can specify VERSION variable
