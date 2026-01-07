@@ -43,15 +43,11 @@ run_test_and_analyze_failed_logs() {
   set +o pipefail
   if [[ "$ret_code" != "0" ]]; then
     if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
-      set +e
       analyze_logs_by_logdetective "$tmp_file"
-      # Let's switch it back
-      set -e
     fi
   fi
   failed_version "$ret_code" "$dir"
   rm -f "$tmp_file"
-
 }
 # This adds backwards compatibility if only single version needs to be testing
 # In CI we would like to test single version but VERSIONS= means, that nothing is tested
