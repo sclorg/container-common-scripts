@@ -83,7 +83,7 @@ for dir in ${VERSIONS}; do
       if [ -x test/run-openshift-remote-cluster ]; then
         run_test_and_analyze_failed_logs "test/run-openshift-remote-cluster"
       else
-        echo "-> Tests for OpenShift 4 are not present. Add run-openshift-remote-cluster script, skipping"
+        echo "-> Tests for OpenShift 4 for version $dir are not present. Add run-openshift-remote-cluster script, skipping"
       fi
     fi
 
@@ -93,7 +93,7 @@ for dir in ${VERSIONS}; do
     if [ -x test/run-upstream ]; then
       run_test_and_analyze_failed_logs "test/run-upstream"
     else
-      echo "-> Upstream tests are not present, skipping"
+      echo "-> Upstream tests for version $dir are not present, skipping"
     fi
   fi
 
@@ -101,7 +101,7 @@ for dir in ${VERSIONS}; do
     if [ -x test/run-openshift-pytest ]; then
       run_test_and_analyze_failed_logs "test/run-openshift-pytest"
     else
-      echo "-> OpenShift PyTest tests are not present, skipping"
+      echo "-> OpenShift PyTest tests for version $dir are not present, skipping"
     fi
   fi
 
@@ -109,7 +109,7 @@ for dir in ${VERSIONS}; do
     if [ -x test/run-pytest ]; then
       run_test_and_analyze_failed_logs "test/run-pytest"
     else
-      echo "-> PyTest tests are not present, skipping"
+      echo "-> PyTest tests for version $dir are not present, skipping"
     fi
   fi
 
