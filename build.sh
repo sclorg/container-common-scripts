@@ -7,7 +7,7 @@
 # SINGLE_VERSION - Specifies the image version - (must match with subdirectory in repo)
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
 
-set -eE
+set -E
 [ -n "${DEBUG:-}" ] && set -x
 
 # shellcheck shell=bash
@@ -21,53 +21,6 @@ error() { echo "ERROR: $*" ; false ; }
 
 trap 'echo "errexit on line $LINENO, $0" >&2' ERR
 
-
-# _parse_output_inner
-# -------------------
-# Helper function for 'parse_output'.
-# We need to avoid case statements in $() for older Bash versions (per issue
-# postgresql-container#35, mac ships with 3.2).
-# Example of problematic statement: echo $(case i in i) echo i;; esac)
-_parse_output_inner ()
-{
-    set -o pipefail
-    {
-        case $stream in
-        stdout|1|"")
-            eval "$command" | tee >(cat - >&"$stdout_fd")
-            ;;
-        stderr|2)
-            set +x # avoid stderr pollution
-            eval "$command" {free_fd}>&1 1>&"$stdout_fd" 2>&"$free_fd" | tee >(cat - >&"$stderr_fd")
-            ;;
-        esac
-        # Inherit correct exit status.
-        (exit "${PIPESTATUS[0]}")
-    } | eval "$filter"
-}
-
-
-# parse_output COMMAND FILTER_COMMAND OUTVAR [STREAM={stderr|stdout}]
-# -------------------------------------------------------------------
-# Parse standard (error) output of COMMAND with FILTER_COMMAND and store the
-# output into variable named OUTVAR.  STREAM might be 'stdout' or 'stderr',
-# defaults to 'stdout'.  The filtered output stays (live) printed to terminal.
-# This method doesn't create any explicit temporary files.
-# Defines:
-#   ${$OUTVAR}: Set to FILTER_COMMAND output.
-parse_output ()
-{
-  local command=$1 filter=$2 var=$3 stream=$4
-  echo "-> building using $command"
-  local raw_output='' rc=0
-  {
-      # shellcheck disable=SC2034
-      raw_output=$(_parse_output_inner)
-  } {stdout_fd}>&1 {stderr_fd}>&2
-  rc=$?
-  eval "$var=\$raw_output"
-  (exit $rc)
-}
 
 # "best-effort" cleanup of image
 function clean_image {
@@ -209,9 +162,7 @@ function docker_build_with_version {
   if [[ $ret_code != "0" ]]; then
     if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
       # Do not fail in case of sending log to pastebin or logdetective fails.
-      set +e
       analyze_logs_by_logdetective "${tmp_file}"
-      set -e
     fi
   else
     # Structure of log build is as follows:
@@ -226,12 +177,6 @@ function docker_build_with_version {
 
   rm -f "$tmp_file"
 
-  # shellcheck disable=SC2016
-
-#  parse_output 'docker build '"$BUILD_OPTIONS"' -f "$dockerfile" "${DOCKER_BUILD_CONTEXT}"' \
-#               "tail -n 1 | awk '/Successfully built|(^--> )?(Using cache )?[a-fA-F0-9]+$/{print \$NF}'" \
-#               IMAGE_ID
-#  analyze_logs_by_logdetective "$?" "${tmp_file}"
   echo "$IMAGE_ID" > .image-id
   tag_image
 }
