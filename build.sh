@@ -149,36 +149,48 @@ function docker_build_with_version {
   if [[ "$SKIP_SQUASH" -eq 0 ]] && [[ "$is_podman" -eq 1 ]]; then
     BUILD_OPTIONS+=" --squash"
   fi
-
-  command="docker build ${BUILD_OPTIONS} -f $dockerfile ${DOCKER_BUILD_CONTEXT}"
-  echo "-> building using $command"
-  set +x -o pipefail
-  tmp_file=$(mktemp "/tmp/${dir}-${OS}.XXXXXX")
-  $command 2>&1 | tee "$tmp_file"
-  ret_code=$?
-  set -x +o pipefail
-  echo "Return code from docker build is '$ret_code'."
-  last_row=$(< "$tmp_file" tail -n 1)
-  if [[ $ret_code != "0" ]]; then
-    if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
-      # Do not fail in case of sending log to pastebin or logdetective fails.
-      analyze_logs_by_logdetective "${tmp_file}"
+  i=1
+  while [ $i -le 2 ]; do
+    command="docker build ${BUILD_OPTIONS} -f $dockerfile ${DOCKER_BUILD_CONTEXT}"
+    echo "-> building using $command"
+    set +x -o pipefail
+    tmp_file=$(mktemp "/tmp/${dir}-${OS}.XXXXXX")
+    $command 2>&1 | tee "$tmp_file"
+    ret_code=$?
+    set -x +o pipefail
+    echo "Return code from docker build is '$ret_code'."
+    last_row=$(< "$tmp_file" tail -n 1)
+    if [[ $ret_code != "0" ]]; then
+      # In case of failure, we want to analyze the logs and send them to pastebin or logdetective.
+      # The failure can be ethel issue like network failure or registry failure.
+      # Red Hat Enterprise Linux 9 for x86_64 - AppStre 0.0  B/s |   0  B     00:00
+      # Errors during downloading metadata for repository 'rhel-9-for-x86_64-appstream-rpms':
+      #  - Curl error (56): Failure when receiving data from the peer for https:// [Received HTTP code 503 from proxy after CONNECT]
+      # Error: Failed to download metadata for repo 'rhel-9-for-x86_64-appstream-rpms':
+      if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
+        # Do not fail in case of sending log to pastebin or logdetective fails.
+        analyze_logs_by_logdetective "${tmp_file}"
+      fi
+      ((i++))
+      sleep 5
+      echo "Retrying to build image for version $dir, attempt $i of 2."
+    else
+      # Structure of log build is as follows:
+      # COMMIT
+      # --> e191d12b5928
+      # e191d12b5928360dd6024fe80d31e08f994d42577f76b9b143e014749afc8ab4
+      # shellcheck disable=SC2016
+      if [[ "$last_row" =~ (^-->)?(Using cache )?[a-fA-F0-9]+$ ]]; then
+        IMAGE_ID="$last_row"
+      fi
+      echo "$IMAGE_ID" > .image-id
+      tag_image
+      break
     fi
-  else
-    # Structure of log build is as follows:
-    # COMMIT
-    # --> e191d12b5928
-    # e191d12b5928360dd6024fe80d31e08f994d42577f76b9b143e014749afc8ab4
-    # shellcheck disable=SC2016
-    if [[ "$last_row" =~ (^-->)?(Using cache )?[a-fA-F0-9]+$ ]]; then
-      IMAGE_ID="$last_row"
-    fi
-  fi
 
-  rm -f "$tmp_file"
+    rm -f "$tmp_file"
+  done
 
-  echo "$IMAGE_ID" > .image-id
-  tag_image
 }
 
 function tag_image {
