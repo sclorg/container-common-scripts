@@ -233,7 +233,9 @@ fi
 echo "Built versions are: $dirs"
 
 for dir in ${dirs}; do
+  # shellcheck disable=SC2164
   pushd "${dir}" > /dev/null
   docker_build_with_version Dockerfile."$OS"
+  # shellcheck disable=SC2164
   popd > /dev/null
 done
