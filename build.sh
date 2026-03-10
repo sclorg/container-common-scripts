@@ -150,6 +150,7 @@ function docker_build_with_version {
     BUILD_OPTIONS+=" --squash"
   fi
   i=1
+  build_failed=1
   while [ $i -le 2 ]; do
     command="docker build ${BUILD_OPTIONS} -f $dockerfile ${DOCKER_BUILD_CONTEXT}"
     echo "-> building using $command"
@@ -185,11 +186,16 @@ function docker_build_with_version {
       fi
       echo "$IMAGE_ID" > .image-id
       tag_image
+      build_failed=0
       break
     fi
 
     rm -f "$tmp_file"
   done
+  if [[ $build_failed -ne 0 ]]; then
+    echo "-> Build failed for version $dir and OS $OS after 2 attempts, giving up."
+    exit 1
+  fi
 
 }
 
