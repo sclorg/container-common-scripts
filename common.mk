@@ -82,7 +82,7 @@ build-all: $(VERSIONS)
 	done
 
 .PHONY: $(VERSIONS)
-$(VERSIONS): % : %/root/help.1
+$(VERSIONS):
 	VERSION="$@" $(script_env) $(build)
 
 .PHONY: test check
@@ -135,11 +135,6 @@ clean-images:
 
 clean-versions:
 	rm -rf $(VERSIONS)
-
-%root/help.1: %README.md
-	mkdir -p $(@D)
-	go-md2man -in "$^" -out "$@"
-	chmod a+r "$@"
 
 generate-all: generate
 
