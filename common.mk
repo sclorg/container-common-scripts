@@ -82,7 +82,7 @@ build-all: $(VERSIONS)
 	done
 
 .PHONY: $(VERSIONS)
-$(VERSIONS):
+$(VERSIONS): copy_md_files
 	VERSION="$@" $(script_env) $(build)
 
 .PHONY: test check
@@ -135,6 +135,17 @@ clean-images:
 
 clean-versions:
 	rm -rf $(VERSIONS)
+
+# Copy also all .md files from version directory to the root of
+# container images, so that they are available in the image
+# Currently there is only README.md, but there may be more in the future
+copy_md_files:
+	@for version in $(VERSIONS); do \
+		mkdir -p "$$version/root" ; \
+		if ls $$version/*.md 1> /dev/null 2>&1; then \
+			cp -v $$version/*.md "$$version/root" ; \
+		fi ; \
+	done
 
 generate-all: generate
 
