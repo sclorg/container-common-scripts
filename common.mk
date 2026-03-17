@@ -127,7 +127,7 @@ betka:
     $(script_env) $(betka)
 
 .PHONY: clean clean-hook clean-images clean-versions
-clean: clean-images
+clean: remove_md_files clean-images
 	@$(MAKE) --no-print-directory clean-hook
 
 clean-images:
@@ -144,6 +144,14 @@ copy_md_files:
 		mkdir -p "$$version/root" ; \
 		if ls $$version/*.md 1> /dev/null 2>&1; then \
 			cp -v $$version/*.md "$$version/root" ; \
+			chmod a+r $$version/root/*.md ; \
+		fi ; \
+	done
+
+remove_md_files:
+	@for version in $(VERSIONS); do \
+		if ls $$version/*.md 1> /dev/null 2>&1; then \
+			rm -v $$version/root/*.md ; \
 		fi ; \
 	done
 
