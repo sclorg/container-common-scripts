@@ -151,7 +151,7 @@ copy_md_files:
 remove_md_files:
 	@for version in $(VERSIONS); do \
 		if ls $$version/*.md 1> /dev/null 2>&1; then \
-			rm -v $$version/root/*.md ; \
+			rm -fv $$version/root/*.md ; \
 		fi ; \
 	done
 

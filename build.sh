@@ -21,6 +21,8 @@ error() { echo "ERROR: $*" ; false ; }
 
 trap 'echo "errexit on line $LINENO, $0" >&2' ERR
 
+MAX_BUILD_ATTEMPTS=2
+
 
 # "best-effort" cleanup of image
 function clean_image {
@@ -151,7 +153,7 @@ function docker_build_with_version {
   fi
   i=1
   build_failed=1
-  while [ $i -le 2 ]; do
+  while [ $i -le $MAX_BUILD_ATTEMPTS ]; do
     command="docker build ${BUILD_OPTIONS} -f $dockerfile ${DOCKER_BUILD_CONTEXT}"
     echo "-> building using $command"
     set +x -o pipefail
@@ -174,7 +176,7 @@ function docker_build_with_version {
       fi
       ((i++))
       sleep 5
-      echo "Retrying to build image for version $dir, attempt $i of 2."
+      echo "Retrying to build image for version $dir, attempt $i of $MAX_BUILD_ATTEMPTS."
     else
       # Structure of log build is as follows:
       # COMMIT
