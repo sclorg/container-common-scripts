@@ -41,45 +41,38 @@ jobs:
               compose="Fedora-latest"
               context="Fedora"
               tmt_plan="/fedora"
+            elif [ "${{ matrix.os }}" == "c9s" ]; then
+              compose="CentOS-Stream-9"
+              context="CentOS Stream 9"
+              tmt_plan="/c9s"
+            elif [ "${{ matrix.os }}" == "c10s" ]; then
+                compose="CentOS-Stream-10"
+                context="CentOS Stream 10"
+                tmt_plan="/c10s"
             else
-              if [ "${{ matrix.os }}" == "c9s" ]; then
-                compose="CentOS-Stream-9"
-                context="CentOS Stream 9"
-                tmt_plan="/c9s"
-              else
-                if [ "${{ matrix.os }}" == "c10s" ]; then
-                  compose="CentOS-Stream-10"
-                  context="CentOS Stream 10"
-                  tmt_plan="/c10s"
-                else
-                  # TODO - update compose and context for c11s when it will be available in Testing Farm
-                  compose="CentOS-Stream-10"
-                  context="CentOS Stream 11"
-                  tmt_plan="/c11s"
-                fi
-              fi
+              # TODO - update compose and context for c11s when it will be available in Testing Farm
+              compose="CentOS-Stream-10"
+              context="CentOS Stream 11"
+              tmt_plan="/c11s"
             fi
           else
             if [ "${{ matrix.os }}" == "rhel8" ]; then
               compose="RHEL-8.10.0-Nightly"
               context="RHEL8"
               tmt_plan="/rhel8-docker$"
+            elif [ "${{ matrix.os }}" == "rhel9" ]; then
+              compose="RHEL-9.6.0-Nightly"
+              context="RHEL9"
+              tmt_plan="/rhel9-docker$"
+            elif [ "${{ matrix.os }}" == "rhel10" ]; then
+              compose="RHEL-10-Nightly"
+              context="RHEL10"
+              tmt_plan="/rhel10-docker$"
             else
-              if [ "${{ matrix.os }}" == "rhel9" ]; then
-                compose="RHEL-9.6.0-Nightly"
-                context="RHEL9"
-                tmt_plan="/rhel9-docker$"
-              else
-                if [ "${{ matrix.os }}" == "rhel10" ]; then
-                  compose="RHEL-10-Nightly"
-                  context="RHEL10"
-                  tmt_plan="/rhel10-docker$"
-                else
-                  # TODO - update compose and context for rhel11 when it will be available in Testing Farm
-                  compose="RHEL-10-Nightly"
-                  context="RHEL11"
-                  tmt_plan="/rhel11-docker$"
-              fi
+              # TODO - update compose and context for rhel11 when it will be available in Testing Farm
+              compose="RHEL-10-Nightly"
+              context="RHEL11"
+              tmt_plan="/rhel11-docker$"
             fi
           fi
           echo "api_key=$api_key" >> "$GITHUB_OUTPUT"
