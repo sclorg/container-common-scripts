@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         container-to-test: ["postgresql-container", "nginx-container", "s2i-perl-container", "s2i-python-container", "s2i-base-container" ]
-        os: ["fedora", "c9s", "rhel8", "rhel9", "c10s", "rhel10"]
+        os: ["fedora", "c9s", "rhel8", "rhel9", "c10s", "rhel10", "c11s", "rhel11"]
 
     if: |
       github.event.issue.pull_request
@@ -32,7 +32,7 @@ jobs:
           branch="master"
           tf_scope="private"
           tmt_repo="https://gitlab.cee.redhat.com/platform-eng-core-services/sclorg-tmt-plans"
-          if [ "${{ matrix.os }}" == "fedora" ] || [ "${{ matrix.os }}" == "c9s" ] || [ "${{ matrix.os }}" == "c10s" ]; then
+          if [ "${{ matrix.os }}" == "fedora" ] || [ "${{ matrix.os }}" == "c9s" ] || [ "${{ matrix.os }}" == "c10s" ] || [ "${{ matrix.os }}" == "c11s" ]; then
             api_key=${{ secrets.TF_PUBLIC_API_KEY }}
             branch="main"
             tf_scope="public"
@@ -47,9 +47,16 @@ jobs:
                 context="CentOS Stream 9"
                 tmt_plan="/c9s"
               else
-                compose="CentOS-Stream-10"
-                context="CentOS Stream 10"
-                tmt_plan="/c10s"
+                if [ "${{ matrix.os }}" == "c10s" ]; then
+                  compose="CentOS-Stream-10"
+                  context="CentOS Stream 10"
+                  tmt_plan="/c10s"
+                else
+                  # TODO - update compose and context for c11s when it will be available in Testing Farm
+                  compose="CentOS-Stream-10"
+                  context="CentOS Stream 11"
+                  tmt_plan="/c11s"
+                fi
               fi
             fi
           else
@@ -63,9 +70,15 @@ jobs:
                 context="RHEL9"
                 tmt_plan="/rhel9-docker$"
               else
-                compose="RHEL-10-Nightly"
-                context="RHEL10"
-                tmt_plan="/rhel10-docker$"
+                if [ "${{ matrix.os }}" == "rhel10" ]; then
+                  compose="RHEL-10-Nightly"
+                  context="RHEL10"
+                  tmt_plan="/rhel10-docker$"
+                else
+                  # TODO - update compose and context for rhel11 when it will be available in Testing Farm
+                  compose="RHEL-10-Nightly"
+                  context="RHEL11"
+                  tmt_plan="/rhel11-docker$"
               fi
             fi
           fi
