@@ -2,7 +2,7 @@
 
 # This script is used to build the OpenShift Docker images.
 #
-# OS - Specifies distribution - "rhel8", "rhel9", "rhel10", "c9s", "c10s" or "fedora"
+# OS - Specifies distribution - "rhel8", "rhel9", "rhel10", "rhel11", "c9s", "c10s" or "fedora"
 # VERSION - Specifies the image version - (must match with subdirectory in repo)
 # SINGLE_VERSION - Specifies the image version - (must match with subdirectory in repo)
 # VERSIONS - Must be set to a list with possible versions (subdirectories)
@@ -170,7 +170,7 @@ function docker_build_with_version {
       # Errors during downloading metadata for repository 'rhel-9-for-x86_64-appstream-rpms':
       #  - Curl error (56): Failure when receiving data from the peer for https:// [Received HTTP code 503 from proxy after CONNECT]
       # Error: Failed to download metadata for repo 'rhel-9-for-x86_64-appstream-rpms':
-      if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
+      if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]] || [[ "${OS}" == "rhel11" ]]; then
         # Do not fail in case of sending log to pastebin or logdetective fails.
         analyze_logs_by_logdetective "${tmp_file}"
       fi

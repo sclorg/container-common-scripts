@@ -7,10 +7,12 @@ from natsort import natsorted
 distro_names = {
     "c9s": ["CentOS Stream 9", "quay.io/sclorg/%s-c9s"],
     "c10s": ["CentOS Stream 10", "quay.io/sclorg/%s-c10s"],
+    "c11s": ["CentOS Stream 11", "quay.io/sclorg/%s-c11s"],
     "fedora": ["Fedora", "quay.io/fedora/%s"],
     "rhel8": ["RHEL 8", "registry.redhat.io/rhel8/%s"],
     "rhel9": ["RHEL 9", "registry.redhat.io/rhel9/%s"],
     "rhel10": ["RHEL 10", "registry.redhat.io/rhel10/%s"],
+    "rhel11": ["RHEL 11", "registry.redhat.io/rhel11/%s"],
 }
 version_regex = re.compile(r"^VERSIONS\s*=\s*(.*)$")
 docker_file_regex = re.compile(r"(?<=Dockerfile\.).+")

@@ -35,11 +35,6 @@ Depends on `tag` as some tests might need to have the images tagged (s2i).
 Similar to `make test` but runs testsuite for container by PyTest, expected to be found at
 `$gitroot/$version/test/run-pytest`
 
-
-`make test-openshift-4`
-Similar to `make test` but runs testsuite for Openshift 4, expected to be found at
-`$gitroot/$version/test/run-openshift-remote-cluster`
-
 `make test-openshift-pytest`
 Similar to `make test` but runs PyTest test suite `https://github.com/sclorg/container-ci-suite` for Openshift 4,
 expected to be found at `$gitroot/$version/test/run-openshift-pytest`
@@ -101,7 +96,7 @@ Dockerfile for the scripts to know which versions to build.
 
 `OS`
 OS version you want to build the images for. Currently, the scripts are able to build for
-c9s, c10s, rhel8, rhel9, rhel10, and fedora.
+c9s, c10s, c11s, rhel8, rhel9, rhel10, rhel11, and fedora.
 
 `SKIP_SQUASH`
 When set to 1 the build script will skip the squash phase of the build.
@@ -171,7 +166,6 @@ Dependencies for testsuite:
 
 - /usr/bin/docker (either `docker` or `podman` + `podman-docker`)
 - git
-- go-md2man
 - make
 - source-to-image
 - shellcheck

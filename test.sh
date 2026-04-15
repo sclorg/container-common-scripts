@@ -42,7 +42,7 @@ run_test_and_analyze_failed_logs() {
   ret_code=$?
   set +o pipefail
   if [[ "$ret_code" != "0" ]]; then
-    if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]; then
+    if [[ "${OS}" == "rhel8" ]] || [[ "${OS}" == "rhel9" ]] || [[ "${OS}" == "rhel10" ]]|| [[ "${OS}" == "rhel11" ]]; then
       analyze_logs_by_logdetective "$tmp_file"
     fi
   fi

@@ -40,6 +40,9 @@ else ifeq ($(TARGET),rhel9)
 else ifeq ($(TARGET),rhel10)
 	OS := rhel10
 	DOCKERFILE ?= Dockerfile.rhel10
+else ifeq ($(TARGET),rhel11)
+	OS := rhel11
+	DOCKERFILE ?= Dockerfile.rhel11
 else ifeq ($(TARGET),fedora)
 	OS := fedora
 	DOCKERFILE ?= Dockerfile.fedora
@@ -48,9 +51,13 @@ else ifeq ($(TARGET),c9s)
 	OS := c9s
 	DOCKERFILE ?= Dockerfile.c9s
 	REGISTRY := quay.io/
-else
+else ifeq ($(TARGET),c10s)
 	OS := c10s
 	DOCKERFILE ?= Dockerfile.c10s
+	REGISTRY := quay.io/
+else
+	OS := c11s
+	DOCKERFILE ?= Dockerfile.c11s
 	REGISTRY := quay.io/
 endif
 
