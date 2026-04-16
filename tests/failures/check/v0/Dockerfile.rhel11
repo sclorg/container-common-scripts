@@ -1,2 +1,3 @@
+# As we do not have a RHEL11 container image yet, we need to use a RHEL10 image.
 FROM ubi10/s2i-core
 LABEL name=test-image
