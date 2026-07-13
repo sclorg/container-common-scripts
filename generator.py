@@ -74,6 +74,7 @@ def filename_to_distro_config(
     - Dockerfile.rhelXX → rhel-XX-x86_64.yaml
     - Dockerfile.cXXs → centos-stream-XX-x86_64.yaml
     - Dockerfile.fedora → the newest fedora-XX-x86_64.yaml
+    - Dockerfile.fXX → the selected fedora-XX-x86_64.yaml
 
     If not found, empty string is returned indicating that the
     combination of distro and version is not included
@@ -81,6 +82,7 @@ def filename_to_distro_config(
     """
     rhel_match = re.match(r".*\.rhel(\d+)$", filename)
     centos_stream_match = re.match(r".*\.c(\d+)s$", filename)
+    fedora_match = re.match(r".*\.f(\d+)$", filename)
 
     if rhel_match:
         config = f"rhel-{rhel_match.group(1)}-x86_64.yaml"
@@ -96,9 +98,11 @@ def filename_to_distro_config(
             config = sorted_configs[0]
         else:
             config = ""
+    elif fedora_match:  # just for base and core images
+        config = f"fedora-{fedora_match.group(1)}-x86_64.yaml"
     else:
         raise RuntimeError(
-            f"File {filename} does not match any of the known suffixes: .rhelXX, .cXs, or .fedora"
+            f"File {filename} does not match any of the known suffixes: .rhelXX, .cXs, .fedora, or .fXX"
         )
 
     return config
