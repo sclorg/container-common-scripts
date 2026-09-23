@@ -24,8 +24,9 @@ analyze_logs_by_logdetective() {
   echo "Sending log file to logdetective server: ${raw_paste_bin_link}"
   echo "-------- LOGDETECTIVE TEST LOG ANALYSIS START --------"
   logdetective_test_file=$(mktemp "/tmp/logdetective_test.XXXXXX")
+  logdetective_request_data=$(jq -n --arg name "$(basename "$log_file_name")" --arg url "$raw_paste_bin_link" '{files: [{name: $name, url: $url}]}')
   # shellcheck disable=SC2181
-  if ! curl -k --insecure --header "Content-Type: application/json" --request POST --data "{\"url\":\"${raw_paste_bin_link}\"}" "$LOGDETECTIVE_SERVER/analyze" >> "${logdetective_test_file}"; then
+  if ! curl -k --insecure --header "Content-Type: application/json" --request POST --data "${logdetective_request_data}" "$LOGDETECTIVE_SERVER/analyze" >> "${logdetective_test_file}"; then
     echo "ERROR: Failed to analyze log file by logdetective server."
     cat "${logdetective_test_file}"
     echo "-------- LOGDETECTIVE TEST LOG ANALYSIS FAILED --------"
