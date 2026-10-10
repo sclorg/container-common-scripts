@@ -154,7 +154,9 @@ function docker_build_with_version {
   i=1
   build_failed=1
   while [ $i -le $MAX_BUILD_ATTEMPTS ]; do
-    command="docker build ${BUILD_OPTIONS} -f $dockerfile ${DOCKER_BUILD_CONTEXT}"
+    # Use --iidfile to capture image ID reliably (official Docker method)
+    iidfile=$(mktemp "/tmp/${dir}-${OS}-iid.XXXXXX")
+    command="docker build --iidfile $iidfile ${BUILD_OPTIONS} -f $dockerfile ${DOCKER_BUILD_CONTEXT}"
     echo "-> building using $command"
     set +x -o pipefail
     tmp_file=$(mktemp "/tmp/${dir}-${OS}.XXXXXX")
@@ -162,6 +164,13 @@ function docker_build_with_version {
     ret_code=$?
     set -x +o pipefail
     echo "Return code from docker build is '$ret_code'."
+    
+    # Read image ID from iidfile
+    if [ -f "$iidfile" ]; then
+      IMAGE_ID=$(cat "$iidfile")
+      rm -f "$iidfile"
+    fi
+    
     last_row=$(< "$tmp_file" tail -n 1)
     if [[ $ret_code != "0" ]]; then
       # In case of failure, we want to analyze the logs and send them to pastebin or logdetective.
@@ -178,14 +187,6 @@ function docker_build_with_version {
       sleep 5
       echo "Retrying to build image for version $dir, attempt $i of $MAX_BUILD_ATTEMPTS."
     else
-      # Structure of log build is as follows:
-      # COMMIT
-      # --> e191d12b5928
-      # e191d12b5928360dd6024fe80d31e08f994d42577f76b9b143e014749afc8ab4
-      # shellcheck disable=SC2016
-      if [[ "$last_row" =~ (^-->)?(Using cache )?[a-fA-F0-9]+$ ]]; then
-        IMAGE_ID="$last_row"
-      fi
       echo "$IMAGE_ID" > .image-id
       tag_image
       build_failed=0
@@ -202,6 +203,10 @@ function docker_build_with_version {
 }
 
 function tag_image {
+  if [ -z "$IMAGE_ID" ]; then
+    echo "ERROR: IMAGE_ID is empty, cannot tag image."
+    return 1
+  fi
   name=$(docker inspect -f "{{.Config.Labels.name}}" "$IMAGE_ID") || (echo "-> No image with this tag found, try re-building." && return)
   # We need to check '.git' dir in root directory
   if [ -d "../.git" ] ; then
