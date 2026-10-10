@@ -118,7 +118,7 @@ function docker_build_with_version {
   #
   # That means that definition of the DEVEL_REPO_rhel8 variable is a responsibility of
   # the test/CI environment.
-  if [ -f "$devel_repo_file" ] && [[ -v "$devel_repo_var" ]] ; then
+  if [ -f "$devel_repo_file" ] && [ -n "${!devel_repo_var}" ] ; then
     CUSTOM_REPO=$(mktemp)
     curl -Lk "${!devel_repo_var}" >"${CUSTOM_REPO}"
     echo "-> $devel_repo_file file exists for version $dir, so using ${!devel_repo_var}."
